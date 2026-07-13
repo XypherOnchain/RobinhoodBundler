@@ -80,29 +80,75 @@ async function collectTape(token) {
 }
 
 async function agentTapeCollector() {
-    const store = bettyStore.load();
     const dash = readDashboard();
     const tokens = new Set();
     if (dash?.lastToken) tokens.add(String(dash.lastToken).toLowerCase());
-    for (const g of store.priceGuards || []) {
+    const pre = bettyStore.load();
+    for (const g of pre.priceGuards || []) {
         if (g.enabled && g.token) tokens.add(String(g.token).toLowerCase());
     }
-    for (const j of store.automationJobs || []) {
+    for (const j of pre.automationJobs || []) {
         if (j.status === "running" && j.mint) tokens.add(String(j.mint).toLowerCase());
     }
-    store.tape = store.tape || {};
+    const snaps = {};
     let n = 0;
     for (const t of tokens) {
         const snap = await collectTape(t);
         if (snap && !snap.error) {
-            store.tape[t] = snap;
+            snaps[t] = snap;
             n++;
         } else if (snap?.error) {
-            store.tape[t] = { ...(store.tape[t] || {}), error: snap.error, at: snap.at };
+            snaps[t] = { error: snap.error, at: snap.at };
         }
     }
-    setAgent(store, "tape", `priced ${n}/${tokens.size} tokens`);
-    bettyStore.save(store);
+    bettyStore.mutate((s) => {
+        s.tape = { ...(s.tape || {}), ...snaps };
+        setAgent(s, "tape", `priced ${n}/${tokens.size} tokens`);
+        return s;
+    });
+}
+
+async function agentPostLaunchGuards() {
+    const store = bettyStore.load();
+    const guards = (store.priceGuards || []).filter((g) => g.enabled);
+    if (!guards.length) {
+        bettyStore.mutate((s) => {
+            setAgent(s, "post-launch", "no armed guards");
+            return s;
+        });
+        return;
+    }
+    let fired = 0;
+    for (const guard of guards) {
+        const key = String(guard.token || "").toLowerCase();
+        const tape = store.tape?.[key];
+        if (!tape || tape.priceUsd == null) continue;
+        const priceUsd = Number(tape.priceUsd);
+        const mcapUsd = Number(tape.mcapUsd || 0);
+        let breach = null;
+        if (guard.stopLossUsd != null && priceUsd <= Number(guard.stopLossUsd)) {
+            breach = `STOP LOSS $${priceUsd.toFixed(8)} ≤ $${guard.stopLossUsd}`;
+        } else if (
+            guard.takeProfitUsd != null &&
+            priceUsd >= Number(guard.takeProfitUsd)
+        ) {
+            breach = `TAKE PROFIT $${priceUsd.toFixed(8)} ≥ $${guard.takeProfitUsd}`;
+        } else if (
+            guard.mcapTriggerUsd != null &&
+            mcapUsd > 0 &&
+            mcapUsd >= Number(guard.mcapTriggerUsd)
+        ) {
+            breach = `MCAP $${mcapUsd.toFixed(0)} ≥ $${guard.mcapTriggerUsd}`;
+        }
+        if (!breach) continue;
+        fired++;
+        console.log(`[betty:post-launch] ${breach}`);
+        await executeGuardSell(guard, breach);
+    }
+    bettyStore.mutate((s) => {
+        setAgent(s, "post-launch", `checked ${guards.length} · fired ${fired}`);
+        return s;
+    });
 }
 
 // ── Price guards + executor sell ─────────────────────────────────────
@@ -192,49 +238,6 @@ async function executeGuardSell(guard, reason) {
         return s;
     });
     return { ok, fail, results };
-}
-
-async function agentPostLaunchGuards() {
-    const store = bettyStore.load();
-    const guards = (store.priceGuards || []).filter((g) => g.enabled);
-    if (!guards.length) {
-        setAgent(store, "post-launch", "no armed guards");
-        bettyStore.save(store);
-        return;
-    }
-    let fired = 0;
-    for (const guard of guards) {
-        const key = String(guard.token || "").toLowerCase();
-        const tape = store.tape?.[key];
-        if (!tape || tape.priceUsd == null) {
-            setAgent(store, "post-launch", `waiting tape for ${key.slice(0, 10)}…`);
-            continue;
-        }
-        const priceUsd = Number(tape.priceUsd);
-        const mcapUsd = Number(tape.mcapUsd || 0);
-        let breach = null;
-        if (guard.stopLossUsd != null && priceUsd <= Number(guard.stopLossUsd)) {
-            breach = `STOP LOSS $${priceUsd.toFixed(8)} ≤ $${guard.stopLossUsd}`;
-        } else if (
-            guard.takeProfitUsd != null &&
-            priceUsd >= Number(guard.takeProfitUsd)
-        ) {
-            breach = `TAKE PROFIT $${priceUsd.toFixed(8)} ≥ $${guard.takeProfitUsd}`;
-        } else if (
-            guard.mcapTriggerUsd != null &&
-            mcapUsd > 0 &&
-            mcapUsd >= Number(guard.mcapTriggerUsd)
-        ) {
-            breach = `MCAP $${mcapUsd.toFixed(0)} ≥ $${guard.mcapTriggerUsd}`;
-        }
-        if (!breach) continue;
-        fired++;
-        console.log(`[betty:post-launch] ${breach}`);
-        await executeGuardSell(guard, breach);
-    }
-    const s2 = bettyStore.load();
-    setAgent(s2, "post-launch", `checked ${guards.length} · fired ${fired}`);
-    bettyStore.save(s2);
 }
 
 // ── Chart pattern + bump automation ──────────────────────────────────
@@ -443,41 +446,53 @@ async function tickJob(job, dash) {
 
 async function agentAutomation() {
     const dash = readDashboard();
-    const store = bettyStore.load();
-    const jobs = (store.automationJobs || []).filter((j) => j.status === "running");
-    // Reject volume jobs if somehow present
-    for (const j of jobs) {
-        if (j.jobType === "volume_bot" || j.jobType === "volume_mirror") {
-            j.status = "failed";
-            j.error = "volume bots excluded";
-            continue;
-        }
-        if (j.jobType === "comment_bot") {
-            j.status = "failed";
-            j.error = "comment_bot not supported on EVM";
-            continue;
-        }
-        await tickJob(j, dash);
+    const snap = bettyStore.load();
+    const runningIds = (snap.automationJobs || [])
+        .filter((j) => j.status === "running")
+        .map((j) => j.id);
+
+    for (const id of runningIds) {
+        const fresh = bettyStore.load();
+        const job = (fresh.automationJobs || []).find((j) => j.id === id);
+        if (!job || job.status !== "running") continue;
+        await tickJob(job, dash);
+        bettyStore.mutate((s) => {
+            const cur = (s.automationJobs || []).find((j) => j.id === id);
+            if (!cur) return s;
+            cur.status = job.status;
+            cur.progress = job.progress;
+            cur.error = job.error;
+            return s;
+        });
     }
-    setAgent(
-        store,
-        "automation",
-        `${jobs.length} running · EVM_ARM_LIVE=${arm.evmArmLive()}`
-    );
-    bettyStore.save(store);
+
+    bettyStore.mutate((s) => {
+        const n = (s.automationJobs || []).filter((j) => j.status === "running")
+            .length;
+        setAgent(
+            s,
+            "automation",
+            `${n} running · EVM_ARM_LIVE=${arm.evmArmLive()}`
+        );
+        return s;
+    });
 }
 
-// ── Other agents ─────────────────────────────────────────────────────
 async function agentBalanceSync() {
     const dash = readDashboard();
-    const store = bettyStore.load();
     if (!dash?.wallets?.length) {
-        setAgent(store, "balance-sync", "no wallets");
-        bettyStore.save(store);
+        bettyStore.mutate((s) => {
+            setAgent(s, "balance-sync", "no wallets");
+            return s;
+        });
         return;
     }
     const sample = dash.wallets
-        .filter((w) => ["funder", "dev", "buyer", "creator"].includes(String(w.role || "").toLowerCase()) || w.role === "buyer")
+        .filter((w) =>
+            ["funder", "dev", "buyer", "creator"].includes(
+                String(w.role || "").toLowerCase()
+            )
+        )
         .slice(0, 20);
     let ok = 0;
     let funderBal = null;
@@ -489,18 +504,21 @@ async function agentBalanceSync() {
             if (String(w.role).toLowerCase() === "funder") funderBal = bal;
         } catch (_) {}
     }
-    setAgent(
-        store,
-        "balance-sync",
-        `checked ${ok}/${sample.length}` +
-            (funderBal != null ? ` · funder ${Number(funderBal).toFixed(4)} ETH` : "")
-    );
-    bettyStore.save(store);
+    bettyStore.mutate((s) => {
+        setAgent(
+            s,
+            "balance-sync",
+            `checked ${ok}/${sample.length}` +
+                (funderBal != null
+                    ? ` · funder ${Number(funderBal).toFixed(4)} ETH`
+                    : "")
+        );
+        return s;
+    });
 }
 
 async function agentLaunchReadiness() {
     const dash = readDashboard();
-    const store = bettyStore.load();
     const issues = [];
     const funder = (dash?.wallets || []).find((w) => w.role === "funder");
     const dev = (dash?.wallets || []).find(
@@ -515,28 +533,29 @@ async function agentLaunchReadiness() {
     if (!buyers.length) issues.push("no planned buyers");
     if (!dash?.lastPlan) issues.push("no buy plan");
     if (!["noxa", "koa", "apestore", "ape"].includes(pad)) issues.push("unknown pad");
-    // Pad-specific soft checks
     if (pad === "koa" && !process.env.KOA_FACTORY_ADDRESS_ROBINHOOD) {
         issues.push("KOA factory env missing");
     }
-    if (pad === "apestore" || pad === "ape") {
-        /* ApeStore uses public API — no extra env */
-    }
-    if (issues.length) {
-        setAgent(store, "launch-readiness", `NOT READY [${pad}]: ${issues.join(", ")}`);
-    } else {
-        setAgent(
-            store,
-            "launch-readiness",
-            `READY · ${pad} · ${buyers.length} buyers · plan ok`
-        );
-    }
-    bettyStore.save(store);
+    bettyStore.mutate((s) => {
+        if (issues.length) {
+            setAgent(
+                s,
+                "launch-readiness",
+                `NOT READY [${pad}]: ${issues.join(", ")}`
+            );
+        } else {
+            setAgent(
+                s,
+                "launch-readiness",
+                `READY · ${pad} · ${buyers.length} buyers · plan ok`
+            );
+        }
+        return s;
+    });
 }
 
 async function agentFundingMonitor() {
     const dash = readDashboard();
-    const store = bettyStore.load();
     const funder = (dash?.wallets || []).find((w) => w.role === "funder");
     const buyers = (dash?.wallets || []).filter((w) => w.role === "buyer");
     let low = 0;
@@ -554,31 +573,35 @@ async function agentFundingMonitor() {
             funderEth = Number(await chain.getWalletBalance(funder.address));
         } catch (_) {}
     }
-    const msg =
-        `buyers funded ${funded} · unfunded planned ${low}` +
-        (funderEth != null ? ` · funder ${funderEth.toFixed(4)}` : "");
-    setAgent(store, "funding-monitor", msg);
-    if (funderEth != null && funderEth < 0.01 && low > 0) {
-        bettyStore.pushAlert(store, "funding", "treasury low vs unfunded buyers");
-    }
-    bettyStore.save(store);
+    bettyStore.mutate((s) => {
+        setAgent(
+            s,
+            "funding-monitor",
+            `buyers funded ${funded} · unfunded planned ${low}` +
+                (funderEth != null ? ` · funder ${funderEth.toFixed(4)}` : "")
+        );
+        if (funderEth != null && funderEth < 0.01 && low > 0) {
+            bettyStore.pushAlert(s, "funding", "treasury low vs unfunded buyers");
+        }
+        return s;
+    });
 }
 
 async function agentSeasoningMonitor() {
     const dash = readDashboard();
-    const store = bettyStore.load();
     const buyers = (dash?.wallets || []).filter((w) => w.role === "buyer");
     const seasoned = buyers.filter((w) => w.seasoned || w.seasonedAt).length;
-    setAgent(
-        store,
-        "seasoning-monitor",
-        `${seasoned}/${buyers.length} buyers marked seasoned`
-    );
-    bettyStore.save(store);
+    bettyStore.mutate((s) => {
+        setAgent(
+            s,
+            "seasoning-monitor",
+            `${seasoned}/${buyers.length} buyers marked seasoned`
+        );
+        return s;
+    });
 }
 
 async function agentWatchdog() {
-    const store = bettyStore.load();
     try {
         const ok = await new Promise((resolve) => {
             const req = http.get("http://127.0.0.1:3847/api/launchpad", (res) => {
@@ -590,15 +613,20 @@ async function agentWatchdog() {
                 resolve(false);
             });
         });
-        if (ok) setAgent(store, "watchdog", "bundler healthy");
-        else {
-            setAgent(store, "watchdog", "bundler unreachable");
-            bettyStore.pushAlert(store, "watchdog", "bundler unreachable");
-        }
+        bettyStore.mutate((s) => {
+            if (ok) setAgent(s, "watchdog", "bundler healthy");
+            else {
+                setAgent(s, "watchdog", "bundler unreachable");
+                bettyStore.pushAlert(s, "watchdog", "bundler unreachable");
+            }
+            return s;
+        });
     } catch (e) {
-        setAgent(store, "watchdog", e.message);
+        bettyStore.mutate((s) => {
+            setAgent(s, "watchdog", e.message);
+            return s;
+        });
     }
-    bettyStore.save(store);
 }
 
 async function tick() {
