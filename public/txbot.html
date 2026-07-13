@@ -1,0 +1,1280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>NOXA TX Bot</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg-primary: #0a0e17;
+      --bg-secondary: #111827;
+      --bg-card: #1a1f2e;
+      --bg-hover: #232a3b;
+      --accent-green: #22c55e;
+      --accent-blue: #3b82f6;
+      --accent-orange: #f97316;
+      --accent-red: #ef4444;
+      --accent-yellow: #eab308;
+      --text-primary: #f1f5f9;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+      --border-primary: #1e293b;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      min-height: 100vh;
+      padding-bottom: 48px;
+    }
+    header {
+      border-bottom: 1px solid var(--border-primary);
+      background: rgba(17, 24, 39, 0.85);
+      backdrop-filter: blur(8px);
+      position: sticky; top: 0; z-index: 50;
+    }
+    .header-inner {
+      max-width: 900px; margin: 0 auto; padding: 0 24px;
+      height: 56px; display: flex; align-items: center; justify-content: space-between; gap: 16px;
+    }
+    .logo { display: flex; align-items: center; gap: 10px; }
+    .logo-badge {
+      width: 32px; height: 32px; border-radius: 8px;
+      background: linear-gradient(135deg, #f97316, #eab308);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; font-weight: 700;
+    }
+    .logo-text { font-weight: 600; letter-spacing: -0.02em; font-size: 16px; }
+    .status-pill {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-size: 12px; font-weight: 500; color: var(--accent-green);
+    }
+    .status-pill .dot {
+      width: 7px; height: 7px; border-radius: 50%; background: var(--accent-green);
+    }
+    .status-pill.busy { color: var(--accent-yellow); }
+    .status-pill.busy .dot { background: var(--accent-yellow); }
+    main { max-width: 900px; margin: 0 auto; padding: 24px; }
+    .card {
+      background: var(--bg-card); border: 1px solid var(--border-primary);
+      border-radius: 12px; padding: 20px; margin-bottom: 16px;
+    }
+    .card h2 { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+    .card p.desc { font-size: 13px; color: var(--text-secondary); margin-bottom: 16px; line-height: 1.5; }
+    .howto {
+      background: rgba(249,115,22,.08); border: 1px solid rgba(249,115,22,.25);
+      border-radius: 10px; padding: 12px 14px; margin-bottom: 16px;
+      font-size: 13px; color: var(--text-secondary); line-height: 1.55;
+    }
+    .howto strong { color: var(--text-primary); }
+    .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: end; }
+    .field { display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 140px; }
+    .field span { font-size: 11px; font-weight: 500; color: var(--text-secondary); text-transform: uppercase; letter-spacing: .04em; }
+    input, select {
+      background: var(--bg-primary); border: 1px solid var(--border-primary);
+      color: var(--text-primary); border-radius: 8px; padding: 10px 12px;
+      font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 13px; outline: none;
+    }
+    input:focus, select:focus { border-color: var(--accent-orange); }
+    .btn {
+      border: none; border-radius: 8px; padding: 10px 14px; font-size: 13px;
+      font-weight: 600; cursor: pointer; font-family: inherit;
+      background: var(--accent-blue); color: white;
+    }
+    .btn:hover { filter: brightness(1.08); }
+    .btn:disabled { opacity: .45; cursor: not-allowed; }
+    .btn-ghost {
+      background: transparent; color: var(--text-secondary);
+      border: 1px solid var(--border-primary);
+    }
+    .btn-ghost:hover { background: var(--bg-hover); color: var(--text-primary); }
+    .btn-green { background: rgba(34,197,94,.15); color: var(--accent-green); border: 1px solid rgba(34,197,94,.25); }
+    .btn-red { background: rgba(239,68,68,.12); color: var(--accent-red); border: 1px solid rgba(239,68,68,.25); }
+    .btn-orange { background: rgba(249,115,22,.15); color: var(--accent-orange); border: 1px solid rgba(249,115,22,.3); }
+    .actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+    .intel-card {
+      background: var(--bg-secondary); border: 1px solid var(--border-primary);
+      border-radius: 12px; padding: 14px; margin-bottom: 14px;
+    }
+    .intel-card h3 { font-size: 14px; margin-bottom: 10px; }
+    .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 16px; }
+    @media (max-width: 800px) { .stats { grid-template-columns: 1fr 1fr; } }
+    .stat {
+      background: var(--bg-secondary); border: 1px solid var(--border-primary);
+      border-radius: 12px; padding: 16px;
+    }
+    .stat .label { font-size: 11px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: .05em; font-weight: 500; }
+    .stat .value { font-size: 24px; font-weight: 700; margin-top: 6px; }
+    .stat .sub { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+    .c-green { color: var(--accent-green); }
+    .c-orange { color: var(--accent-orange); }
+    .empty {
+      text-align: center; color: var(--text-muted); padding: 28px;
+      border: 1px dashed var(--border-primary); border-radius: 10px; font-size: 13px;
+    }
+    .log {
+      height: 280px; overflow: auto; background: var(--bg-primary);
+      border: 1px solid var(--border-primary); border-radius: 10px;
+      padding: 12px; font-family: "JetBrains Mono", ui-monospace, monospace;
+      font-size: 11px; line-height: 1.55; margin-top: 12px;
+    }
+    .log .ok { color: var(--accent-green); }
+    .log .err { color: var(--accent-red); }
+    .log .info { color: var(--text-muted); }
+    .log .warn { color: var(--accent-yellow); }
+    .footer-bar {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      background: var(--bg-secondary); border-top: 1px solid var(--border-primary);
+      padding: 8px 24px; font-size: 11px; color: var(--text-muted);
+      display: flex; justify-content: space-between;
+    }
+    a { color: var(--accent-blue); }
+    .mm-bal-grid {
+      display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin: 12px 0;
+    }
+    @media (max-width: 700px) { .mm-bal-grid { grid-template-columns: 1fr; } }
+    .mm-bal-card {
+      background: var(--bg-secondary); border: 1px solid var(--border-primary);
+      border-radius: 10px; padding: 12px 14px;
+    }
+    .mm-bal-card .k { font-size: 11px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: .04em; }
+    .mm-bal-card .v { font-size: 20px; font-weight: 700; margin-top: 4px; font-family: "JetBrains Mono", monospace; }
+    .mm-bal-card .s { font-size: 11px; color: var(--text-muted); margin-top: 4px; word-break: break-all; }
+    .mm-wallet-wrap {
+      max-height: 320px; overflow: auto; border: 1px solid var(--border-primary);
+      border-radius: 10px; margin-top: 10px; background: var(--bg-primary);
+    }
+    table.mm-wallets {
+      width: 100%; border-collapse: collapse; font-size: 12px;
+      font-family: "JetBrains Mono", ui-monospace, monospace;
+    }
+    table.mm-wallets th {
+      position: sticky; top: 0; background: var(--bg-secondary);
+      text-align: left; padding: 8px 10px; color: var(--text-secondary);
+      font-weight: 600; font-size: 10px; text-transform: uppercase; letter-spacing: .04em;
+      border-bottom: 1px solid var(--border-primary);
+    }
+    table.mm-wallets td {
+      padding: 7px 10px; border-bottom: 1px solid rgba(30,41,59,.6);
+      color: var(--text-primary); white-space: nowrap;
+    }
+    table.mm-wallets tr:hover td { background: var(--bg-hover); }
+    table.mm-wallets .num { text-align: right; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="header-inner">
+      <div class="logo">
+        <div class="logo-badge">TX</div>
+        <span class="logo-text">NOXA TX BOT</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px">
+        <span class="status-pill" id="pill"><span class="dot"></span><span id="pillText">Idle</span></span>
+        <button class="btn-ghost" id="btnRefresh" style="padding:6px 10px">Refresh</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="card">
+      <h2>TX Booster — stay trending (cheap)</h2>
+      <p class="desc">Runs on its own process (:3849) so it doesn’t fight the bundler or sniper for RPC. Pads token tx count on a dedicated wallet.</p>
+      <div class="howto">
+        <strong>Cheapest:</strong> Mode = <strong>Transfer</strong> (self dust token xfers). Mix = mostly transfers + occasional buy. Buy-only is the expensive path.
+        Fund from a funder wallet imported here, or send ETH to the TX bot address manually.
+      </div>
+
+      <div class="intel-card">
+        <h3>TX bot wallet</h3>
+        <div id="txBotWalletBox" class="empty">No TX bot wallet yet.</div>
+        <div class="actions" style="margin-top:10px">
+          <button class="btn" id="btnTxBotCreate">Create wallet</button>
+          <button class="btn-ghost" id="btnTxBotImport">Import PK</button>
+          <button class="btn-ghost" id="btnTxBotPk">Show address</button>
+        </div>
+        <div class="row" style="margin-top:10px;align-items:end">
+          <div class="field" style="max-width:140px"><span>Fund from funder (ETH)</span><input id="txBotFundEth" type="number" step="0.001" min="0.001" max="0.2" value="0.12" title="For $50 rebate volume: ~0.08 LP + 0.03 cycle + gas" /></div>
+          <button class="btn-orange" id="btnTxBotFund">Fund wallet</button>
+          <button class="btn-ghost" id="btnFunderImport">Import funder PK</button>
+        </div>
+        <div id="funderLine" style="margin-top:8px;font-size:12px;color:var(--text-muted)">Funder: —</div>
+      </div>
+
+      <div class="row" style="align-items:end;flex-wrap:wrap;gap:12px">
+        <div class="field" style="flex:1;min-width:220px"><span>Token</span><input id="txBotToken" placeholder="0x…" /></div>
+        <div class="field" style="max-width:200px">
+          <span>Mode</span>
+          <select id="txBotMode">
+            <option value="transfer" selected>Transfer — cheapest (~$0.002/tx)</option>
+            <option value="mix">Mix 1 buy : 9 xfer</option>
+            <option value="buy">Buy only (~$0.01/tx)</option>
+          </select>
+        </div>
+        <div class="field" style="max-width:160px">
+          <span>Speed</span>
+          <select id="txBotSpeed">
+            <option value="slow">Slow (45–90s) — cheapest $/hr</option>
+            <option value="medium">Medium (8–15s)</option>
+            <option value="high">High (0.8–2s)</option>
+            <option value="blaze" selected>Blaze (0.15–0.4s) — fastest</option>
+          </select>
+        </div>
+        <div class="field" style="max-width:160px"><span>Buy size (ETH)</span><input id="txBotBuyEth" type="text" value="0.0000001" title="Only used for Buy / Mix buys" /></div>
+        <div class="field" style="max-width:120px"><span>Jitter size</span>
+          <select id="txBotJitter"><option value="1" selected>On</option><option value="0">Off</option></select>
+        </div>
+      </div>
+
+      <div class="actions" style="margin-top:12px">
+        <button class="btn-green" id="btnTxBotStart">Start booster</button>
+        <button class="btn-red" id="btnTxBotStop">Stop</button>
+        <button class="btn-ghost" id="btnTxBotRefresh">Refresh status</button>
+      </div>
+
+      <div id="txBotStats" class="stats">
+        <div class="stat"><div class="label">Status</div><div class="value" id="txBotStatusVal" style="font-size:18px">Off</div><div class="sub" id="txBotStatusSub">—</div></div>
+        <div class="stat"><div class="label">OK txs</div><div class="value c-green" id="txBotOk" style="font-size:18px">0</div><div class="sub">failed <span id="txBotFail">0</span></div></div>
+        <div class="stat"><div class="label">Spent (buys+gas)</div><div class="value c-orange" id="txBotSpentUsd" style="font-size:18px">$0</div><div class="sub"><span id="txBotSpent">0</span> ETH · gas <span id="txBotGasEth">0</span> · <span id="txBotAvg">avg —/tx</span></div></div>
+        <div class="stat"><div class="label">Next buy</div><div class="value" id="txBotNext" style="font-size:16px">—</div><div class="sub" id="txBotLast">—</div></div>
+      </div>
+      <div class="log" id="logTxBot"></div>
+    </section>
+
+    <section class="card" id="volumeSection">
+      <h2>Volume booster — DEX volume (buy ↔ sell)</h2>
+      <p class="desc">Separate from the TX-count padder. Cycles a Uniswap buy then full sell so the token shows real volume. Uses the same TX bot wallet.</p>
+      <div class="howto">
+        <strong>Why $50 lost ~$1:</strong> locker owns most in-range liquidity — a thin self-LP only captures a few % of fees. <strong>Fee rebate</strong> needs a <em>tight</em> band (width 1–2) + enough LP seed (~0.3 ETH+) so your share is ≥55%. Collect gas was also too low (fixed).
+      </div>
+
+      <div class="row" style="align-items:end;flex-wrap:wrap;gap:12px">
+        <div class="field" style="flex:1;min-width:220px"><span>Token</span><input id="volToken" placeholder="0x… (defaults to TX token)" /></div>
+        <div class="field" style="max-width:160px">
+          <span>Size preset</span>
+          <select id="volPreset">
+            <option value="50" selected>$50 + rebate (recommended)</option>
+            <option value="2.5">Micro $2.50 (no rebate)</option>
+            <option value="5">Small $5 (no rebate)</option>
+            <option value="15">Med $15</option>
+          </select>
+        </div>
+        <div class="field" style="max-width:120px"><span>Size (USD)</span><input id="volUsd" type="number" step="0.5" min="0.5" max="200" value="50" title="Buy size in USD per cycle" /></div>
+        <div class="field" style="max-width:120px"><span>LP seed (ETH)</span><input id="volLpEth" type="number" step="0.01" min="0.05" max="2" value="0.30" title="ETH for self-LP — need enough to beat locker (~55%+ of in-range L)" /></div>
+        <div class="field" style="max-width:110px"><span>Collect every</span><input id="volCollectN" type="number" step="1" min="1" max="20" value="4" title="Collect LP fees every N cycles — higher = less gas" /></div>
+        <div class="field" style="max-width:100px"><span>Range width</span><input id="volWidth" type="number" step="1" min="1" max="20" value="2" title="LP width in tick spacings — tighter = more fee share per ETH" /></div>
+        <div class="field" style="max-width:120px"><span>Max loss $</span><input id="volMaxLoss" type="number" step="0.01" min="0.01" max="5" value="0.25" title="Pause if net loss after a collect exceeds this" /></div>
+        <div class="field" style="max-width:100px"><span>Jitter %</span><input id="volJitter" type="number" step="1" min="0" max="25" value="5" /></div>
+        <div class="field" style="max-width:160px">
+          <span>Speed</span>
+          <select id="volSpeed">
+            <option value="slow">Slow (1.5–3 min)</option>
+            <option value="medium" selected>Medium (35–70s)</option>
+            <option value="high">High (18–35s)</option>
+          </select>
+        </div>
+      </div>
+      <label style="display:flex;align-items:center;gap:8px;margin-top:10px;font-size:13px;color:var(--text-secondary);cursor:pointer">
+        <input type="checkbox" id="volRebate" style="width:auto" checked />
+        Fee rebate (self-LP) — required for cheap $50 cycles
+      </label>
+      <div id="volEstLoss" style="margin-top:8px;font-size:12px;color:var(--text-muted)">Est. loss/cycle: —</div>
+
+      <div class="actions" style="margin-top:12px">
+        <button class="btn-green" id="btnVolStart">Start volume</button>
+        <button class="btn-red" id="btnVolStop">Stop volume</button>
+        <button class="btn-ghost" id="btnVolRefresh">Refresh</button>
+      </div>
+
+      <div id="volStats" class="stats">
+        <div class="stat"><div class="label">Status</div><div class="value" id="volStatusVal" style="font-size:18px">Off</div><div class="sub" id="volStatusSub">—</div></div>
+        <div class="stat"><div class="label">Cycles</div><div class="value c-green" id="volCycles" style="font-size:18px">0</div><div class="sub">buys <span id="volBuys">0</span> · sells <span id="volSells">0</span> · fail <span id="volFail">0</span></div></div>
+        <div class="stat"><div class="label">Volume printed</div><div class="value c-orange" id="volPrinted" style="font-size:18px">$0</div><div class="sub"><span id="volEth">0</span> ETH · gas <span id="volGas">$0</span></div></div>
+        <div class="stat"><div class="label">Round-trip loss</div><div class="value" id="volLoss" style="font-size:18px">$0</div><div class="sub" id="volLossSub">pool fee + gas · last —</div></div>
+      </div>
+      <div class="log" id="logVol"></div>
+    </section>
+
+    <section class="card" id="trendSection">
+      <h2>Trend mode — multi-wallet makers + volume</h2>
+      <p class="desc" style="margin:0 0 12px">Rotates buys/sells across many wallets for <strong>unique makers</strong> (what DexScreener weights heavily). Smaller size × more wallets beats one whale. Mutual exclusion with Volume / TX pad.</p>
+      <div class="row" style="flex-wrap:wrap;gap:10px;align-items:flex-end">
+        <div class="field" style="min-width:220px;flex:1"><span>Token</span><input id="trendToken" placeholder="0x…" /></div>
+        <div class="field" style="max-width:110px"><span>$ / cycle</span><input id="trendUsd" type="number" step="1" min="1" max="80" value="8" /></div>
+        <div class="field" style="max-width:100px"><span>Jitter %</span><input id="trendJitter" type="number" step="1" min="0" max="80" value="35" /></div>
+        <div class="field" style="max-width:110px"><span>Max loss $</span><input id="trendMaxLoss" type="number" step="0.01" min="0.05" max="5" value="0.35" /></div>
+        <div class="field" style="max-width:120px"><span>Speed</span>
+          <select id="trendSpeed"><option value="slow">Slow</option><option value="medium" selected>Medium</option><option value="high">High</option></select>
+        </div>
+        <div class="field" style="max-width:120px"><span>Fund each (ETH)</span><input id="trendFundEth" type="number" step="0.001" min="0.002" max="0.05" value="0.008" /></div>
+      </div>
+      <div id="trendEstLoss" style="margin-top:8px;font-size:12px;color:var(--text-muted)">Est. loss/cycle ≈ 2% of size + gas · import ≥2 wallets first</div>
+      <div class="actions" style="margin-top:12px;flex-wrap:wrap">
+        <button class="btn" id="btnTrendImport">Import buyers from bundler</button>
+        <button class="btn-orange" id="btnTrendFund">Fund trend wallets</button>
+        <button class="btn-green" id="btnTrendStart">Start trend</button>
+        <button class="btn-red" id="btnTrendStop">Stop trend</button>
+        <button class="btn-ghost" id="btnTrendRefresh">Refresh</button>
+      </div>
+      <div id="trendStats" class="stats" style="margin-top:12px">
+        <div class="stat"><div class="label">Status</div><div class="value" id="trendStatusVal" style="font-size:18px">Off</div><div class="sub" id="trendStatusSub">—</div></div>
+        <div class="stat"><div class="label">Makers</div><div class="value c-green" id="trendMakers" style="font-size:18px">0</div><div class="sub">wallets in pool <span id="trendPool">0</span></div></div>
+        <div class="stat"><div class="label">Volume</div><div class="value c-orange" id="trendVol" style="font-size:18px">$0</div><div class="sub">cycles <span id="trendCycles">0</span> · fail <span id="trendFail">0</span></div></div>
+        <div class="stat"><div class="label">Loss</div><div class="value" id="trendLoss" style="font-size:18px">$0</div><div class="sub" id="trendLossSub">pool fee + gas</div></div>
+      </div>
+      <div class="log" id="logTrend"></div>
+    </section>
+
+    <section class="card" id="mmSection">
+      <h2>Chart MM — sell high / buy dips (inventory)</h2>
+      <p class="desc" style="margin:0 0 8px">Paints the zig-zag with <strong>existing bags</strong> (sell into green) + dry powder (buy red). Fee ≈ 1%/leg — not $1k wash. Cap: 25% of inventory · $400 fee pause.</p>
+      <div id="mmOpsPrep" style="margin:0 0 12px;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:12px;color:var(--text-secondary);line-height:1.5">
+        <strong style="color:var(--text)">Prep</strong> — set <em>Buy budget</em> to what you actually have (e.g. 0.55). Phases scale down automatically.<br>
+        1. Funder → <code>0x684D107Cd9898fd5F1c8f068F16DC6418279f9F7</code><br>
+        2. Import buyers → Fund wallets (fit count × ETH/wallet to your balance) → Start MM<br>
+        3. Watch DexScreener 5m · optional Boost while running
+      </div>
+      <div class="mm-bal-grid" id="mmBalGrid">
+        <div class="mm-bal-card">
+          <div class="k">Funder ETH</div>
+          <div class="v c-green" id="mmFunderEth">…</div>
+          <div class="s" id="mmFunderAddr">—</div>
+        </div>
+        <div class="mm-bal-card">
+          <div class="k">MM wallets · ETH</div>
+          <div class="v c-orange" id="mmPoolEth">…</div>
+          <div class="s" id="mmPoolCount">0 wallets</div>
+        </div>
+        <div class="mm-bal-card">
+          <div class="k">Pengu bags · USD</div>
+          <div class="v" id="mmPoolTokUsd">…</div>
+          <div class="s" id="mmPoolTok">token — · px —</div>
+        </div>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
+        <div style="font-size:12px;color:var(--text-secondary)">Imported MM wallets (live balances)</div>
+        <button class="btn-ghost" id="btnMmOverview" type="button" style="padding:6px 10px;font-size:12px">Refresh balances</button>
+      </div>
+      <div class="mm-wallet-wrap">
+        <table class="mm-wallets">
+          <thead>
+            <tr><th>#</th><th>Name</th><th>Address</th><th class="num">ETH</th><th class="num">Token</th><th class="num">~$</th></tr>
+          </thead>
+          <tbody id="mmWalletBody">
+            <tr><td colspan="6" style="color:var(--text-muted);padding:16px;text-align:center">Loading wallets…</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="row" style="flex-wrap:wrap;gap:10px;align-items:flex-end;margin-top:14px">
+        <div class="field" style="min-width:220px;flex:1"><span>Token</span><input id="mmToken" placeholder="0x…" value="0x8E0821112f5b63a5939eAeeBaF251eB7958081b6" /></div>
+        <div class="field" style="max-width:110px"><span>Buy ETH/tx</span><input id="mmBuyEth" type="number" step="0.001" min="0.002" max="0.05" value="0.008" /></div>
+        <div class="field" style="max-width:100px"><span>Sell %/tx</span><input id="mmSellPct" type="number" step="0.5" min="1" max="15" value="3" /></div>
+        <div class="field" style="max-width:110px"><span>Bag cap %</span><input id="mmInvCap" type="number" step="1" min="5" max="50" value="25" /></div>
+        <div class="field" style="max-width:110px"><span>Fee cap $</span><input id="mmFeeCap" type="number" step="10" min="50" max="2000" value="400" /></div>
+        <div class="field" style="max-width:120px"><span>Speed</span>
+          <select id="mmSpeed"><option value="slow">Slow</option><option value="medium" selected>Medium</option><option value="high">High</option></select>
+        </div>
+        <div class="field" style="max-width:120px"><span>Buy budget ETH</span><input id="mmBuyBudget" type="number" step="0.01" min="0.05" max="5" value="0.55" title="Total ETH for all buy phases — scales the plan (was ~0.70). Use what you have." /></div>
+        <div class="field" style="max-width:110px"><span>Fund wallets #</span><input id="mmFundCount" type="number" step="1" min="1" max="60" value="20" /></div>
+        <div class="field" style="max-width:120px"><span>Fund each</span><input id="mmFundEth" type="number" step="0.001" min="0.002" max="0.05" value="0.01" /></div>
+      </div>
+      <div id="mmFundHint" style="margin-top:8px;font-size:12px;color:var(--text-muted)">Fund plan: 20 × 0.01 = 0.20 ETH · leave ~0.01 on funder · buy budget 0.55 ETH</div>
+      <div id="mmPhaseHint" style="margin-top:4px;font-size:12px;color:var(--text-muted)">Phases: pump→0.000074 · dip→0.000050 · pump · dip→0.000052 · push→0.000095</div>
+      <div class="actions" style="margin-top:12px;flex-wrap:wrap">
+        <button class="btn" id="btnMmImport">Import buyers</button>
+        <button class="btn-orange" id="btnMmFund">Fund MM wallets</button>
+        <button class="btn-green" id="btnMmStart">Start chart MM</button>
+        <button class="btn-red" id="btnMmStop">Stop MM</button>
+        <button class="btn-ghost" id="btnMmRefresh">Refresh</button>
+      </div>
+      <div id="mmStats" class="stats" style="margin-top:12px">
+        <div class="stat"><div class="label">Status</div><div class="value" id="mmStatusVal" style="font-size:18px">Off</div><div class="sub" id="mmStatusSub">—</div></div>
+        <div class="stat"><div class="label">Phase</div><div class="value c-green" id="mmPhase" style="font-size:16px">—</div><div class="sub">px <span id="mmPrice">—</span></div></div>
+        <div class="stat"><div class="label">Makers / bag</div><div class="value c-orange" id="mmMakers" style="font-size:18px">0</div><div class="sub">sold <span id="mmBagPct">0</span>% · pool <span id="mmPool">0</span></div></div>
+        <div class="stat"><div class="label">Volume / fees</div><div class="value" id="mmVol" style="font-size:18px">$0</div><div class="sub">fees ~$<span id="mmFees">0</span> · B/S <span id="mmBs">0/0</span></div></div>
+      </div>
+      <div id="mmLedger" class="stats" style="margin-top:10px;grid-template-columns:repeat(4,1fr)">
+        <div class="stat"><div class="label">Buy ETH spent</div><div class="value" id="mmBuySpent" style="font-size:16px">0</div><div class="sub">sell ETH in <span id="mmSellIn">0</span></div></div>
+        <div class="stat"><div class="label">Gas</div><div class="value" id="mmGas" style="font-size:16px">0</div><div class="sub">~$<span id="mmGasUsd">0</span></div></div>
+        <div class="stat"><div class="label">Session cost</div><div class="value c-orange" id="mmCost" style="font-size:16px">$0</div><div class="sub">fees + gas · fail <span id="mmFail">0</span></div></div>
+        <div class="stat"><div class="label">External moves</div><div class="value" id="mmExt" style="font-size:16px">0</div><div class="sub">price jumps between our txs</div></div>
+      </div>
+      <div style="margin-top:10px;font-size:12px;color:var(--text-secondary)">Live log — funding + every buy/sell with wallet balances, gas, fees, price Δ</div>
+      <div class="log" id="logMm" style="height:420px"></div>
+    </section>
+  </main>
+
+  <div class="footer-bar">
+    <span>TX Bot · localhost:3849 · bundler :3847 · sniper :3848</span>
+    <span id="footerHint">Separate process — won’t block the bundler</span>
+  </div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const state = { txBot: null, volumeBot: null, trendBot: null, mmBot: null, mmOverview: null, wallets: [], lastToken: "" };
+
+function short(a){ return a ? a.slice(0,6)+"…"+a.slice(-4) : "—"; }
+function fmt(n,d=4){ if(n==null||Number.isNaN(+n)) return "—"; const x=+n; if(!x) return "0"; if(x<1e-4) return x.toExponential(2); return x.toFixed(d); }
+function fmtTok(n){
+  if(n==null||!Number.isFinite(+n)) return "—";
+  const x=+n;
+  if(x>=1e9) return (x/1e9).toFixed(2)+"B";
+  if(x>=1e6) return (x/1e6).toFixed(2)+"M";
+  if(x>=1e3) return (x/1e3).toFixed(1)+"K";
+  return x.toFixed(0);
+}
+function money(n,d=2){
+  if(n==null||!Number.isFinite(+n)) return "—";
+  const x=+n;
+  if(Math.abs(x)<0.01) return "$"+x.toFixed(4);
+  return "$"+x.toFixed(d);
+}
+
+async function api(path, opts){
+  const r = await fetch(path, {
+    headers: { "Content-Type": "application/json", ...(opts?.headers||{}) },
+    ...opts,
+  });
+  const j = await r.json().catch(() => ({}));
+  if(!r.ok) throw new Error(j.error || r.statusText || "Request failed");
+  return j;
+}
+
+function setBusy(on, text){
+  const pill = $("pill");
+  const t = $("pillText");
+  if(on){ pill.classList.add("busy"); t.textContent = text || "Working…"; }
+  else {
+    pill.classList.remove("busy");
+    const running = state.txBot?.running || state.volumeBot?.running || state.trendBot?.running || state.mmBot?.running;
+    t.textContent = state.mmBot?.running ? "CHART MM" : state.trendBot?.running ? "TREND" : state.volumeBot?.running ? "VOLUME" : (state.txBot?.running ? "TX PAD" : "Idle");
+  }
+}
+
+function renderVolume(){
+  const vb = state.volumeBot || {};
+  if($("volToken") && vb.token && !$("volToken").value) $("volToken").value = vb.token;
+  if($("volToken") && !$("volToken").value && (state.txBot?.token || state.lastToken)) {
+    $("volToken").value = state.txBot?.token || state.lastToken;
+  }
+  if($("volUsd") && vb.targetUsd!=null) $("volUsd").value = vb.targetUsd;
+  if($("volJitter") && vb.jitterPct!=null) $("volJitter").value = vb.jitterPct;
+  if($("volMaxLoss") && vb.maxLossUsd!=null) $("volMaxLoss").value = vb.maxLossUsd;
+  if($("volLpEth") && vb.lpEth!=null) $("volLpEth").value = vb.lpEth;
+  if($("volCollectN") && vb.collectEveryN!=null) $("volCollectN").value = vb.collectEveryN;
+  if($("volWidth") && vb.widthSteps!=null) $("volWidth").value = vb.widthSteps;
+  if($("volRebate")) $("volRebate").checked = vb.rebateMode !== false;
+  if($("volSpeed") && vb.speed) $("volSpeed").value = vb.speed;
+  if($("volPreset") && vb.targetUsd!=null){
+    const p = String(vb.targetUsd);
+    const opt = [...$("volPreset").options].find(o => o.value === p);
+    if(opt) $("volPreset").value = p;
+  }
+  updateVolEst();
+  const running = !!vb.running;
+  if($("volStatusVal")){
+    $("volStatusVal").textContent = running ? "RUNNING" : (vb.stopping ? "Stopping…" : "Off");
+    $("volStatusVal").style.color = running ? "var(--accent-green)" : "var(--text-muted)";
+  }
+  if($("volStatusSub")){
+    const est = vb.estLossUsd != null ? vb.estLossUsd : estimateVolLoss(Number(vb.targetUsd||50), vb.rebateMode !== false);
+    const reb = vb.rebateMode !== false ? "rebate ON" : "no rebate";
+    $("volStatusSub").textContent = `~$${vb.targetUsd||50}/cycle · ${reb} · est ~$${Number(est).toFixed(3)} · ${vb.speedLabel||vb.speed||"—"}` + (vb.lpTokenId ? ` · LP #${vb.lpTokenId}` : "") + (vb.token ? " · "+short(vb.token) : "");
+  }
+  if($("volCycles")) $("volCycles").textContent = vb.stats?.cycles ?? 0;
+  if($("volBuys")) $("volBuys").textContent = vb.stats?.okBuys ?? 0;
+  if($("volSells")) $("volSells").textContent = vb.stats?.okSells ?? 0;
+  if($("volFail")) $("volFail").textContent = vb.stats?.fail ?? 0;
+  if($("volPrinted")) $("volPrinted").textContent = money(vb.stats?.volumeUsd ?? 0, 0);
+  if($("volEth")) $("volEth").textContent = fmt(vb.stats?.volumeEth, 5);
+  if($("volGas")){
+    const g = vb.stats?.gasUsd != null ? vb.stats.gasUsd : (vb.stats?.avgGasUsd != null ? vb.stats.avgGasUsd * (vb.stats?.cycles||0) : null);
+    $("volGas").textContent = g!=null ? money(g, 3) : "—";
+  }
+  if($("volLoss")) $("volLoss").textContent = money(vb.stats?.lossUsd ?? 0, 3);
+  if($("volLossSub")){
+    const last = vb.stats?.lastCycleLossUsd;
+    $("volLossSub").textContent = last!=null
+      ? `pool fee + gas · last ${money(last, 3)}`
+      : "pool fee + gas · last —";
+  }
+  const log = $("logVol");
+  if(log && Array.isArray(vb.logs)){
+    log.innerHTML = vb.logs.slice(0,40).map(e => {
+      const cls = e.kind==="ok"?"ok":e.kind==="err"?"err":e.kind==="warn"?"warn":"info";
+      return `<div class="${cls}">${e.text||""}</div>`;
+    }).join("");
+  }
+}
+
+function renderTxBot(){
+  const tb = state.txBot || {};
+  const w = tb.wallet;
+  const box = $("txBotWalletBox");
+  if(box){
+    if(!w){
+      box.className = "empty";
+      box.textContent = "No TX bot wallet yet — create or import one.";
+    } else {
+      box.className = "";
+      const bal = state.wallets?.find(x => x.address?.toLowerCase()===w.address?.toLowerCase())?.balance;
+      box.innerHTML = `<div style="font-family:JetBrains Mono,monospace;font-size:12px">
+        <div><strong>${w.name||"TX Bot"}</strong> · <a href="https://robinhoodchain.blockscout.com/address/${w.address}" target="_blank" rel="noopener">${w.address}</a></div>
+        <div style="margin-top:6px;color:var(--text-secondary)">Balance: <strong style="color:var(--accent-green)">${bal!=null?fmt(bal,5)+" ETH":"…"}</strong></div>
+      </div>`;
+    }
+  }
+  const funder = state.wallets?.find(x => String(x.role||"").toLowerCase() === "funder");
+  if($("funderLine")){
+    const live = state.mmOverview?.funder;
+    const bal = live?.eth != null ? live.eth : funder?.balance;
+    const addr = live?.address || funder?.address;
+    $("funderLine").innerHTML = addr
+      ? `Funder: <a href="https://robinhoodchain.blockscout.com/address/${addr}" target="_blank" rel="noopener">${addr}</a> · <strong style="color:var(--accent-green)">${bal!=null?fmt(bal,5)+" ETH":"…"}</strong>`
+      : "Funder: none — import funder PK to use Fund, or send ETH manually";
+  }
+  if($("txBotToken") && tb.token && !$("txBotToken").value) $("txBotToken").value = tb.token;
+  if($("txBotToken") && !$("txBotToken").value && state.lastToken) $("txBotToken").value = state.lastToken;
+  if($("txBotSpeed") && tb.speed) $("txBotSpeed").value = tb.speed;
+  if($("txBotMode") && tb.mode) $("txBotMode").value = tb.mode;
+  if($("txBotBuyEth") && tb.buyEth) $("txBotBuyEth").value = tb.buyEth;
+  if($("txBotJitter") && tb.jitterBuy!=null) $("txBotJitter").value = tb.jitterBuy ? "1" : "0";
+
+  const running = !!tb.running;
+  if($("txBotStatusVal")){
+    $("txBotStatusVal").textContent = running ? "RUNNING" : (tb.stopping ? "Stopping…" : "Off");
+    $("txBotStatusVal").style.color = running ? "var(--accent-green)" : "var(--text-muted)";
+  }
+  if($("txBotStatusSub")) $("txBotStatusSub").textContent = (tb.modeLabel||tb.mode||"—") + " · " + (tb.speedLabel||tb.speed||"—") + (tb.token ? " · "+short(tb.token) : "");
+  if($("txBotOk")) $("txBotOk").textContent = tb.stats?.ok ?? 0;
+  if($("txBotFail")) $("txBotFail").textContent = tb.stats?.fail ?? 0;
+  const ethSpent = Number(tb.stats?.ethSpent||0);
+  const gasEth = Number(tb.stats?.gasEth||0);
+  const totalEth = Number(tb.stats?.totalEth != null ? tb.stats.totalEth : ethSpent + gasEth);
+  const spentUsd = tb.stats?.spentUsd != null ? Number(tb.stats.spentUsd) : (tb.ethUsd ? totalEth * Number(tb.ethUsd) : null);
+  if($("txBotSpent")) $("txBotSpent").textContent = fmt(totalEth, 8);
+  if($("txBotGasEth")) $("txBotGasEth").textContent = fmt(gasEth, 8);
+  if($("txBotSpentUsd")){
+    $("txBotSpentUsd").textContent = spentUsd!=null && Number.isFinite(spentUsd)
+      ? ("$" + (spentUsd < 1 ? spentUsd.toFixed(4) : spentUsd.toFixed(2)))
+      : "…";
+  }
+  if($("txBotAvg")){
+    const avg = tb.stats?.avgUsdPerTx;
+    $("txBotAvg").textContent = avg!=null && Number.isFinite(avg)
+      ? ("avg $" + (avg < 0.01 ? avg.toFixed(4) : avg.toFixed(3)) + "/tx")
+      : "avg —/tx";
+  }
+  if($("txBotNext")) $("txBotNext").textContent = tb.nextAt ? new Date(tb.nextAt).toLocaleTimeString() : "—";
+  if($("txBotLast")){
+    const last = tb.stats?.lastHash ? short(tb.stats.lastHash) : (tb.stats?.lastError || "—");
+    $("txBotLast").textContent = tb.lastTxAt ? ("last "+new Date(tb.lastTxAt).toLocaleTimeString()+" · "+last) : last;
+  }
+  const log = $("logTxBot");
+  if(log && Array.isArray(tb.logs)){
+    log.innerHTML = tb.logs.slice(0,40).map(e => {
+      const cls = e.kind==="ok"?"ok":e.kind==="err"?"err":e.kind==="warn"?"warn":"info";
+      return `<div class="${cls}">${e.text||""}</div>`;
+    }).join("");
+  }
+  renderVolume();
+  setBusy(false);
+}
+
+async function refresh(){
+  const s = await api("/api/state?balances=1");
+  state.wallets = s.wallets || [];
+  state.txBot = s.txBot || state.txBot;
+  state.volumeBot = s.volumeBot || state.volumeBot;
+  state.trendBot = s.trendBot || state.trendBot;
+  state.mmBot = s.mmBot || state.mmBot;
+  state.lastToken = s.lastToken || state.lastToken;
+  renderTxBot();
+  renderTrend();
+  renderMm();
+  renderMmOverview();
+  refreshMmOverview().catch(()=>{});
+}
+
+async function refreshTxBotStatus(){
+  try {
+    state.txBot = await api("/api/txbot/status");
+    renderTxBot();
+  } catch(e){ console.error(e); }
+}
+
+async function refreshVolStatus(){
+  try {
+    state.volumeBot = await api("/api/volume/status");
+    renderVolume();
+    setBusy(false);
+  } catch(e){ console.error(e); }
+}
+
+function trendCfgFromForm(){
+  return {
+    token: ($("trendToken")?.value.trim() || $("volToken")?.value.trim() || $("txBotToken")?.value.trim() || state.lastToken || ""),
+    speed: $("trendSpeed")?.value || "medium",
+    targetUsd: Number($("trendUsd")?.value) || 8,
+    jitterPct: Number($("trendJitter")?.value) || 35,
+    maxLossUsd: Number($("trendMaxLoss")?.value) || 0.35,
+  };
+}
+
+function updateTrendEst(){
+  const usd = Number($("trendUsd")?.value) || 8;
+  const est = usd * 0.02 + 0.03;
+  if($("trendEstLoss")){
+    $("trendEstLoss").textContent = `Est. loss/cycle ≈ $${est.toFixed(3)} (2% pool fee + gas). 100 cycles ≈ $${(est*100).toFixed(0)} · $${(usd*100).toFixed(0)} volume · up to 100 makers if funded.`;
+  }
+}
+
+function renderTrend(){
+  const tb = state.trendBot || {};
+  if($("trendToken") && tb.token && !$("trendToken").value) $("trendToken").value = tb.token;
+  if($("trendToken") && !$("trendToken").value && (state.volumeBot?.token || state.lastToken)) {
+    $("trendToken").value = state.volumeBot?.token || state.lastToken;
+  }
+  if($("trendUsd") && tb.targetUsd!=null) $("trendUsd").value = tb.targetUsd;
+  if($("trendJitter") && tb.jitterPct!=null) $("trendJitter").value = tb.jitterPct;
+  if($("trendMaxLoss") && tb.maxLossUsd!=null) $("trendMaxLoss").value = tb.maxLossUsd;
+  if($("trendSpeed") && tb.speed) $("trendSpeed").value = tb.speed;
+  updateTrendEst();
+  const running = !!tb.running;
+  if($("trendStatusVal")){
+    $("trendStatusVal").textContent = running ? "RUNNING" : (tb.stopping ? "Stopping…" : "Off");
+    $("trendStatusVal").style.color = running ? "var(--accent-green)" : "var(--text-muted)";
+  }
+  if($("trendStatusSub")){
+    $("trendStatusSub").textContent = `~$${tb.targetUsd||8}/cycle · est ~$${Number(tb.estLossUsd||0).toFixed(3)} · ${tb.speedLabel||tb.speed||"—"}`;
+  }
+  if($("trendMakers")) $("trendMakers").textContent = tb.makerCount ?? tb.stats?.makerCount ?? 0;
+  if($("trendPool")) $("trendPool").textContent = tb.walletCount ?? 0;
+  if($("trendVol")) $("trendVol").textContent = money(tb.stats?.volumeUsd, 0);
+  if($("trendCycles")) $("trendCycles").textContent = tb.stats?.cycles ?? 0;
+  if($("trendFail")) $("trendFail").textContent = tb.stats?.fail ?? 0;
+  const lossUsd = tb.stats?.lossUsd != null ? tb.stats.lossUsd
+    : (tb.stats?.ethUsd && tb.stats?.roundtripLossEth ? tb.stats.roundtripLossEth * tb.stats.ethUsd : null);
+  if($("trendLoss")) $("trendLoss").textContent = money(lossUsd, 2);
+  if($("trendLossSub")){
+    const last = tb.stats?.lastCycleLossUsd;
+    $("trendLossSub").textContent = last!=null ? `last ~$${Number(last).toFixed(3)}` : "pool fee + gas";
+  }
+  const log = $("logTrend");
+  if(log && Array.isArray(tb.logs)){
+    log.innerHTML = tb.logs.slice(0,40).map(e => {
+      const cls = e.kind==="err"?"bad": e.kind==="ok"?"ok": e.kind==="warn"?"warn":"";
+      return `<div class="${cls}">${e.text||""}</div>`;
+    }).join("");
+  }
+}
+
+async function refreshTrendStatus(){
+  try {
+    state.trendBot = await api("/api/trend/status");
+    renderTrend();
+    setBusy(false);
+  } catch(e){ console.error(e); }
+}
+
+function mmCfgFromForm(){
+  return {
+    token: ($("mmToken")?.value.trim() || state.lastToken || "0x8E0821112f5b63a5939eAeeBaF251eB7958081b6"),
+    speed: $("mmSpeed")?.value || "medium",
+    buyEthPerTx: Number($("mmBuyEth")?.value) || 0.008,
+    sellPctPerTx: Number($("mmSellPct")?.value) || 3,
+    maxInventoryPct: Number($("mmInvCap")?.value) || 25,
+    sessionFeeCapUsd: Number($("mmFeeCap")?.value) || 400,
+    buyBudgetEth: Number($("mmBuyBudget")?.value) || 0.55,
+  };
+}
+
+function updateMmFundHint(){
+  const n = Math.max(1, Number($("mmFundCount")?.value) || 20);
+  const per = Number($("mmFundEth")?.value) || 0.01;
+  const budget = Number($("mmBuyBudget")?.value) || 0.55;
+  const need = n * per;
+  const funderEth = state.mmOverview?.funder?.eth ?? state.wallets?.find(w => String(w.role||"").toLowerCase()==="funder")?.balance;
+  const have = funderEth != null ? Number(funderEth) : null;
+  let msg = `Fund plan: ${n} × ${per} = ${need.toFixed(3)} ETH · leave ~0.01 on funder · buy budget ${budget} ETH`;
+  if(have != null){
+    const ok = have >= need + 0.01;
+    msg += ` · funder has ${fmt(have,4)} ETH${ok ? " ✓" : " (short — lower count or ETH/wallet)"}`;
+    if($("mmFundHint")) $("mmFundHint").style.color = ok ? "var(--text-muted)" : "var(--accent-orange)";
+  }
+  if($("mmFundHint")) $("mmFundHint").textContent = msg;
+}
+
+function renderMmOverview(){
+  const ov = state.mmOverview;
+  if(!ov){
+    // Fallback from state.wallets while overview loads
+    const funder = state.wallets?.find(x => String(x.role||"").toLowerCase()==="funder");
+    const mms = (state.wallets||[]).filter(x => {
+      const r = String(x.role||"").toLowerCase();
+      return r==="mm"||r==="trend"||r==="buyer";
+    });
+    if($("mmFunderEth")) $("mmFunderEth").textContent = funder?.balance!=null ? fmt(funder.balance,5) : "…";
+    if($("mmFunderAddr")) $("mmFunderAddr").textContent = funder?.address || "No funder in store";
+    if($("mmPoolEth")){
+      const ethSum = mms.reduce((s,w)=>s+(Number(w.balance)||0),0);
+      $("mmPoolEth").textContent = mms.length ? fmt(ethSum,5) : "0";
+    }
+    if($("mmPoolCount")) $("mmPoolCount").textContent = `${mms.length} wallets (ETH only — loading tokens…)`;
+    if($("mmPoolTokUsd")) $("mmPoolTokUsd").textContent = "…";
+    if($("mmPoolTok")) $("mmPoolTok").textContent = "fetching token balances…";
+    if($("mmWalletBody") && mms.length){
+      $("mmWalletBody").innerHTML = mms.map((w,i) => `<tr>
+        <td>${w.index??i}</td>
+        <td>${(w.name||"MM").replace(/</g,"")}</td>
+        <td><a href="https://robinhoodchain.blockscout.com/address/${w.address}" target="_blank" rel="noopener">${short(w.address)}</a></td>
+        <td class="num">${w.balance!=null?fmt(w.balance,5):"…"}</td>
+        <td class="num">…</td>
+        <td class="num">…</td>
+      </tr>`).join("");
+    } else if($("mmWalletBody") && !mms.length){
+      $("mmWalletBody").innerHTML = `<tr><td colspan="6" style="color:var(--text-muted);padding:16px;text-align:center">No MM wallets yet — click Import buyers</td></tr>`;
+    }
+    return;
+  }
+  const f = ov.funder;
+  if($("mmFunderEth")) $("mmFunderEth").textContent = f?.eth!=null ? fmt(f.eth,5) : (f ? "…" : "none");
+  if($("mmFunderAddr")){
+    $("mmFunderAddr").innerHTML = f?.address
+      ? `<a href="https://robinhoodchain.blockscout.com/address/${f.address}" target="_blank" rel="noopener">${f.address}</a>`
+      : "No funder — import funder PK above";
+  }
+  if($("mmPoolEth")) $("mmPoolEth").textContent = ov.summary?.totalEthLabel?.replace(" ETH","") || fmt(ov.summary?.totalEth,5);
+  if($("mmPoolCount")) $("mmPoolCount").textContent = `${ov.summary?.walletCount||0} wallets · ${ov.summary?.totalEthLabel||"—"}`;
+  if($("mmPoolTokUsd")) $("mmPoolTokUsd").textContent = ov.summary?.tokWorthUsdLabel || "—";
+  if($("mmPoolTok")){
+    const px = ov.priceUsd!=null ? Number(ov.priceUsd).toFixed(8) : "—";
+    $("mmPoolTok").textContent = `${ov.summary?.totalTokenLabel||"—"} tok · px $${px}`;
+  }
+  const body = $("mmWalletBody");
+  if(body){
+    const rows = ov.wallets || [];
+    if(!rows.length){
+      body.innerHTML = `<tr><td colspan="6" style="color:var(--text-muted);padding:16px;text-align:center">No MM wallets — click Import buyers</td></tr>`;
+    } else {
+      const px = ov.priceUsd;
+      body.innerHTML = rows.map(w => {
+        const usd = (px!=null && w.token!=null) ? "$"+Math.round(w.token*px).toLocaleString() : "—";
+        return `<tr>
+          <td>${w.index}</td>
+          <td>${String(w.name||"").replace(/</g,"")}</td>
+          <td><a href="https://robinhoodchain.blockscout.com/address/${w.address}" target="_blank" rel="noopener">${short(w.address)}</a></td>
+          <td class="num">${w.eth!=null?fmt(w.eth,5):"—"}</td>
+          <td class="num">${fmtTok(w.token)}</td>
+          <td class="num">${usd}</td>
+        </tr>`;
+      }).join("");
+    }
+  }
+}
+
+async function refreshMmOverview(opts){
+  const withTokens = !!(opts && opts.tokens);
+  try {
+    const token = ($("mmToken")?.value.trim() || state.lastToken || "0x8E0821112f5b63a5939eAeeBaF251eB7958081b6");
+    const fast = await api("/api/mm/overview?tokens=0&token="+encodeURIComponent(token));
+    state.mmOverview = fast;
+    if(fast.status) state.mmBot = fast.status;
+    renderMmOverview();
+    renderMm();
+    renderTxBot();
+    updateMmFundHint();
+    if(withTokens){
+      api("/api/mm/overview?tokens=1&token="+encodeURIComponent(token)).then(ov => {
+        state.mmOverview = ov;
+        if(ov.status) state.mmBot = ov.status;
+        renderMmOverview();
+        renderMm();
+        renderTxBot();
+      }).catch(console.error);
+    }
+  } catch(e){
+    console.error(e);
+    renderMmOverview();
+  }
+}
+
+function renderMm(){
+  const mb = state.mmBot || {};
+  if($("mmToken") && mb.token && !$("mmToken").value) $("mmToken").value = mb.token;
+  if($("mmBuyEth") && mb.buyEthPerTx!=null) $("mmBuyEth").value = mb.buyEthPerTx;
+  if($("mmSellPct") && mb.sellPctPerTx!=null) $("mmSellPct").value = mb.sellPctPerTx;
+  if($("mmInvCap") && mb.maxInventoryPct!=null) $("mmInvCap").value = mb.maxInventoryPct;
+  if($("mmFeeCap") && mb.sessionFeeCapUsd!=null) $("mmFeeCap").value = mb.sessionFeeCapUsd;
+  if($("mmBuyBudget") && mb.buyBudgetEth!=null) $("mmBuyBudget").value = mb.buyBudgetEth;
+  if($("mmSpeed") && mb.speed) $("mmSpeed").value = mb.speed;
+  const running = !!mb.running;
+  if($("mmStatusVal")){
+    $("mmStatusVal").textContent = running ? "RUNNING" : (mb.stopping ? "Stopping…" : "Off");
+    $("mmStatusVal").style.color = running ? "var(--accent-green)" : "var(--text-muted)";
+  }
+  if($("mmStatusSub")){
+    $("mmStatusSub").textContent = mb.speedLabel || mb.speed || "—";
+  }
+  if($("mmPhase")){
+    const ph = mb.phase;
+    $("mmPhase").textContent = ph ? `${(mb.phaseIndex||0)+1}/${mb.phaseCount||5} ${ph.action}` : "—";
+    $("mmPhase").title = ph?.label || "";
+  }
+  if($("mmPrice")){
+    const px = mb.stats?.lastPriceUsd;
+    $("mmPrice").textContent = px!=null ? Number(px).toFixed(8) : "—";
+  }
+  if($("mmMakers")) $("mmMakers").textContent = mb.makerCount ?? mb.stats?.makerCount ?? 0;
+  if($("mmBagPct")) $("mmBagPct").textContent = mb.inventorySoldPct ?? 0;
+  if($("mmPool")) $("mmPool").textContent = mb.walletCount ?? 0;
+  if($("mmVol")) $("mmVol").textContent = money(mb.stats?.volumeUsd, 0);
+  if($("mmFees")) $("mmFees").textContent = Math.round(mb.stats?.feesEstUsd || 0);
+  if($("mmBs")) $("mmBs").textContent = `${mb.stats?.buys||0}/${mb.stats?.sells||0}`;
+  const led = mb.ledger || mb.stats || {};
+  if($("mmBuySpent")) $("mmBuySpent").textContent = fmt(led.buyEthSpent ?? mb.stats?.buyEthSpent, 4);
+  if($("mmSellIn")) $("mmSellIn").textContent = fmt(led.sellEthIn ?? mb.stats?.sellEthIn, 4);
+  if($("mmGas")) $("mmGas").textContent = fmt(led.gasEth ?? mb.stats?.gasEth, 5) + " ETH";
+  if($("mmGasUsd")) $("mmGasUsd").textContent = Number(led.gasUsd ?? mb.stats?.gasUsd ?? 0).toFixed(2);
+  if($("mmCost")) $("mmCost").textContent = money(led.costUsd ?? mb.stats?.costUsd, 2);
+  if($("mmFail")) $("mmFail").textContent = mb.stats?.fail ?? 0;
+  if($("mmExt")) $("mmExt").textContent = led.extMoves ?? mb.stats?.extMoves ?? 0;
+  if($("mmPhaseHint") && mb.phase?.label){
+    const bud = mb.phase.budgetEth != null ? ` · phase budget ${mb.phase.budgetEth} ETH` : "";
+    $("mmPhaseHint").textContent = `Now: ${mb.phase.label} · target $${Number(mb.phase.targetUsd).toFixed(8)} · floor $${Number(mb.phase.floorUsd).toFixed(8)}${bud}`;
+  }
+  updateMmFundHint();
+  const log = $("logMm");
+  if(log && Array.isArray(mb.logs)){
+    log.innerHTML = mb.logs.slice(0,120).map(e => {
+      const cls = e.kind==="err"?"err": e.kind==="ok"?"ok": e.kind==="warn"?"warn":"info";
+      const t = e.at ? new Date(e.at).toLocaleTimeString() + " " : "";
+      return `<div class="${cls}">${t}${e.text||""}</div>`;
+    }).join("");
+  }
+  // Keep overview cards in sync when we only have state.wallets
+  if(!state.mmOverview) renderMmOverview();
+}
+
+async function refreshMmStatus(){
+  try {
+    state.mmBot = await api("/api/mm/status");
+    renderMm();
+    await refreshMmOverview();
+    setBusy(false);
+  } catch(e){ console.error(e); }
+}
+
+async function txBotCfgFromForm(){
+  return {
+    token: $("txBotToken").value.trim() || state.lastToken || "",
+    speed: $("txBotSpeed").value || "medium",
+    mode: $("txBotMode") ? $("txBotMode").value : "transfer",
+    buyEth: $("txBotBuyEth").value.trim() || "0.0000001",
+    jitterBuy: $("txBotJitter").value !== "0",
+  };
+}
+
+function estimateVolLoss(usd, rebate, share){
+  const n = Number(usd)||50;
+  if(rebate) {
+    const s = share != null && share > 0 ? Math.min(0.99, Number(share)) : 0.55;
+    const every = Number($("volCollectN")?.value) || 4;
+    return n * 0.02 * (1 - s) + 0.035 + 0.015/every;
+  }
+  return n * 0.011 + 0.02;
+}
+function volCfgFromForm(){
+  const rebate = $("volRebate") ? !!$("volRebate").checked : true;
+  return {
+    token: ($("volToken").value.trim() || $("txBotToken").value.trim() || state.lastToken || ""),
+    speed: $("volSpeed").value || "medium",
+    targetUsd: Number($("volUsd").value) || (rebate ? 50 : 2.5),
+    jitterPct: Number($("volJitter").value) || 0,
+    maxLossUsd: Number($("volMaxLoss")?.value) || (rebate ? 0.25 : 0.08),
+    rebateMode: rebate,
+    lpEth: Number($("volLpEth")?.value) || 0.30,
+    collectEveryN: Number($("volCollectN")?.value) || 4,
+    widthSteps: Number($("volWidth")?.value) || 2,
+  };
+}
+
+function updateVolEst(){
+  const rebate = $("volRebate") ? !!$("volRebate").checked : true;
+  const usd = Number($("volUsd")?.value) || (rebate ? 50 : 2.5);
+  const share = state.volumeBot?.lpShare;
+  const est = estimateVolLoss(usd, rebate, share);
+  if($("volEstLoss")){
+    const pct = share != null ? ` · LP share ${(Number(share)*100).toFixed(1)}%` : " · target ≥55% share";
+    $("volEstLoss").textContent = rebate
+      ? `Est. avg NET ≈ $${est.toFixed(3)}/cycle (unrecovered fee + gas)${pct}. Seed ~${$("volLpEth")?.value||0.30} ETH · width ${$("volWidth")?.value||2}.`
+      : `Est. loss ≈ $${est.toFixed(3)} (pool fee) · enable Fee rebate for $50`;
+    $("volEstLoss").style.color = (!rebate && usd >= 25) || (rebate && est > 0.4) ? "var(--accent-orange)" : "var(--text-muted)";
+  }
+}
+
+let _txBotCfgTimer = null;
+async function applyTxBotLiveCfg(silent){
+  try {
+    const cfg = await txBotCfgFromForm();
+    const r = await api("/api/txbot/configure", { method:"POST", body: JSON.stringify(cfg) });
+    state.txBot = r.status || r;
+    renderTxBot();
+  } catch(e){
+    if(!silent) console.error(e);
+  }
+}
+function scheduleTxBotLiveCfg(){
+  clearTimeout(_txBotCfgTimer);
+  _txBotCfgTimer = setTimeout(() => applyTxBotLiveCfg(true), 200);
+}
+
+$("txBotSpeed").onchange = () => applyTxBotLiveCfg(true);
+$("txBotMode").onchange = () => applyTxBotLiveCfg(true);
+$("txBotJitter").onchange = () => applyTxBotLiveCfg(true);
+$("txBotBuyEth").onchange = () => applyTxBotLiveCfg(true);
+$("txBotBuyEth").oninput = () => scheduleTxBotLiveCfg();
+$("txBotToken").onchange = () => applyTxBotLiveCfg(true);
+
+$("btnTxBotCreate").onclick = async () => {
+  try {
+    setBusy(true, "Creating…");
+    const r = await api("/api/txbot/wallet/create", { method:"POST", body:"{}" });
+    state.txBot = r.status;
+    await refresh();
+  } catch(e){ setBusy(false); alert(e.message); }
+};
+$("btnTxBotImport").onclick = async () => {
+  const pk = prompt("Paste TX bot private key (0x…)");
+  if(!pk) return;
+  try {
+    setBusy(true, "Importing…");
+    const r = await api("/api/txbot/wallet/import", { method:"POST", body: JSON.stringify({ privateKey: pk.trim() }) });
+    state.txBot = r.status;
+    await refresh();
+  } catch(e){ setBusy(false); alert(e.message); }
+};
+$("btnTxBotPk").onclick = () => {
+  alert("TX bot address:\n"+(state.txBot?.wallet?.address||"—")+"\n\nKeys live in data/txbot.json on the server — never commit that file.");
+};
+$("btnFunderImport").onclick = async () => {
+  const pk = prompt("Paste funder private key (same as bundler funder, for funding only)");
+  if(!pk) return;
+  try {
+    setBusy(true, "Importing funder…");
+    await api("/api/txbot/funder/import", { method:"POST", body: JSON.stringify({ privateKey: pk.trim() }) });
+    await refresh();
+  } catch(e){ setBusy(false); alert(e.message); }
+};
+$("btnTxBotFund").onclick = async () => {
+  try {
+    setBusy(true, "Funding…");
+    if($("logTxBot")) $("logTxBot").innerHTML = "";
+    await api("/api/txbot/fund", { method:"POST", body: JSON.stringify({
+      amountEth: $("txBotFundEth").value || "0.002",
+    })});
+  } catch(e){ setBusy(false); alert(e.message); }
+};
+$("btnTxBotStart").onclick = async () => {
+  try {
+    const cfg = await txBotCfgFromForm();
+    if(!cfg.token){ alert("Set token address"); return; }
+    if(state.volumeBot?.running){ alert("Stop Volume booster first"); return; }
+    if(state.trendBot?.running){ alert("Stop Trend booster first"); return; }
+    if(state.mmBot?.running){ alert("Stop Chart MM first"); return; }
+    if(!confirm(`Start TX booster?\n\nToken ${cfg.token}\nSpeed ${cfg.speed}\nMode ${cfg.mode}`)) return;
+    setBusy(true, "Starting…");
+    const r = await api("/api/txbot/start", { method:"POST", body: JSON.stringify(cfg) });
+    state.txBot = r.status;
+    renderTxBot();
+  } catch(e){ setBusy(false); alert(e.message); }
+};
+$("btnTxBotStop").onclick = async () => {
+  try {
+    const r = await api("/api/txbot/stop", { method:"POST", body:"{}" });
+    state.txBot = r.status;
+    renderTxBot();
+  } catch(e){ alert(e.message); }
+};
+$("btnTxBotRefresh").onclick = () => refreshTxBotStatus();
+$("btnRefresh").onclick = () => refresh();
+
+$("btnVolStart").onclick = async () => {
+  try {
+    const cfg = volCfgFromForm();
+    if(!cfg.token){ alert("Set token address"); return; }
+    if(state.txBot?.running){ alert("Stop the TX count booster first"); return; }
+    if(state.trendBot?.running){ alert("Stop Trend booster first"); return; }
+    if(state.mmBot?.running){ alert("Stop Chart MM first"); return; }
+    if(!confirm(`Start VOLUME booster?\n\n~$${cfg.targetUsd} buy → sell\nFee rebate: ${cfg.rebateMode?"ON (self-LP)":"OFF"}\nEst. net loss ~$${estimateVolLoss(cfg.targetUsd, cfg.rebateMode).toFixed(3)}/cycle\nLP seed: ${cfg.lpEth} ETH\nMax pause: $${cfg.maxLossUsd}\n\n${cfg.rebateMode?"First run mints a tight LP so pool fees come back to you.":"Without rebate, pool fee ≈ 1% each way."}`)) return;
+    setBusy(true, "Starting volume…");
+    const r = await api("/api/volume/start", { method:"POST", body: JSON.stringify(cfg) });
+    state.volumeBot = r.status;
+    renderVolume();
+    setBusy(false);
+  } catch(e){ setBusy(false); alert(e.message); }
+};
+$("btnVolStop").onclick = async () => {
+  try {
+    const r = await api("/api/volume/stop", { method:"POST", body:"{}" });
+    state.volumeBot = r.status;
+    renderVolume();
+    setBusy(false);
+  } catch(e){ alert(e.message); }
+};
+$("btnVolRefresh").onclick = () => refreshVolStatus();
+
+$("btnTrendImport").onclick = async () => {
+  try {
+    setBusy(true, "Importing buyers…");
+    const r = await api("/api/trend/import-buyers", { method:"POST", body: JSON.stringify({ limit: 40 }) });
+    state.trendBot = r.status;
+    renderTrend();
+    setBusy(false);
+    alert(`Imported/updated · pool now ${r.poolSize} wallets (added ${r.added} new)`);
+  } catch(e){ setBusy(false); alert(e.message); }
+};
+$("btnTrendFund").onclick = async () => {
+  try {
+    const per = Number($("trendFundEth")?.value) || 0.008;
+    if(!confirm(`Fund up to 30 trend wallets with ~${per} ETH each from funder?\n\nNeed funder on TX host + enough ETH.`)) return;
+    setBusy(true, "Funding trend wallets…");
+    const r = await api("/api/trend/fund", { method:"POST", body: JSON.stringify({ perWalletEth: per, maxWallets: 30 }) });
+    setBusy(false);
+    alert(`Funded ${r.funded} wallets @ ${r.perWalletEth} ETH`);
+    await refreshTrendStatus();
+  } catch(e){ setBusy(false); alert(e.message); }
+};
+$("btnTrendStart").onclick = async () => {
+  try {
+    const cfg = trendCfgFromForm();
+    if(!cfg.token){ alert("Set token address"); return; }
+    if(state.txBot?.running){ alert("Stop TX padder first"); return; }
+    if(state.volumeBot?.running){ alert("Stop Volume booster first"); return; }
+    if(state.mmBot?.running){ alert("Stop Chart MM first"); return; }
+    const est = cfg.targetUsd * 0.02 + 0.03;
+    if(!confirm(`Start TREND mode?\n\n~$${cfg.targetUsd}/cycle across many wallets\nEst. loss ~$${est.toFixed(3)}/cycle (2% fee + gas)\nJitter ${cfg.jitterPct}%\n\nImport + fund wallets first.`)) return;
+    setBusy(true, "Starting trend…");
+    const r = await api("/api/trend/start", { method:"POST", body: JSON.stringify(cfg) });
+    state.trendBot = r.status;
+    renderTrend();
+    setBusy(false);
+  } catch(e){ setBusy(false); alert(e.message); }
+};
+$("btnTrendStop").onclick = async () => {
+  try {
+    const r = await api("/api/trend/stop", { method:"POST", body:"{}" });
+    state.trendBot = r.status;
+    renderTrend();
+    setBusy(false);
+  } catch(e){ alert(e.message); }
+};
+$("btnTrendRefresh").onclick = () => refreshTrendStatus();
+["trendUsd","trendJitter","trendSpeed","trendToken","trendMaxLoss"].forEach(id => {
+  const el = $(id);
+  if(!el) return;
+  el.onchange = async () => {
+    updateTrendEst();
+    try {
+      const r = await api("/api/trend/configure", { method:"POST", body: JSON.stringify(trendCfgFromForm()) });
+      state.trendBot = r.status || r;
+      renderTrend();
+    } catch(_){}
+  };
+  if(id === "trendUsd") el.oninput = () => updateTrendEst();
+});
+
+$("btnMmImport").onclick = async () => {
+  try {
+    setBusy(true, "Importing buyers for MM…");
+    const r = await api("/api/mm/import-buyers", { method:"POST", body: JSON.stringify({ limit: 78 }) });
+    state.mmBot = r.status;
+    await refresh();
+    setBusy(false);
+    alert(`MM pool ${r.poolSize} wallets (added ${r.added}, updated ${r.updated})\n\nSet Buy budget to what you have (e.g. 0.55), then Fund MM wallets.`);
+  } catch(e){ setBusy(false); alert(e.message); }
+};
+$("btnMmFund").onclick = async () => {
+  try {
+    const per = Number($("mmFundEth")?.value) || 0.01;
+    const n = Math.max(1, Number($("mmFundCount")?.value) || 20);
+    const need = (n * per).toFixed(3);
+    const funderEth = state.mmOverview?.funder?.eth;
+    const have = funderEth != null ? `Funder has ${Number(funderEth).toFixed(4)} ETH.` : "";
+    if(!confirm(`Fund up to ${n} MM wallets with ~${per} ETH each (~${need} ETH total)?\n\n${have}\nWatch the live log below — each send appears as it happens.`)) return;
+    setBusy(true, "Funding MM wallets… watch log");
+    // Scroll log into view so user sees live lines
+    $("logMm")?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    const r = await api("/api/mm/fund", { method:"POST", body: JSON.stringify({ perWalletEth: per, maxWallets: n, leaveEth: 0.01 }) });
+    if(r.status) state.mmBot = r.status;
+    renderMm();
+    await refreshMmOverview();
+    setBusy(false);
+    // soft notice — details already in log
+    const msg = `Funded ${r.funded} wallets · sent ${(r.fundedEth||0).toFixed(4)} ETH` + (r.funderBalAfter!=null ? ` · funder left ${Number(r.funderBalAfter).toFixed(4)}` : "");
+    if(state.mmBot){
+      state.mmBot.logs = [{ at: new Date().toISOString(), text: "📋 "+msg, kind: "ok" }, ...(state.mmBot.logs||[])].slice(0,120);
+      renderMm();
+    }
+  } catch(e){ setBusy(false); alert(e.message); }
+};
+$("btnMmStart").onclick = async () => {
+  try {
+    const cfg = mmCfgFromForm();
+    if(!cfg.token){ alert("Set token"); return; }
+    if(state.txBot?.running || state.volumeBot?.running || state.trendBot?.running){
+      alert("Stop TX / Volume / Trend first"); return;
+    }
+    if(!confirm(`Start Chart MM?\n\nBuy budget ${cfg.buyBudgetEth} ETH (phases scale to this)\nBag cap ${cfg.maxInventoryPct}% · fee cap $${cfg.sessionFeeCapUsd}\nBuy ${cfg.buyEthPerTx} ETH/tx · sell ${cfg.sellPctPerTx}%/tx\n\nUses existing bags + funder ETH.`)) return;
+    setBusy(true, "Starting chart MM…");
+    const r = await api("/api/mm/start", { method:"POST", body: JSON.stringify(cfg) });
+    state.mmBot = r.status;
+    renderMm();
+    setBusy(false);
+  } catch(e){ setBusy(false); alert(e.message); }
+};
+$("btnMmStop").onclick = async () => {
+  try {
+    const r = await api("/api/mm/stop", { method:"POST", body:"{}" });
+    state.mmBot = r.status;
+    renderMm();
+    setBusy(false);
+  } catch(e){ alert(e.message); }
+};
+if($("btnMmOverview")) $("btnMmOverview").onclick = () => refreshMmOverview({ tokens: true });
+$("btnMmRefresh").onclick = () => {
+  refreshMmStatus();
+  refreshMmOverview({ tokens: true });
+};
+["mmToken","mmBuyEth","mmSellPct","mmInvCap","mmFeeCap","mmSpeed","mmBuyBudget"].forEach(id => {
+  const el = $(id);
+  if(!el) return;
+  el.onchange = async () => {
+    try {
+      const r = await api("/api/mm/configure", { method:"POST", body: JSON.stringify(mmCfgFromForm()) });
+      state.mmBot = r.status || r;
+      renderMm();
+      if(id === "mmToken") refreshMmOverview().catch(()=>{});
+    } catch(_){}
+  };
+  if(id === "mmBuyBudget") el.oninput = () => updateMmFundHint();
+});
+["mmFundCount","mmFundEth"].forEach(id => {
+  const el = $(id);
+  if(!el) return;
+  el.oninput = () => updateMmFundHint();
+  el.onchange = () => updateMmFundHint();
+});
+
+["volUsd","volJitter","volSpeed","volToken","volMaxLoss","volLpEth","volRebate","volCollectN","volWidth"].forEach(id => {
+  const el = $(id);
+  if(!el) return;
+  el.onchange = async () => {
+    if(id === "volRebate" && $("volRebate").checked && Number($("volUsd").value) < 10){
+      $("volUsd").value = 50;
+      $("volMaxLoss").value = 0.25;
+      if($("volPreset")) $("volPreset").value = "50";
+    }
+    updateVolEst();
+    try {
+      const r = await api("/api/volume/configure", { method:"POST", body: JSON.stringify(volCfgFromForm()) });
+      state.volumeBot = r.status || r;
+      renderVolume();
+    } catch(_){}
+  };
+  if(id === "volUsd" || id === "volLpEth" || id === "volCollectN") el.oninput = () => updateVolEst();
+});
+if($("volPreset")){
+  $("volPreset").onchange = () => {
+    $("volUsd").value = $("volPreset").value;
+    if($("volPreset").value === "50" && $("volRebate")) $("volRebate").checked = true;
+    updateVolEst();
+    $("volUsd").dispatchEvent(new Event("change"));
+  };
+}
+
+const es = new EventSource("/api/events");
+es.onmessage = (ev) => {
+  try {
+    const msg = JSON.parse(ev.data);
+    if(msg.type==="txbot_status" || msg.type==="txbot_log" || msg.type==="txbot_tx"){
+      if(msg.status) state.txBot = msg.status;
+      else if(msg.entry && state.txBot){
+        state.txBot.logs = [msg.entry, ...(state.txBot.logs||[])].slice(0,40);
+      }
+      renderTxBot();
+    }
+    if(msg.type==="volume_status" || msg.type==="volume_log" || msg.type==="volume_tx"){
+      if(msg.status) state.volumeBot = msg.status;
+      else if(msg.entry && state.volumeBot){
+        state.volumeBot.logs = [msg.entry, ...(state.volumeBot.logs||[])].slice(0,40);
+      }
+      renderVolume();
+      setBusy(!!(state.volumeBot?.running || state.txBot?.running || state.trendBot?.running || state.mmBot?.running));
+    }
+    if(msg.type==="trend_status" || msg.type==="trend_log" || msg.type==="trend_tx"){
+      if(msg.status) state.trendBot = msg.status;
+      else if(msg.entry && state.trendBot){
+        state.trendBot.logs = [msg.entry, ...(state.trendBot.logs||[])].slice(0,40);
+      }
+      renderTrend();
+      setBusy(!!(state.volumeBot?.running || state.txBot?.running || state.trendBot?.running || state.mmBot?.running));
+    }
+    if(msg.type==="mm_status" || msg.type==="mm_log" || msg.type==="mm_tx" || msg.type==="mm_fund_done"){
+      if(msg.status) state.mmBot = msg.status;
+      else if(msg.entry && state.mmBot){
+        state.mmBot.logs = [msg.entry, ...(state.mmBot.logs||[])].slice(0,120);
+      }
+      renderMm();
+      setBusy(!!(state.volumeBot?.running || state.txBot?.running || state.trendBot?.running || state.mmBot?.running));
+      // Auto-scroll log on new lines while funding/running
+      const logEl = $("logMm");
+      if(logEl && (msg.type==="mm_log" || msg.type==="mm_fund_done")) logEl.scrollTop = 0;
+    }
+    if(msg.type==="balances"){
+      if(Array.isArray(msg.wallets)){
+        state.wallets = msg.wallets;
+      } else if(Array.isArray(msg.updates)){
+        if(!Array.isArray(state.wallets)) state.wallets = [];
+        for(const u of msg.updates){
+          const key = String(u.address||"").toLowerCase();
+          const i = state.wallets.findIndex(w => String(w.address||"").toLowerCase()===key);
+          if(i>=0) state.wallets[i] = { ...state.wallets[i], ...u };
+          else state.wallets.push(u);
+        }
+      }
+      renderTxBot();
+      if(!state.mmOverview) renderMmOverview();
+      else {
+        // Patch funder ETH from live balance stream
+        const f = state.wallets.find(x => String(x.role||"").toLowerCase()==="funder");
+        if(f && state.mmOverview.funder && f.balance!=null){
+          state.mmOverview.funder.eth = Number(f.balance);
+          state.mmOverview.funder.ethLabel = Number(f.balance).toFixed(5)+" ETH";
+          if($("mmFunderEth")) $("mmFunderEth").textContent = fmt(f.balance,5);
+        }
+      }
+    }
+    if(msg.type==="job_done"){
+      refresh().catch(()=>{});
+    }
+  } catch(_){}
+};
+
+refresh().catch(console.error);
+setInterval(() => {
+  // light refresh only — don't hammer RPC with full token scans
+  api("/api/mm/status").then(s => { state.mmBot = s; renderMm(); }).catch(()=>{});
+  api("/api/state").then(s => {
+    state.wallets = s.wallets || state.wallets;
+    state.txBot = s.txBot || state.txBot;
+    renderTxBot();
+    renderMmOverview();
+  }).catch(()=>{});
+}, 15000);
+</script>
+</body>
+</html>

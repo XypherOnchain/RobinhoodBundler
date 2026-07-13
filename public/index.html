@@ -1,0 +1,3520 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>NOXA Launch Desk</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg-primary: #0a0e17;
+      --bg-secondary: #111827;
+      --bg-card: #1a1f2e;
+      --bg-hover: #232a3b;
+      --accent-green: #22c55e;
+      --accent-blue: #3b82f6;
+      --accent-purple: #a855f7;
+      --accent-orange: #f97316;
+      --accent-red: #ef4444;
+      --accent-yellow: #eab308;
+      --text-primary: #f1f5f9;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+      --border-primary: #1e293b;
+      --border-hover: #334155;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      min-height: 100vh;
+      padding-bottom: 48px;
+    }
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: #111827; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+
+    header {
+      border-bottom: 1px solid var(--border-primary);
+      background: rgba(17, 24, 39, 0.85);
+      backdrop-filter: blur(8px);
+      position: sticky; top: 0; z-index: 50;
+    }
+    .header-inner {
+      max-width: 1100px; margin: 0 auto; padding: 0 24px;
+      height: 56px; display: flex; align-items: center; justify-content: space-between; gap: 16px;
+    }
+    .logo { display: flex; align-items: center; gap: 10px; }
+    .logo-badge {
+      width: 32px; height: 32px; border-radius: 8px;
+      background: linear-gradient(135deg, var(--accent-purple), var(--accent-blue));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; font-weight: 700;
+    }
+    .logo-text { font-weight: 600; letter-spacing: -0.02em; font-size: 16px; }
+    nav { display: flex; gap: 4px; flex-wrap: wrap; }
+    nav button {
+      border: none; background: transparent; color: var(--text-secondary);
+      padding: 6px 12px; border-radius: 6px; font-size: 13px; font-weight: 500;
+      cursor: pointer; font-family: inherit;
+    }
+    nav button:hover { color: var(--text-primary); background: var(--bg-hover); }
+    nav button.active { background: rgba(59,130,246,.15); color: var(--accent-blue); }
+    .status-pill {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-size: 12px; font-weight: 500; color: var(--accent-green);
+    }
+    .status-pill .dot {
+      width: 7px; height: 7px; border-radius: 50%; background: var(--accent-green);
+    }
+    .status-pill.busy { color: var(--accent-yellow); }
+    .status-pill.busy .dot { background: var(--accent-yellow); }
+
+    .project-bar {
+      max-width: 1100px; margin: 0 auto; padding: 10px 24px 0;
+      display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+    }
+    .project-tabs { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+    .project-tab {
+      border: 1px solid var(--border-primary); background: var(--bg-secondary);
+      color: var(--text-secondary); padding: 7px 12px; border-radius: 8px;
+      font-size: 12px; font-weight: 600; cursor: pointer; font-family: inherit;
+    }
+    .project-tab:hover { border-color: var(--border-hover); color: var(--text-primary); }
+    .project-tab.active {
+      background: rgba(168,85,247,.15); border-color: rgba(168,85,247,.45);
+      color: #e9d5ff;
+    }
+    .project-tab .meta {
+      display: block; font-size: 10px; font-weight: 500; color: var(--text-muted);
+      margin-top: 2px; font-family: "JetBrains Mono", monospace;
+    }
+    .project-note {
+      font-size: 12px; color: var(--text-muted); margin-left: auto;
+    }
+    .project-banner {
+      max-width: 1100px; margin: 8px auto 0; padding: 0 24px;
+    }
+    .project-banner-inner {
+      background: rgba(234,179,8,.1); border: 1px solid rgba(234,179,8,.35);
+      color: var(--accent-yellow); border-radius: 8px; padding: 8px 12px;
+      font-size: 12px;
+    }
+
+
+    .seg {
+      display: inline-flex; gap: 0; border: 1px solid var(--border-primary);
+      border-radius: 10px; overflow: hidden; background: var(--bg-primary);
+    }
+    .seg-btn {
+      border: none; background: transparent; color: var(--text-secondary);
+      padding: 12px 18px; font-size: 13px; font-weight: 700; cursor: pointer;
+      font-family: inherit; min-width: 120px; transition: background .15s, color .15s;
+    }
+    .seg-btn + .seg-btn { border-left: 1px solid var(--border-primary); }
+    .seg-btn:hover { color: var(--text-primary); background: var(--bg-hover); }
+    .seg-btn.active {
+      background: var(--accent-blue); color: #fff;
+    }
+    .seg-btn.active[data-pad="apestore"] {
+      background: #16a34a; color: #fff;
+    }
+    .btn:active, .btn-ghost:active, .btn-green:active, .btn-red:active, .btn-orange:active {
+      transform: translateY(1px); filter: brightness(.92);
+    }
+    .btn.is-selected, .btn-green.is-selected {
+      outline: 2px solid #fff; outline-offset: 2px;
+      box-shadow: 0 0 0 3px rgba(59,130,246,.35);
+    }
+    .project-tab {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 8px 10px 8px 12px;
+    }
+    .project-tab .tab-main { text-align: left; }
+    .project-tab .x {
+      border: none; background: rgba(239,68,68,.12); color: var(--accent-red);
+      width: 22px; height: 22px; border-radius: 6px; cursor: pointer;
+      font-size: 14px; line-height: 1; font-weight: 700; flex-shrink: 0;
+    }
+    .project-tab .x:hover { background: rgba(239,68,68,.28); }
+    .launchpad-bar {
+      display: flex; flex-wrap: wrap; align-items: center; gap: 12px;
+      margin-bottom: 14px; padding: 12px 14px;
+      background: rgba(59,130,246,.06); border: 1px solid rgba(59,130,246,.2);
+      border-radius: 10px;
+    }
+    .launchpad-bar .hint { font-size: 12px; color: var(--text-muted); }
+
+    main { max-width: 1100px; margin: 0 auto; padding: 24px; }
+
+    .card {
+      background: var(--bg-card); border: 1px solid var(--border-primary);
+      border-radius: 12px; padding: 20px; margin-bottom: 16px;
+      animation: fadeIn .35s ease-out;
+    }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+    .card h2 { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+    .card p.desc { font-size: 13px; color: var(--text-secondary); margin-bottom: 16px; line-height: 1.5; }
+
+    .howto {
+      background: rgba(59,130,246,.08); border: 1px solid rgba(59,130,246,.2);
+      border-radius: 10px; padding: 12px 14px; margin-bottom: 16px;
+      font-size: 13px; color: var(--text-secondary); line-height: 1.55;
+    }
+    .howto strong { color: var(--text-primary); }
+    .howto ol { margin: 8px 0 0 18px; }
+    .howto li { margin: 4px 0; }
+
+    .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: end; }
+    .field { display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 140px; }
+    .field span { font-size: 11px; font-weight: 500; color: var(--text-secondary); text-transform: uppercase; letter-spacing: .04em; }
+    input, select {
+      background: var(--bg-primary); border: 1px solid var(--border-primary);
+      color: var(--text-primary); border-radius: 8px; padding: 10px 12px;
+      font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 13px; outline: none;
+    }
+    input:focus, select:focus { border-color: var(--accent-blue); }
+
+    .btn {
+      border: none; border-radius: 8px; padding: 10px 14px; font-size: 13px;
+      font-weight: 600; cursor: pointer; font-family: inherit;
+      background: var(--accent-blue); color: white;
+    }
+    .btn:hover { filter: brightness(1.08); }
+    .btn:disabled { opacity: .45; cursor: not-allowed; }
+    .btn-ghost {
+      background: transparent; color: var(--text-secondary);
+      border: 1px solid var(--border-primary);
+    }
+    .btn-ghost:hover { background: var(--bg-hover); color: var(--text-primary); }
+    .btn-green { background: rgba(34,197,94,.15); color: var(--accent-green); border: 1px solid rgba(34,197,94,.25); }
+    .btn-red { background: rgba(239,68,68,.12); color: var(--accent-red); border: 1px solid rgba(239,68,68,.25); }
+    .btn-orange { background: rgba(249,115,22,.15); color: var(--accent-orange); border: 1px solid rgba(249,115,22,.3); }
+    .sell-pcts { display: flex; flex-wrap: wrap; gap: 4px; }
+    .sell-pcts button {
+      padding: 6px 10px; font-size: 11px; font-weight: 700; border-radius: 6px;
+      border: 1px solid rgba(239,68,68,.35); background: rgba(239,68,68,.12);
+      color: var(--accent-red); cursor: pointer; font-family: inherit;
+    }
+    .sell-pcts button:hover { background: rgba(239,68,68,.22); }
+    .sell-pcts button:disabled { opacity: .4; cursor: not-allowed; }
+    .actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+    .tok-logo {
+      width: 40px; height: 40px; border-radius: 10px; object-fit: cover;
+      background: var(--bg-hover); border: 1px solid var(--border-primary); flex-shrink: 0;
+    }
+    .tok-logo.ph {
+      display: inline-flex; align-items: center; justify-content: center;
+      font-size: 12px; font-weight: 700; color: var(--text-muted);
+    }
+    .sig {
+      display: inline-block; padding: 1px 7px; border-radius: 999px; font-size: 10px;
+      font-family: Inter, sans-serif; font-weight: 600; margin: 1px 3px 1px 0;
+    }
+    .sig.ok { background: rgba(34,197,94,.12); color: var(--accent-green); }
+    .sig.warn { background: rgba(234,179,8,.12); color: var(--accent-yellow); }
+    .sig.bad { background: rgba(239,68,68,.12); color: var(--accent-red); }
+    .sig.info { background: rgba(59,130,246,.12); color: var(--accent-blue); }
+    .pairs-layout { display: grid; grid-template-columns: 1.4fr 1fr; gap: 14px; margin-top: 14px; }
+    @media (max-width: 980px) { .pairs-layout { grid-template-columns: 1fr; } }
+    .intel-card {
+      background: var(--bg-secondary); border: 1px solid var(--border-primary);
+      border-radius: 12px; padding: 14px; position: sticky; top: 72px; max-height: calc(100vh - 100px); overflow: auto;
+    }
+    .intel-card h3 { font-size: 14px; margin-bottom: 10px; }
+    .creator-launch {
+      display: flex; gap: 10px; align-items: center; padding: 8px 0;
+      border-bottom: 1px solid var(--border-primary); font-size: 12px;
+    }
+
+    .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px; }
+    @media (max-width: 800px) { .stats { grid-template-columns: 1fr 1fr; } }
+    .stat {
+      background: var(--bg-card); border: 1px solid var(--border-primary);
+      border-radius: 12px; padding: 16px;
+    }
+    .stat .label { font-size: 11px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: .05em; font-weight: 500; }
+    .stat .value { font-size: 24px; font-weight: 700; margin-top: 6px; }
+    .stat .sub { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+    .c-blue { color: var(--accent-blue); }
+    .c-green { color: var(--accent-green); }
+    .c-orange { color: var(--accent-orange); }
+    .c-purple { color: var(--accent-purple); }
+
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th {
+      text-align: left; font-size: 11px; color: var(--text-muted); text-transform: uppercase;
+      letter-spacing: .04em; font-weight: 500; padding: 8px 6px; border-bottom: 1px solid var(--border-primary);
+    }
+    td {
+      padding: 10px 6px; border-bottom: 1px solid var(--border-primary);
+      font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 12px;
+      vertical-align: middle;
+    }
+    td input { padding: 7px 8px; font-size: 12px; width: 100%; min-width: 80px; }
+    .tag {
+      display: inline-block; padding: 2px 8px; border-radius: 999px;
+      font-family: Inter, sans-serif; font-size: 11px; font-weight: 600;
+    }
+    .tag.funder { background: rgba(249,115,22,.15); color: var(--accent-orange); }
+    .tag.dev { background: rgba(34,197,94,.15); color: var(--accent-green); }
+    .tag.buyer { background: rgba(59,130,246,.15); color: var(--accent-blue); }
+    .tag.sniper { background: rgba(168,85,247,.15); color: var(--accent-purple); }
+    .tag.distributor { background: rgba(100,116,139,.2); color: var(--text-secondary); }
+    .empty {
+      text-align: center; color: var(--text-muted); padding: 28px;
+      border: 1px dashed var(--border-primary); border-radius: 10px; font-size: 13px;
+    }
+    .log {
+      height: 220px; overflow: auto; background: var(--bg-primary);
+      border: 1px solid var(--border-primary); border-radius: 10px;
+      padding: 12px; font-family: "JetBrains Mono", ui-monospace, monospace;
+      font-size: 11px; line-height: 1.55; margin-top: 12px;
+    }
+    .log .ok { color: var(--accent-green); }
+    .log .err { color: var(--accent-red); }
+    .log .info { color: var(--text-muted); }
+    .log .tx { color: #60a5fa; word-break: break-all; }
+    .progress {
+      height: 8px; background: var(--bg-primary); border-radius: 999px; overflow: hidden; margin: 12px 0 6px;
+    }
+    .progress > div {
+      height: 100%; background: var(--accent-blue); border-radius: 999px; transition: width .4s ease;
+    }
+    .warn { color: var(--accent-yellow); }
+    .hidden { display: none !important; }
+    .money-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 12px; margin-top: 12px;
+    }
+    .money-card {
+      background: var(--bg-primary); border: 1px solid var(--border-primary);
+      border-radius: 12px; padding: 14px 16px;
+    }
+    .money-card h3 {
+      font-size: 12px; font-weight: 600; color: var(--text-muted);
+      text-transform: uppercase; letter-spacing: .04em; margin-bottom: 8px;
+    }
+    .money-big {
+      font-size: 22px; font-weight: 700; letter-spacing: -0.03em;
+      font-family: "JetBrains Mono", monospace;
+    }
+    .money-row {
+      display: flex; justify-content: space-between; gap: 10px;
+      font-size: 13px; padding: 5px 0; border-bottom: 1px solid var(--border-primary);
+    }
+    .money-row:last-child { border-bottom: none; }
+    .money-row span:last-child { font-family: "JetBrains Mono", monospace; font-size: 12px; }
+    .money-plain {
+      margin-top: 10px; font-size: 13px; line-height: 1.45; color: var(--text-secondary);
+      background: rgba(59,130,246,.08); border-radius: 8px; padding: 10px 12px;
+    }
+    .money-plain.bad { background: rgba(239,68,68,.12); color: #fecaca; }
+    .money-plain.warn { background: rgba(234,179,8,.12); color: #fde68a; }
+    .money-plain.ok { background: rgba(34,197,94,.1); color: #bbf7d0; }
+    .check-list { list-style: none; margin-top: 8px; }
+    .check-list li {
+      display: flex; gap: 10px; align-items: flex-start;
+      padding: 8px 0; border-bottom: 1px solid var(--border-primary); font-size: 13px;
+    }
+    .check-dot {
+      width: 18px; height: 18px; border-radius: 50%; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 700; margin-top: 1px;
+    }
+    .check-dot.yes { background: rgba(34,197,94,.2); color: var(--accent-green); }
+    .check-dot.no { background: rgba(239,68,68,.2); color: var(--accent-red); }
+    .score-ring {
+      display: inline-flex; align-items: baseline; gap: 6px;
+      font-size: 28px; font-weight: 700; font-family: "JetBrains Mono", monospace;
+    }
+    .footer-bar {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      background: var(--bg-secondary); border-top: 1px solid var(--border-primary);
+      padding: 8px 24px; font-size: 11px; color: var(--text-muted);
+      display: flex; justify-content: space-between;
+    }
+    .flow-path {
+      max-width: 1100px; margin: 12px auto 0; padding: 0 24px;
+      display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
+    }
+    .flow-step {
+      display: flex; align-items: center; gap: 8px;
+      padding: 8px 12px; border-radius: 999px;
+      border: 1px solid var(--border-primary); background: var(--bg-secondary);
+      color: var(--text-muted); font-size: 12px; font-weight: 600;
+      cursor: pointer; font-family: inherit;
+    }
+    .flow-step:hover { color: var(--text-primary); border-color: var(--border-hover); }
+    .flow-step.active {
+      background: rgba(59,130,246,.18); border-color: rgba(59,130,246,.5); color: #93c5fd;
+    }
+    .flow-step .num {
+      width: 20px; height: 20px; border-radius: 50%;
+      display: inline-flex; align-items: center; justify-content: center;
+      background: var(--bg-primary); font-size: 11px;
+    }
+    .flow-step.active .num { background: var(--accent-blue); color: #fff; }
+    .flow-arrow { color: var(--text-muted); font-size: 12px; opacity: .5; }
+    .action-group {
+      margin-top: 16px; padding: 14px; border: 1px solid var(--border-primary);
+      border-radius: 12px; background: rgba(17,24,39,.55);
+    }
+    .action-group h3 {
+      font-size: 13px; font-weight: 600; margin-bottom: 4px; color: var(--text-primary);
+    }
+    .action-group .hint {
+      font-size: 12px; color: var(--text-muted); margin-bottom: 10px; line-height: 1.4;
+    }
+    .action-group .actions { margin-top: 0; }
+    details.advanced {
+      margin-top: 16px; border: 1px solid var(--border-primary);
+      border-radius: 10px; padding: 10px 14px; background: var(--bg-primary);
+    }
+    details.advanced > summary {
+      cursor: pointer; font-size: 13px; font-weight: 600; color: var(--text-secondary);
+      list-style: none;
+    }
+    details.advanced > summary::-webkit-details-marker { display: none; }
+    details.advanced > summary::before { content: "▸ "; color: var(--text-muted); }
+    details.advanced[open] > summary::before { content: "▾ "; }
+    nav.main-nav button { padding: 6px 10px; font-size: 12px; }
+    @media (max-width: 900px) {
+      .flow-arrow { display: none; }
+      nav.main-nav { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="header-inner">
+      <div class="logo">
+        <div class="logo-badge">NX</div>
+        <span class="logo-text">NOXA Launch Desk</span>
+      </div>
+      <nav class="main-nav">
+        <button class="active" data-step="1">1. Wallets</button>
+        <button data-step="2">2. Budget</button>
+        <button data-step="3">3. Send cash</button>
+        <button data-step="4">4. Go live</button>
+        <button data-step="5">5. Cash out</button>
+      </nav>
+      <div style="display:flex;align-items:center;gap:14px">
+        <div class="status-pill" id="statusPill"><span class="dot"></span><span id="statusText">Ready</span></div>
+      </div>
+    </div>
+  </header>
+
+  <div class="project-bar">
+    <div class="project-tabs" id="projectTabs"></div>
+    <button class="project-tab" id="btnNewProject" title="Start a fresh coin project">+ New coin</button>
+    <div class="project-note">Each tab = one coin. Click × to delete empty/old tabs. Bank wallet is shared.</div>
+  </div>
+  <div class="flow-path" id="flowPath">
+    <button type="button" class="flow-step active" data-step="1"><span class="num">1</span> Wallets</button>
+    <span class="flow-arrow">→</span>
+    <button type="button" class="flow-step" data-step="2"><span class="num">2</span> Budget</button>
+    <span class="flow-arrow">→</span>
+    <button type="button" class="flow-step" data-step="3"><span class="num">3</span> Send cash</button>
+    <span class="flow-arrow">→</span>
+    <button type="button" class="flow-step" data-step="4"><span class="num">4</span> Go live</button>
+    <span class="flow-arrow">→</span>
+    <button type="button" class="flow-step" data-step="5"><span class="num">5</span> Cash out</button>
+  </div>
+  <div class="project-banner" id="projectBanner" style="display:none">
+    <div class="project-banner-inner" id="projectBannerText"></div>
+  </div>
+
+  <main style="max-width:1100px;margin:0 auto;padding:20px 24px">
+
+    <div class="stats hidden" id="overviewStats">
+      <div class="stat"><div class="label">Bank wallet</div><div class="value c-orange" id="statFunder">—</div><div class="sub">holds your cash</div></div>
+      <div class="stat"><div class="label">Helper wallets</div><div class="value c-blue" id="statBuyers">0</div><div class="sub">do the buys</div></div>
+      <div class="stat"><div class="label">Budget set</div><div class="value c-green" id="statBudget">0 ETH</div><div class="sub">ready to spend</div></div>
+      <div class="stat"><div class="label">Coin</div><div class="value c-purple" id="statToken">—</div><div class="sub">this project</div></div>
+    </div>
+    <p class="desc hidden" id="funderLine" style="margin-top:-8px;margin-bottom:16px">Bank wallet address: <a id="funderLink" href="#" target="_blank" rel="noopener" style="color:var(--accent-blue);font-family:JetBrains Mono,monospace;font-size:12px"><span id="funderFull">—</span></a></p>
+
+    <section class="card" id="step1">
+      <h2>Step 1 — Set up wallets</h2>
+      <p class="desc">You need three kinds of wallets. Think of them like roles on a team.</p>
+      <div class="howto">
+        <strong>Do this in order:</strong>
+        <ol>
+          <li><strong>Bank</strong> — import the wallet that holds your ETH</li>
+          <li><strong>Creator</strong> — create (or import) the wallet that will make the coin</li>
+          <li><strong>Helpers</strong> — create a few wallets that will buy the coin</li>
+          <li>(Optional) Season helpers + use privacy hops when funding so they look less linked</li>
+          <li>Go to <strong>Budget</strong></li>
+        </ol>
+      </div>
+
+      <div class="action-group">
+        <h3>A. Bank wallet (shared)</h3>
+        <p class="hint">This is your treasury. It pays for everything. One bank is shared across all coin tabs.</p>
+        <div class="actions">
+          <button class="btn" id="btnImportFunder">Import bank wallet</button>
+          <button class="btn-ghost" id="btnRefresh">Refresh balances</button>
+        </div>
+      </div>
+
+      <div class="action-group">
+        <h3>B. Creator wallet (this coin only)</h3>
+        <p class="hint">Creates the token and does the first small buy. Keep it separate from the bank and helpers.</p>
+        <div class="actions">
+          <button class="btn" id="btnCreateDev">Create creator wallet</button>
+          <button class="btn-ghost" id="btnImportDev">Import creator</button>
+          <button class="btn-orange" id="btnFundDev">Send cash to creator</button>
+        </div>
+        <div id="devWalletBox" style="margin-top:10px;font-size:13px;color:var(--text-secondary)"></div>
+      </div>
+
+      <div class="action-group">
+        <h3>C. Helper wallets (buyers)</h3>
+        <p class="hint">These wallets buy after launch. More helpers = more buy transactions.</p>
+        <div class="actions">
+          <button class="btn" id="btnCreate4">Create 4 helpers</button>
+          <button class="btn-ghost" id="btnCreateN">Create many…</button>
+          <button class="btn-ghost" id="btnCreate1">+ 1 helper</button>
+          <button class="btn-red" id="btnClearBuyers">Remove helpers</button>
+        </div>
+      </div>
+
+      <details class="advanced">
+        <summary>Optional: season helpers, export keys, sweep leftover cash</summary>
+        <div style="margin-top:12px">
+          <div class="row" style="align-items:end">
+            <div class="field" style="max-width:160px">
+              <span>Season intensity</span>
+              <select id="seasonIntensity">
+                <option value="light">Light (~4 txs)</option>
+                <option value="medium" selected>Medium (~8 txs)</option>
+                <option value="heavy">Heavy (~12 txs)</option>
+              </select>
+            </div>
+            <div class="field" style="max-width:140px">
+              <span>Budget / wallet</span>
+              <input id="seasonBudget" type="number" step="0.001" min="0.002" value="0.008" />
+            </div>
+            <button class="btn-green" id="btnSeason">Season helpers</button>
+            <button class="btn-ghost" id="btnExportKeys">Export keys CSV</button>
+            <button class="btn-orange" id="btnRecall">Sweep leftover ETH → bank</button>
+            <button class="btn-ghost" id="btnRecoverHops">Recover stuck hops</button>
+            <button class="btn-red" id="btnForceRestart">Reset this coin tab</button>
+          </div>
+          <p class="desc" style="margin-top:8px">Seasoning briefly uses each helper so it doesn’t look brand-new. Leftover cash returns to the bank.</p>
+          <div id="seasonProgress" class="hidden" style="margin-top:10px">
+            <div class="progress"><div id="seasonBar" style="width:0%"></div></div>
+            <div style="font-size:12px;color:var(--text-muted)" id="seasonLabel">0/0</div>
+          </div>
+          <div class="log" id="logSeason" style="max-height:160px;margin-top:10px"></div>
+          <div class="log" id="logRecall" style="max-height:140px;margin-top:10px"></div>
+        </div>
+      </details>
+
+      <div id="walletTable" style="margin-top:16px;max-height:420px;overflow:auto"></div>
+      <div class="actions">
+        <button class="btn" id="goto2">Next: Set budget →</button>
+      </div>
+    </section>
+
+    <section class="card hidden" id="stepLaunch">
+      <h2>Create the coin</h2>
+      <p class="desc">Pick a launchpad, name the coin, then create. Helpers can buy right after.</p>
+      <div class="launchpad-bar" id="launchpadBarLaunch">
+        <strong style="font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--text-secondary)">Launchpad</strong>
+        <div class="seg" role="group" aria-label="Launchpad">
+          <button type="button" class="seg-btn active" data-pad="noxa" id="padLaunchNoxa">NOXA</button>
+          <button type="button" class="seg-btn" data-pad="apestore" id="padLaunchApe">ApeStore</button>
+        </div>
+        <span class="hint" id="launchpadHint">Creates on NOXA Fun (Robinhood)</span>
+      </div>
+      <div class="row">
+        <div class="field"><span>Coin name</span><input id="launchName" placeholder="e.g. Sunny Pengu" /></div>
+        <div class="field" style="max-width:140px"><span>Ticker</span><input id="launchSymbol" placeholder="e.g. SUNNY" /></div>
+        <div class="field" style="max-width:150px"><span>Creator buy (ETH)</span><input id="launchDevBuy" type="number" step="0.001" min="0.001" value="0.02" /></div>
+        <div class="field" style="max-width:200px">
+          <span>Helper buys after</span>
+          <select id="launchBuyMode">
+            <option value="burst" selected>Fast burst</option>
+            <option value="organic">Slow &amp; natural</option>
+            <option value="sequential">One-by-one</option>
+          </select>
+        </div>
+      </div>
+      <details class="advanced">
+        <summary>Optional links</summary>
+        <div class="row" style="margin-top:10px">
+          <div class="field"><span>Image / metadata</span><input id="launchUri" placeholder="ipfs://… or https://…" spellcheck="false" /></div>
+          <div class="field"><span>Twitter / X</span><input id="launchTwitter" placeholder="https://x.com/…" spellcheck="false" /></div>
+        </div>
+        <div class="row" style="margin-top:10px">
+          <div class="field"><span>Website</span><input id="launchWebsite" placeholder="https://…" spellcheck="false" /></div>
+          <div class="field"><span>Telegram</span><input id="launchTelegram" placeholder="https://t.me/…" spellcheck="false" /></div>
+        </div>
+      </details>
+      <div class="actions" style="margin-top:14px">
+        <button class="btn-green is-selected" id="btnLaunchBuy">Create coin + buy helpers</button>
+        <button class="btn-ghost" id="btnLaunchOnly">Create only</button>
+        <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-secondary);cursor:pointer">
+          <input type="checkbox" id="launchBuyAfter" checked style="width:auto" /> Helpers buy right after create
+        </label>
+      </div>
+      <div class="log" id="logLaunch" style="max-height:220px;margin-top:12px"></div>
+      <p class="desc" style="margin-top:8px" id="launchResult"></p>
+    </section>
+
+    <section class="card hidden" id="step2">
+      <h2>Step 2 — Set the budget</h2>
+      <p class="desc">Decide how much ETH helpers will spend in total. We’ll split it across them (small buys first, larger later).</p>
+      <div class="howto">
+        <strong>Do this:</strong>
+        <ol>
+          <li>Leave token blank if you’ll create a new coin in Go live</li>
+          <li>Or paste an existing coin address if you’re buying one already live</li>
+          <li>Set total ETH and how many helpers</li>
+          <li>Build plan → Save to wallets → Next</li>
+        </ol>
+      </div>
+      <div class="launchpad-bar" id="launchpadBarBudget">
+        <strong style="font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--text-secondary)">Launchpad</strong>
+        <div class="seg" role="group" aria-label="Launchpad">
+          <button type="button" class="seg-btn active" data-pad="noxa" id="padBudgetNoxa">NOXA</button>
+          <button type="button" class="seg-btn" data-pad="apestore" id="padBudgetApe">ApeStore</button>
+        </div>
+        <span class="hint">Same choice used for create, buy, and sell</span>
+      </div>
+      <div class="row">
+        <div class="field" style="flex:2"><span>Coin address (optional for new launches)</span><input id="token" placeholder="Leave blank for a new coin, or paste 0x…" spellcheck="false" /></div>
+        <select id="launchpad" style="display:none"><option value="noxa">NOXA</option><option value="apestore">ApeStore</option></select>
+        <div class="field"><span>Total to spend (ETH)</span><input id="totalEth" type="number" step="0.001" min="0" value="0.2" /></div>
+        <div class="field"><span># of helpers</span><input id="walletCount" type="number" min="1" max="500" value="4" /></div>
+      </div>
+      <details class="advanced">
+        <summary>Advanced: buy shape &amp; delays</summary>
+        <div class="row" style="margin-top:10px">
+          <div class="field"><span>Start size shape</span><input id="startPct" type="number" step="0.05" min="0.05" max="10" value="0.4" /></div>
+          <div class="field"><span>End size shape</span><input id="endPct" type="number" step="0.05" min="0.05" max="10" value="1.2" /></div>
+          <div class="field"><span>Seconds between buys</span><input id="delayStep" type="number" min="0" value="0" /></div>
+        </div>
+      </details>
+      <div class="actions">
+        <button class="btn" id="btnPlan">Build plan</button>
+        <button class="btn-green" id="btnApply">Save plan to wallets</button>
+      </div>
+      <div id="tokenMeta" class="stats" style="margin-top:16px;display:none"></div>
+      <div id="planWarn" style="display:none;margin-top:10px;padding:10px 12px;border:1px solid rgba(234,179,8,.35);border-radius:10px;color:var(--accent-yellow);font-size:12px"></div>
+      <div id="planBox" style="margin-top:14px"></div>
+      <div class="actions">
+        <button class="btn-ghost" id="goto1b">← Wallets</button>
+        <button class="btn" id="goto3">Next: Send cash →</button>
+      </div>
+    </section>
+
+    <section class="card hidden" id="step3">
+      <h2>Step 3 — Send cash to helpers</h2>
+      <p class="desc">Move ETH from your bank to each helper so they can buy. We send a little extra for network fees.</p>
+      <div class="howto">
+        <strong>Do this:</strong>
+        <ol>
+          <li>Make sure the budget was saved</li>
+          <li>Preview → check the list looks right</li>
+          <li>Send cash → wait until it finishes</li>
+          <li>If some fail, hit Continue (skips wallets that already have cash)</li>
+          <li>Go to <strong>Go live</strong></li>
+        </ol>
+      </div>
+      <div class="row">
+        <div class="field" style="max-width:180px">
+          <span>Privacy hops</span>
+          <select id="hops">
+            <option value="2" selected>2 (recommended)</option>
+            <option value="3">3 (slower)</option>
+            <option value="1">1 (weaker)</option>
+          </select>
+        </div>
+      </div>
+      <div class="actions">
+        <button class="btn-ghost" id="btnPreview">Preview</button>
+        <button class="btn" id="btnFund">Send cash</button>
+        <button class="btn-orange" id="btnFundContinue">Continue</button>
+        <button class="btn-ghost" id="btnFundPause">Pause</button>
+        <button class="btn" id="btnFundResume">Resume</button>
+        <button class="btn-red" id="btnFundCancel">Stop</button>
+      </div>
+      <div id="fundProgress" class="hidden">
+        <div class="progress"><div id="fundBar" style="width:0%"></div></div>
+        <div style="font-size:12px;color:var(--text-muted)" id="fundLabel">0/0</div>
+      </div>
+      <div id="fundJobs" style="margin-top:12px"></div>
+      <div class="log" id="logFund"></div>
+      <div class="actions">
+        <button class="btn-ghost" id="goto2b">← Budget</button>
+        <button class="btn" id="goto4">Next: Go live →</button>
+      </div>
+    </section>
+
+    <section class="card hidden" id="step4">
+      <h2>Step 4 — Go live / helper buys</h2>
+      <p class="desc">Usually you already hit <strong>Create coin + buy</strong> above. Use this only to buy again, retry failed buys, or change buy style.</p>
+      <div class="howto">
+        <strong>Buy styles:</strong>
+        <ul>
+          <li><strong>Fast burst</strong> — everyone buys quickly</li>
+          <li><strong>Slow &amp; natural</strong> — buys slowly; if an outsider buys, we pause and trim a little, then continue</li>
+        </ul>
+      </div>
+      <div id="buyReadyBox" style="margin-bottom:14px"></div>
+      <div class="row" style="align-items:end">
+        <div class="field" style="max-width:220px">
+          <span>Buy style</span>
+          <select id="buyMode">
+            <option value="burst" selected>Fast burst</option>
+            <option value="organic">Slow &amp; natural</option>
+            <option value="sequential">One-by-one (use delays)</option>
+          </select>
+        </div>
+        <div class="field" style="max-width:140px">
+          <span>Slippage %</span>
+          <input id="buySlippage" type="number" min="1" max="50" step="0.5" value="8" />
+        </div>
+        <div class="field" style="max-width:140px">
+          <span>In-flight txs</span>
+          <input id="buyConcurrency" type="number" min="6" max="16" value="12" />
+        </div>
+      </div>
+      <details class="advanced">
+        <summary>Advanced buy settings</summary>
+        <div class="row" style="align-items:end;margin-top:10px">
+          <div class="field" style="max-width:220px">
+            <span>If outsider buys in (burst)</span>
+            <select id="foreignBuyPolicy">
+              <option value="bump" selected>Raise priority &amp; continue</option>
+              <option value="log">Log only</option>
+              <option value="pause">Pause remaining</option>
+              <option value="react">Dump filled, then continue</option>
+            </select>
+          </div>
+          <div class="field" style="max-width:140px">
+            <span>Min outsider ETH</span>
+            <input id="foreignMinEth" type="number" min="0" max="5" step="0.001" value="0.008" />
+          </div>
+        </div>
+        <div class="row" id="organicOpts" style="align-items:end;margin-top:10px;display:none">
+          <div class="field" style="max-width:140px"><span>Pace (sec)</span><input id="organicPaceSec" type="number" min="2" max="120" step="1" value="10" /></div>
+          <div class="field" style="max-width:140px"><span>Max chart dip %</span><input id="organicMaxDipPct" type="number" min="10" max="20" step="1" value="15" /></div>
+          <div class="field" style="max-width:140px"><span>Quiet after (sec)</span><input id="organicQuietSec" type="number" min="4" max="120" step="1" value="12" /></div>
+          <div class="field" style="max-width:140px"><span>Soft-sell % / bag</span><input id="organicSellPct" type="number" min="8" max="50" step="1" value="25" /></div>
+        </div>
+      </details>
+      <div class="actions" style="margin-top:12px">
+        <button class="btn" id="btnBuy">Start buying</button>
+        <button class="btn-orange" id="btnBuyRetry">Retry failed</button>
+        <button class="btn-red" id="btnBuyCancel">Cancel</button>
+      </div>
+      <div class="log" id="logBuy"></div>
+      <div class="actions">
+        <button class="btn-ghost" id="goto3b">← Send cash</button>
+        <button class="btn" id="goto5">Next: Cash out →</button>
+      </div>
+    </section>
+
+    <section class="card hidden" id="step5">
+      <h2>Step 5 — Cash out</h2>
+      <p class="desc">Watch the chart, then sell helper bags carefully. Prefer small sells so you don’t crash the price.</p>
+      <div class="howto">
+        <strong>Do this:</strong>
+        <ol>
+          <li>Load the chart (or open DexScreener)</li>
+          <li>Refresh P&amp;L to see what you hold</li>
+          <li>Build recommendations for safe sells</li>
+          <li>Sell a % from each wallet — don’t dump everything at once unless you’re done</li>
+        </ol>
+      </div>
+      <div id="sellChartPanel" style="margin-bottom:16px">
+        <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:10px">
+          <strong id="sellChartTitle">DexScreener</strong>
+          <button class="btn-ghost" id="btnSellChartLoad" style="padding:6px 10px;font-size:11px">Load chart</button>
+          <button class="btn-ghost" id="btnSellChartRefresh" style="padding:6px 10px;font-size:11px">Reload</button>
+          <a id="sellDexLink" href="#" target="_blank" rel="noopener" class="btn" style="text-decoration:none;display:none;align-items:center;padding:6px 12px;font-size:11px">Open DexScreener ↗</a>
+        </div>
+        <div id="sellChartShell" style="position:relative;width:100%;height:min(420px,55vh);border:1px solid var(--border);border-radius:10px;overflow:hidden;background:#0b0d12">
+          <div id="sellChartPlaceholder" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:20px;text-align:center;color:var(--text-muted);font-size:13px;z-index:1">
+            <div>Chart loads on demand (DexScreener embeds are slow).</div>
+            <div style="font-size:12px">Use <strong>Open DexScreener ↗</strong> for the fastest view, or click <strong>Load chart</strong>.</div>
+          </div>
+          <iframe id="sellChartFrame" title="DexScreener chart" style="width:100%;height:100%;border:0;background:#0b0d12;display:none" allow="clipboard-write; encrypted-media; fullscreen; picture-in-picture" allowfullscreen></iframe>
+        </div>
+        <p style="margin-top:8px;font-size:11px;color:var(--text-muted)">Embed is optional — opening DexScreener in a new tab is usually snappier.</p>
+      </div>
+      <div class="row">
+        <div class="field" style="flex:2"><span>Token</span><input id="sellToken" placeholder="0x…" spellcheck="false" /></div>
+        <div class="field" style="max-width:120px"><span>Bulk % to sell</span><input id="sellPct" type="number" min="1" max="100" value="100" title="Used by Sell all / Sell by plan" /></div>
+        <div class="field" style="max-width:160px">
+          <span>Mode</span>
+          <select id="sellMode">
+            <option value="parallel" selected>All at once (fast)</option>
+            <option value="sequential">One-by-one</option>
+          </select>
+        </div>
+        <div class="field" style="max-width:220px">
+          <span>Sell order</span>
+          <select id="sellPlanStrategy">
+            <option value="auto" selected>Auto — least impact (best)</option>
+            <option value="least_impact">Least impact (small first)</option>
+            <option value="largest_first">Largest first (dump exit)</option>
+            <option value="best_pnl_first">Best P&amp;L first</option>
+            <option value="worst_pnl_first">Worst P&amp;L first</option>
+          </select>
+        </div>
+        <div class="field" style="max-width:140px">
+          <span>Target MC $</span>
+          <input id="targetMcapUsd" type="number" min="1000" step="1000" value="1000000" title="Path-to-target projection" />
+        </div>
+      </div>
+      <p class="desc" style="margin:8px 0 0">Every wallet row has <strong>5% / 10% / 25% / 50% / 100%</strong> sell buttons — click one to sell that wallet only. Same on recommended wallets below.</p>
+      <div class="actions">
+        <button class="btn-ghost" id="btnSellPreview">Refresh P&amp;L</button>
+        <button class="btn" id="btnSellPlan">Build / refresh recommendations</button>
+        <button class="btn-green" id="btnRefreshRecs" title="Only rebuilds the sell plan when YOU click — never auto">Refresh next sells</button>
+        <button class="btn-orange" id="btnRecallSell">Sweep leftover ETH → bank</button>
+        <button class="btn-red" id="btnForceRestartSell" title="End this launch and clear helpers for the next coin">Reset this coin tab</button>
+      </div>
+      <p class="desc" style="margin:8px 0 0;color:var(--accent-yellow)">Sell plan is saved — refresh keeps it. It only rebuilds when you click the recommendation buttons, and only clears when you reset this coin tab.</p>
+      <div id="sellSummary" class="stats" style="margin-top:16px;display:none"></div>
+      <div id="sellTable" style="margin-top:14px"></div>
+      <div id="sellPlanBox" style="margin-top:16px;display:none"></div>
+      <div id="sellHistoryBox" style="margin-top:16px;display:none"></div>
+      <div class="log" id="logSell"></div>
+      <div class="actions">
+        <button class="btn-ghost" id="goto4b">← Back</button>
+      </div>
+    </section>
+
+
+      </main>
+
+  <div class="footer-bar">
+    <span>NOXA Launch Desk</span>
+    <span id="footerHint">Follow the path: Wallets → Budget → Send cash → Go live → Cash out</span>
+  </div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const state = {
+  sellHistory: [],
+  sellHistorySummary: null,
+  wallets: [], plan: null, token: null, fundingPreview: null,
+  sellPreview: null, sellPlan: null, pairs: [], snipes: [],
+  snipeConfig: null, sniper: null, sniperPortfolio: null, snipeRange: "24h",
+  mode: "bundler", sniperHostEnabled: false,
+  step: 0, walletPage: 0, walletPageSize: 9999, maxBundleWallets: 500,
+  projects: [], activeProjectId: null, lastToken: "", launchpad: "noxa",
+};
+function currentLaunchpad(){
+  const el = $("launchpad");
+  const v = (el?.value || state.launchpad || "noxa").toLowerCase();
+  return (v === "apestore" || v === "ape") ? "apestore" : "noxa";
+}
+function syncLaunchpadUI(pad){
+  const v = (pad === "apestore" || pad === "ape") ? "apestore" : "noxa";
+  state.launchpad = v;
+  if($("launchpad")) $("launchpad").value = v;
+  document.querySelectorAll(".seg-btn[data-pad]").forEach(b => {
+    b.classList.toggle("active", b.dataset.pad === v);
+  });
+  const hint = $("launchpadHint");
+  if(hint){
+    hint.textContent = v === "apestore"
+      ? "Creates on ApeStore (Robinhood) · 1% LP fee, 50% to creator"
+      : "Creates on NOXA Fun (Robinhood)";
+  }
+}
+async function setLaunchpad(pad){
+  syncLaunchpadUI(pad);
+  try { await api("/api/launchpad", { method:"POST", body: JSON.stringify({ launchpad: currentLaunchpad() }) }); } catch(_){}
+}
+function wireLaunchpadSeg(){
+  document.querySelectorAll(".seg-btn[data-pad]").forEach(b => {
+    b.onclick = () => setLaunchpad(b.dataset.pad);
+  });
+}
+
+function short(a){ return a ? a.slice(0,6)+"…"+a.slice(-4) : "—"; }
+function roleLabel(role){
+  const r = String(role || "").toLowerCase();
+  return ({ funder: "Bank", dev: "Creator", buyer: "Helper", sniper: "Sniper", distributor: "Hop" })[r] || role || "—";
+}
+/** Merge server wallets into sticky client list — never drop wallets or blank known balances. */
+function mergeWallets(incoming){
+  const next = Array.isArray(incoming) ? incoming : [];
+  if(!next.length && (state.wallets||[]).length){
+    // Server briefly empty — keep sticky launch wallets until Force restart
+    return;
+  }
+  const byAddr = new Map((state.wallets||[]).map(w => [String(w.address||"").toLowerCase(), w]));
+  const merged = next.map(nw => {
+    const key = String(nw.address||"").toLowerCase();
+    const prev = byAddr.get(key);
+    if(!prev) return { ...nw };
+    return {
+      ...prev,
+      ...nw,
+      // Keep last known balance if RPC cache hasn't filled yet
+      balance: nw.balance != null ? nw.balance : prev.balance,
+      buyAmountEth: nw.buyAmountEth != null ? nw.buyAmountEth : prev.buyAmountEth,
+      delaySec: nw.delaySec != null ? nw.delaySec : prev.delaySec,
+      seasoned: nw.seasoned != null ? nw.seasoned : prev.seasoned,
+      seasonTxCount: nw.seasonTxCount != null ? nw.seasonTxCount : prev.seasonTxCount,
+    };
+  });
+  // Prefer server order (index) when present; sticky keep any extras only if force-replace not requested
+  state.wallets = merged;
+}
+function fmt(n,d=4){ if(n==null||Number.isNaN(+n)) return "—"; const x=+n; if(!x) return "0"; if(x<1e-4) return x.toExponential(2); return x.toFixed(d); }
+function money(n, d=0){
+  if(n==null||Number.isNaN(+n)) return "—";
+  const x = +n;
+  const abs = Math.abs(x);
+  const digits = d!=null ? d : (abs>=1000 ? 0 : abs>=100 ? 0 : 2);
+  const s = abs.toLocaleString(undefined, { maximumFractionDigits: digits, minimumFractionDigits: digits>0?Math.min(digits,2):0 });
+  if(x < 0) return "-$"+s;
+  return "$"+s;
+}
+function moneySigned(n, d=0){
+  if(n==null||Number.isNaN(+n)) return "—";
+  const x = +n;
+  if(x > 0) return "+"+money(x, d);
+  if(x < 0) return money(x, d);
+  return money(0, d);
+}
+function ethPx(){
+  return Number(state.sellPreview?.ethUsd || state.sellPlan?.marketMake?.inventory?.ethUsd || state.sellPlan?.simulation?.ethUsd || 0) || 0;
+}
+function toUsd(eth){
+  const px = ethPx();
+  if(!px || eth==null) return null;
+  return Number(eth) * px;
+}
+async function api(path, opts){
+  const r = await fetch(path, { headers: { "Content-Type":"application/json" }, ...opts });
+  const j = await r.json().catch(()=>({}));
+  if(!r.ok){
+    const err = new Error(j.error || r.statusText);
+    err.code = j.code;
+    err.needConfirm = j.needConfirm;
+    err.money = j.money;
+    err.payload = j;
+    throw err;
+  }
+  return j;
+}
+function setBusy(on, label){
+  const pill = $("statusPill");
+  pill.classList.toggle("busy", !!on);
+  $("statusText").textContent = label || (on ? "Working…" : "Ready");
+  const funding = !!on && /fund/i.test(label||"");
+  const buying = !!on && /buy/i.test(label||"");
+  state._fundingBusy = funding;
+  state._buyingBusy = buying;
+  // Keep MM / sell-plan / chart usable while funding or buying
+  const keepAlive = new Set(["btnSellPlan","btnSellPreview","btnSellChartRefresh","btnFundPause","btnFundResume","btnFundCancel","btnBuyCancel"]);
+  ["btnFund","btnFundContinue","btnBuy","btnBuyRetry","btnPlan","btnApply","btnPreview","btnSeason","btnSellPreview","btnSellPlan","btnRecall","btnRecallSell","btnRecoverHops","btnClearBuyers","btnSnipeSave","btnSnipeStop","btnSniperRecall","btnSniperSellAll","btnSnipeReset","btnSnipePortfolio","btnPairsRefresh","btnSniperCreate","btnSniperImport","btnSniperFund","btnSniperRemove","btnSniperPk","btnSellChartRefresh"].forEach(id => {
+    if(!$(id)) return;
+    if(on && keepAlive.has(id) && (funding || buying)) { $(id).disabled = false; return; }
+    $(id).disabled = !!on;
+  });
+  if($("btnFundPause")) $("btnFundPause").disabled = !funding;
+  if($("btnFundResume")) $("btnFundResume").disabled = !funding;
+  if($("btnFundCancel")) $("btnFundCancel").disabled = !funding;
+  if($("hops")) $("hops").disabled = false;
+}
+function showStep(n){
+  if(n===6 || n===7){ n = state.step || 1; }
+  state.step = n;
+  [1,2,3,4,5].forEach(i => {
+    const el = $(`step${i}`);
+    if(!el) return;
+    el.classList.toggle("hidden", i!==n);
+  });
+  // Launch card lives on Go live (step 4) — create coin then buy
+  if($("stepLaunch")) $("stepLaunch").classList.toggle("hidden", n!==4);
+  document.querySelectorAll("nav button[data-step], #flowPath .flow-step").forEach(b => {
+    b.classList.toggle("active", Number(b.dataset.step)===n);
+  });
+  $("footerHint").textContent = ({
+    1: "Step 1 — bank, creator, and helper wallets",
+    2: "Step 2 — how much each helper will spend",
+    3: "Step 3 — send cash from bank → helpers",
+    4: "Step 4 — create the coin and buy",
+    5: "Step 5 — sell and take profit",
+  })[n] || "";
+  const bundlerTop = [1,2,3,4,5].includes(n);
+  if($("overviewStats")) $("overviewStats").classList.toggle("hidden", !bundlerTop);
+  if($("funderLine")) $("funderLine").classList.toggle("hidden", !bundlerTop);
+  if(n===1){ renderWallets(); renderDevBox(); }
+  if(n===2){ renderPlan(); renderDevBox(); api("/api/balances/refresh",{method:"POST",body:"{}"}).catch(()=>{}); }
+  if(n===3) renderFundJobs();
+  if(n===4){ renderBuyReady(); renderDevBox(); api("/api/balances/refresh",{method:"POST",body:"{}"}).catch(()=>{}); }
+  if(n===5){
+    const t = $("token")?.value?.trim() || state.plan?.token?.address || state.plan?.token || "";
+    if(t && !$("sellToken").value) $("sellToken").value = typeof t === "string" ? t : "";
+    loadSellChart(false, { embed: false });
+    renderSell();
+  }
+}
+function renderDevBox(){
+  const box = $("devWalletBox");
+  if(!box) return;
+  const d = state.dev;
+  if(!d){
+    box.innerHTML = `<span style="color:var(--accent-yellow)">No creator wallet yet — create or import one above.</span>`;
+    return;
+  }
+  const bal = d.balance!=null ? `${fmt(d.balance,5)} ETH` : "…";
+  box.innerHTML = `<strong style="color:var(--text-primary)">Creator</strong> · <span style="font-family:JetBrains Mono,monospace;font-size:12px">${d.address}</span> · <span style="color:var(--accent-green)">${bal}</span>`;
+}
+function ageLabel(sec){
+  if(sec==null) return "—";
+  if(sec<60) return Math.floor(sec)+"s";
+  if(sec<3600) return Math.floor(sec/60)+"m";
+  return Math.floor(sec/3600)+"h";
+}
+function logoHtml(t, size){
+  const s = size || 40;
+  const ph = `<div class="tok-logo ph" style="width:${s}px;height:${s}px">${(t.symbol||"?").slice(0,2)}</div>`;
+  let url = t.logoUrl || "";
+  // Prefer Cloudflare IPFS if we still have a raw ipfs:// or ipfs.io link
+  if(!url && t.logo){
+    const raw = String(t.logo);
+    if(raw.startsWith("ipfs://")) url = "https://cloudflare-ipfs.com/ipfs/" + raw.slice(7).replace(/^ipfs\//,"");
+    else if(raw.startsWith("Qm") || raw.startsWith("bafy") || raw.startsWith("bafk")) url = "https://cloudflare-ipfs.com/ipfs/" + raw;
+    else if(/^https?:\/\//i.test(raw)) url = raw;
+  }
+  if(url && /ipfs\.io\/ipfs\//i.test(url)){
+    url = url.replace(/https?:\/\/ipfs\.io\/ipfs\//i, "https://cloudflare-ipfs.com/ipfs/");
+  }
+  if(!url) return ph;
+  const sym = (t.symbol||"?").slice(0,2).replace(/'/g,"");
+  return `<img class="tok-logo" style="width:${s}px;height:${s}px" src="${url}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.onerror=null;this.outerHTML='<div class=\\'tok-logo ph\\' style=\\'width:${s}px;height:${s}px\\'>${sym}</div>'">`;
+}
+function sigHtml(signals){
+  return (signals||[]).map(s => `<span class="sig ${s.tone||"info"}">${s.label}</span>`).join("");
+}
+function sortPairsNewest(rows){
+  return (rows||[]).slice().sort((a,b)=>{
+    const ab = Number(a.createdAtBlock||0), bb = Number(b.createdAtBlock||0);
+    if(bb!==ab) return bb-ab;
+    const aa = a.ageSec!=null ? a.ageSec : 1e12;
+    const ba = b.ageSec!=null ? b.ageSec : 1e12;
+    if(aa!==ba) return aa-ba;
+    return new Date(b.createdAt||0).getTime() - new Date(a.createdAt||0).getTime();
+  });
+}
+function renderPairs(){
+  const box = $("pairsTable");
+  if(!box) return;
+  const rows = sortPairsNewest(state.pairs || []);
+  state.pairs = rows;
+  const note = state.pairsFeedNote || "";
+  const freshest = rows[0]?.ageSec;
+  const feedLine = note || (freshest!=null ? `Newest launch ${ageLabel(freshest)} ago · on-chain factory feed` : "");
+  if(!rows.length){
+    box.innerHTML = `<div class="empty">Waiting for live launch feed…</div>`;
+    return;
+  }
+  box.innerHTML = `${feedLine?`<p style="font-size:12px;color:${freshest!=null&&freshest<120?"var(--accent-green)":"var(--accent-yellow)"};margin:0 0 8px">${feedLine}</p>`:""}<table>
+    <thead><tr><th></th><th>Age</th><th>Token</th><th>MC / vs start</th><th>Dev / organic</th><th>Dev track</th><th></th></tr></thead>
+    <tbody>${rows.map(t => {
+      const hot = (t.ageSec!=null && t.ageSec < 60);
+      const vs = t.mcVsStartX!=null ? t.mcVsStartX.toFixed(2)+"x" : "—";
+      const serial = t.creatorSerial ? `<span class="sig bad">serial ${t.creatorLaunchCount}</span>` : `<span class="sig info">${t.creatorLaunchCount||1} launch${(t.creatorLaunchCount||1)>1?"s":""}</span>`;
+      return `<tr data-intel="${t.address}" style="cursor:pointer;${hot?"background:rgba(34,197,94,.06)":""}">
+        <td>${logoHtml(t,36)}</td>
+        <td style="color:${hot?"var(--accent-green)":"var(--text-muted)"}">${ageLabel(t.ageSec)}</td>
+        <td title="${t.address}">
+          <strong>$${t.symbol||"?"}</strong> <span style="color:var(--text-muted)">${t.name||""}</span>
+          <div style="margin-top:4px">${sigHtml(t.signals)}</div>
+          <div style="margin-top:4px">
+            <a href="${t.noxaUrl}" target="_blank" rel="noopener" style="color:var(--accent-blue);font-size:11px" onclick="event.stopPropagation()">${short(t.address)}</a>
+            ${t.twitter?` · <a href="${t.twitter}" target="_blank" rel="noopener" style="color:var(--accent-blue);font-size:11px" onclick="event.stopPropagation()">X</a>`:""}
+            ${t.telegram?` · <a href="${t.telegram}" target="_blank" rel="noopener" style="color:var(--accent-blue);font-size:11px" onclick="event.stopPropagation()">TG</a>`:""}
+            ${t.website?` · <a href="${t.website}" target="_blank" rel="noopener" style="color:var(--accent-blue);font-size:11px" onclick="event.stopPropagation()">Web</a>`:""}
+          </div>
+        </td>
+        <td>${t.marketCapUsdLabel || fmt(t.marketCapEth,3)+" ETH"}<br><span style="color:var(--text-muted)">${vs} start · fee ${fmt(t.poolFeePct,0)}%</span></td>
+        <td>dev ${fmt(t.initialBuyEth,4)}<br><span style="color:var(--text-muted)">org ~${fmt(t.organicBuyEth,4)}</span></td>
+        <td>${serial}<br><span style="color:var(--text-muted)">best ATH ${t.creatorBestAthMcUsdLabel || fmt(t.creatorBestAthMcEth,2)+"Ξ"}</span></td>
+        <td onclick="event.stopPropagation()">
+          <button class="btn" data-snipe="${t.address}" style="padding:6px 10px;font-size:11px">Snipe</button>
+          <button class="btn-ghost" data-intel-btn="${t.address}" style="padding:6px 8px;font-size:11px">Intel</button>
+          <button class="btn-ghost" data-use="${t.address}" style="padding:6px 8px;font-size:11px">Use</button>
+        </td>
+      </tr>`;
+    }).join("")}</tbody></table>`;
+  box.querySelectorAll("[data-snipe]").forEach(btn => {
+    btn.onclick = async () => {
+      try {
+        setBusy(true, "Sniping…");
+        $("logSnipe").innerHTML = "";
+        await api("/api/snipe", { method:"POST", body: JSON.stringify({
+          token: btn.dataset.snipe,
+          amountEth: Number($("snipeEth").value)||0.01,
+          takeProfitX: Number($("snipeTp").value)||2,
+          stopLossPct: Number($("snipeSl").value)||40,
+        })});
+      } catch(e){ setBusy(false); alert(e.message); }
+    };
+  });
+  box.querySelectorAll("[data-use]").forEach(btn => {
+    btn.onclick = () => {
+      $("token").value = btn.dataset.use;
+      $("sellToken").value = btn.dataset.use;
+      showStep(2);
+    };
+  });
+  box.querySelectorAll("[data-intel], [data-intel-btn]").forEach(el => {
+    el.onclick = (e) => {
+      const addr = el.dataset.intel || el.dataset.intelBtn;
+      if(addr) showIntel(addr);
+    };
+  });
+}
+async function showIntel(address){
+  const panel = $("intelPanel");
+  if(!panel) return;
+  const cached = (state.pairs||[]).find(t => t.address?.toLowerCase()===address.toLowerCase());
+  panel.innerHTML = `<h3>Token intel</h3><div class="empty">Loading ${cached?("$"+cached.symbol):short(address)}…</div>`;
+  try {
+    const j = await api(`/api/token/${address}/intel`);
+    const t = j.token || cached || {};
+    const c = j.creator || {};
+    const launches = c.launches || [];
+    panel.innerHTML = `
+      <div style="display:flex;gap:12px;align-items:center;margin-bottom:12px">
+        ${logoHtml(t,52)}
+        <div>
+          <div style="font-size:18px;font-weight:700">$${t.symbol||"?"}</div>
+          <div style="color:var(--text-muted);font-size:12px">${t.name||""}</div>
+          <div style="margin-top:4px">${sigHtml(t.signals)}</div>
+        </div>
+      </div>
+      <div class="stats" style="grid-template-columns:1fr 1fr;margin-bottom:12px">
+        <div class="stat"><div class="label">MC</div><div class="value" style="font-size:18px">${t.marketCapUsdLabel||fmt(t.marketCapEth,3)+"Ξ"}</div><div class="sub">${t.mcVsStartX!=null?t.mcVsStartX.toFixed(2)+"x start":"—"}</div></div>
+        <div class="stat"><div class="label">ATH</div><div class="value" style="font-size:18px">${t.athMarketCapUsdLabel||fmt(t.athMarketCapEth,3)+"Ξ"}</div><div class="sub">dev buy ${fmt(t.initialBuyEth,4)}Ξ</div></div>
+        <div class="stat"><div class="label">Organic</div><div class="value" style="font-size:18px">${fmt(t.organicBuyEth,4)}</div><div class="sub">net ${fmt(t.netBuyAmountEth,4)}Ξ</div></div>
+        <div class="stat"><div class="label">Pool fee</div><div class="value" style="font-size:18px">${fmt(t.poolFeePct,0)}%</div><div class="sub">vol 1h ${fmt(t.volume1hEth,3)}</div></div>
+      </div>
+      <div style="font-size:12px;margin-bottom:10px;line-height:1.6">
+        <a href="${t.noxaUrl}" target="_blank" rel="noopener" style="color:var(--accent-blue)">NOXA</a> ·
+        <a href="${t.explorerUrl}" target="_blank" rel="noopener" style="color:var(--accent-blue)">Token</a>
+        ${t.twitter?` · <a href="${t.twitter}" target="_blank" rel="noopener" style="color:var(--accent-blue)">X</a>`:""}
+        ${t.telegram?` · <a href="${t.telegram}" target="_blank" rel="noopener" style="color:var(--accent-blue)">TG</a>`:""}
+        ${t.website?` · <a href="${t.website}" target="_blank" rel="noopener" style="color:var(--accent-blue)">Web</a>`:""}
+      </div>
+      ${t.description?`<p style="font-size:12px;color:var(--text-secondary);margin-bottom:12px">${t.description.slice(0,220)}</p>`:""}
+      <h3>Dev wallet</h3>
+      <p style="font-size:12px;margin-bottom:8px">
+        <a href="${t.creatorExplorerUrl||"#"}" target="_blank" rel="noopener" style="color:var(--accent-blue);font-family:JetBrains Mono,monospace">${short(t.creator)}</a>
+        · <strong>${c.launchCount||launches.length||1}</strong> launches scanned
+        ${c.serialLauncher?' · <span class="sig bad">serial launcher</span>':""}
+        <br>best ATH ${c.bestAthMcUsdLabel||fmt(c.bestAthMcEth,2)+"Ξ"} · avg ATH ${c.avgAthMcUsdLabel||fmt(c.avgAthMcEth,2)+"Ξ"}
+        <button class="btn-ghost" id="btnDeepCreator" data-c="${t.creator}" style="padding:4px 8px;font-size:11px;margin-left:6px">Deep scan</button>
+      </p>
+      <div id="creatorLaunches">${launches.length?launches.slice(0,12).map(l => `
+        <div class="creator-launch">
+          ${logoHtml(l,28)}
+          <div style="flex:1">
+            <strong>$${l.symbol||"?"}</strong>
+            <span style="color:var(--text-muted)">${l.createdAt?new Date(l.createdAt).toLocaleString():""}</span>
+            <div style="color:var(--text-muted)">MC ${l.marketCapUsdLabel||fmt(l.marketCapEth,2)+"Ξ"} · ATH ${l.athMarketCapUsdLabel||fmt(l.athMarketCapEth,2)+"Ξ"} · dev ${fmt(l.initialBuyEth,3)}Ξ</div>
+          </div>
+          <a href="${l.noxaUrl||("https://fun.noxa.fi/robinhood/"+l.address)}" target="_blank" rel="noopener" style="color:var(--accent-blue);font-size:11px">open</a>
+        </div>`).join(""):`<div class="empty">Only this launch in recent scan — try Deep scan</div>`}
+      </div>
+      <div class="actions" style="margin-top:12px">
+        <button class="btn" id="intelSnipe" data-a="${t.address}">Snipe this</button>
+        <button class="btn-ghost" id="intelUse" data-a="${t.address}">Use in plan</button>
+      </div>`;
+    const deep = $("btnDeepCreator");
+    if(deep) deep.onclick = async () => {
+      deep.disabled = true; deep.textContent = "Scanning…";
+      try {
+        const d = await api(`/api/creator/${deep.dataset.c}?deep=1`);
+        const box = $("creatorLaunches");
+        box.innerHTML = (d.launches||[]).slice(0,20).map(l => `
+          <div class="creator-launch">
+            ${logoHtml(l,28)}
+            <div style="flex:1">
+              <strong>$${l.symbol||"?"}</strong>
+              <span style="color:var(--text-muted)">${l.createdAt?new Date(l.createdAt).toLocaleString():""}</span>
+              <div style="color:var(--text-muted)">MC ${l.marketCapUsdLabel||fmt(l.marketCapEth,2)+"Ξ"} · ATH ${l.athMarketCapUsdLabel||fmt(l.athMarketCapEth,2)+"Ξ"} · dev ${fmt(l.initialBuyEth,3)}Ξ</div>
+            </div>
+            <a href="${l.noxaUrl||("https://fun.noxa.fi/robinhood/"+l.address)}" target="_blank" rel="noopener" style="color:var(--accent-blue);font-size:11px">open</a>
+          </div>`).join("") || `<div class="empty">No other launches found in scan</div>`;
+        deep.textContent = `${d.launchCount} found`;
+      } catch(e){ deep.textContent = "Failed"; alert(e.message); }
+    };
+    $("intelSnipe").onclick = async () => {
+      try {
+        setBusy(true, "Sniping…");
+        await api("/api/snipe", { method:"POST", body: JSON.stringify({
+          token: address,
+          amountEth: Number($("snipeEth").value)||0.01,
+          takeProfitX: Number($("snipeTp").value)||2,
+          stopLossPct: Number($("snipeSl").value)||40,
+        })});
+      } catch(e){ setBusy(false); alert(e.message); }
+    };
+    $("intelUse").onclick = () => {
+      $("token").value = address;
+      $("sellToken").value = address;
+      showStep(2);
+    };
+  } catch(e){
+    panel.innerHTML = `<h3>Token intel</h3><div class="empty">${e.message}</div>`;
+  }
+}
+function renderSnipeHistory(){
+  const box = $("snipeHistory");
+  if(!box) return;
+  const rows = (state.sniperPortfolio?.snipes || state.snipes || []);
+  if(!rows.length){ box.innerHTML = `<div class="empty">No snipes in this range</div>`; return; }
+  box.innerHTML = `<table>
+    <thead><tr><th>When</th><th>Token</th><th>Spent</th><th>P&amp;L</th><th>Status</th><th>Exit</th></tr></thead>
+    <tbody>${rows.map(s => {
+      const pnlUsd = s.profitUsd;
+      const pnlLabel = s.profitUsdLabel || (pnlUsd!=null ? ((pnlUsd>=0?"+":"")+"$"+Math.abs(pnlUsd).toFixed(2)) : null);
+      const spent = s.spentUsdLabel || (s.amountEth!=null ? fmt(s.amountEth,4)+" ETH" : "—");
+      return `<tr>
+      <td>${s.at?new Date(s.at).toLocaleString():"—"}</td>
+      <td title="${s.token||""}">$${s.symbol||"?"} ${s.auto?'<span class="tag buyer">auto</span>':""}</td>
+      <td>${spent}</td>
+      <td style="color:${pnlColor(pnlUsd ?? s.profitEth)};font-weight:600">${
+        !s.ok ? "—" :
+        s.sold && !s.sellHash ? "sell failed (still open?)" :
+        (pnlLabel || (s.sold ? "sold · out pending" : (s.ok?"open":"—")))
+      }</td>
+      <td style="color:${s.ok?"var(--accent-green)":"var(--accent-red)"}">${s.ok?(s.hash?`<a href="https://robinhoodchain.blockscout.com/tx/${s.hash}" target="_blank" style="color:inherit">tx</a>`:"ok"):(s.error||"fail")}</td>
+      <td>${s.sold?(s.exitReason||"sold"): (s.ok?"open":"—")}</td>
+    </tr>`;
+    }).join("")}</tbody></table>`;
+}
+function renderSniperPortfolio(){
+  const p = state.sniperPortfolio;
+  if(!p || !p.sniper){
+    if($("snStatBal")) $("snStatBal").textContent = "—";
+    if($("sniperOpenTable")) $("sniperOpenTable").innerHTML = `<div class="empty">Import/create a sniper wallet to see balance &amp; P&amp;L.</div>`;
+    return;
+  }
+  const s = p.summary || {};
+  const rangeLabel = { "1h":"last hour", "24h":"last 24h", "7d":"last 7 days", "30d":"last 30 days", "all":"all time" }[p.range] || p.range;
+  const ethPx = p.ethUsd ? ` · ETH $${Math.round(p.ethUsd)}` : "";
+  if($("sniperTopLink")){
+    $("sniperTopLink").href = p.sniper.explorer || "#";
+    $("sniperTopLink").textContent = short(p.sniper.address);
+  }
+  if($("snStatBal")) $("snStatBal").textContent = s.ethBalanceUsdLabel || "—";
+  if($("snStatBalSub")) $("snStatBalSub").textContent = s.ethBalance!=null ? `${fmt(s.ethBalance,5)} ETH${ethPx}` : "cash left";
+  if($("snStatOpen")) $("snStatOpen").textContent = s.openValueUsdLabel || "—";
+  if($("snStatOpenSub")) $("snStatOpenSub").textContent = `cost ${s.openCostUsdLabel||"—"}`;
+  if($("snStatUnreal")){
+    $("snStatUnreal").textContent = s.unrealizedPnlUsdLabel || "—";
+    $("snStatUnreal").style.color = pnlColor(s.unrealizedPnlUsd ?? s.unrealizedPnlEth);
+  }
+  if($("snStatReal")){
+    $("snStatReal").textContent = s.realizedPnlUsdLabel || "—";
+    $("snStatReal").style.color = pnlColor(s.realizedPnlUsd ?? s.realizedPnlEth);
+  }
+  if($("snStatRealSub")) $("snStatRealSub").textContent = `${s.closedCount||0} closed · ${rangeLabel}`;
+  if($("snStatTotal")){
+    const made = (s.totalPnlUsd ?? 0) >= 0;
+    $("snStatTotal").textContent = s.totalPnlUsdLabel || "—";
+    $("snStatTotal").style.color = pnlColor(s.totalPnlUsd ?? s.totalPnlEth);
+    if($("snStatRangeLabel")){
+      $("snStatRangeLabel").textContent = `${made ? "made" : "lost"} · ${rangeLabel}${ethPx}`;
+    }
+  }
+  if($("snStatSpent")) $("snStatSpent").textContent = s.spentUsdLabel || "—";
+  if($("snStatBuys")) $("snStatBuys").textContent = `${s.buys||0} / ${s.failed||0}`;
+  if($("snStatWin")) $("snStatWin").textContent = s.winRate!=null ? `win ${fmt(s.winRate,0)}%` : "win rate —";
+  if($("snStatBags")) $("snStatBags").textContent = String(s.openCount||0);
+
+  const box = $("sniperOpenTable");
+  if(box){
+    const opens = p.openPositions || [];
+    if(!opens.length){
+      box.innerHTML = `<div class="empty">No open sniper holdings (or dust already gone).</div>`;
+    } else {
+      box.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:6px">
+        <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase">Open holdings (USD)${state.snipeConfig?.autoSell ? " · auto-sell watching" : ""}</div>
+        <button class="btn-orange" id="btnSniperSellAllTop" style="padding:4px 10px;font-size:11px">Sell all open</button>
+      </div>
+      <table>
+        <thead><tr><th>Token</th><th>Buys</th><th>Cost</th><th>Value</th><th>P&amp;L</th><th></th></tr></thead>
+        <tbody>${opens.map(o => `<tr>
+          <td title="${o.token}">$${o.symbol||"?"}</td>
+          <td>${o.buys||1}</td>
+          <td>${o.costUsdLabel||"—"}</td>
+          <td>${o.valueUsdLabel||"—"}</td>
+          <td style="color:${pnlColor(o.unrealizedUsd ?? o.unrealized)};font-weight:600">${o.unrealizedUsdLabel||"—"}</td>
+          <td><button class="btn-red sniper-sell-one" data-token="${o.token}" data-symbol="${o.symbol||""}" style="padding:4px 8px;font-size:11px">Sell</button></td>
+        </tr>`).join("")}</tbody>
+      </table>`;
+      const sellAllTop = $("btnSniperSellAllTop");
+      if(sellAllTop) sellAllTop.onclick = () => sellSniperOpen({ all: true });
+      box.querySelectorAll(".sniper-sell-one").forEach(btn => {
+        btn.onclick = () => sellSniperOpen({ token: btn.dataset.token, symbol: btn.dataset.symbol });
+      });
+    }
+  }
+  renderSnipeHistory();
+}
+async function sellSniperOpen({ token, symbol, all } = {}){
+  const label = all ? "ALL open sniper bags" : `$${symbol || "token"}`;
+  if(!confirm(`Market-sell ${label} from the sniper wallet now?`)) return;
+  try {
+    setBusy(true, all ? "Selling all open…" : `Selling $${symbol||"…"}…`);
+    if($("logSnipe")) $("logSnipe").innerHTML = "";
+    await api("/api/sniper/sell", {
+      method: "POST",
+      body: JSON.stringify(all ? { all: true } : { token, symbol }),
+    });
+  } catch(e){
+    setBusy(false);
+    alert(e.message);
+  }
+}
+async function loadSniperPortfolio(){
+  if(state.step !== 6) return;
+  try {
+    const range = $("snipeRange")?.value || state.snipeRange || "24h";
+    state.snipeRange = range;
+    state.sniperPortfolio = await api(`/api/sniper/portfolio?range=${encodeURIComponent(range)}`);
+    if(state.sniperPortfolio?.sniper){
+      state.sniper = { ...(state.sniper||{}), ...state.sniperPortfolio.sniper, balance: state.sniperPortfolio.summary?.ethBalance };
+    }
+    renderSniper();
+    renderSniperPortfolio();
+  } catch(e){
+    if($("sniperOpenTable")) $("sniperOpenTable").innerHTML = `<div class="empty">${e.message}</div>`;
+  }
+}
+function syncSnipeForm(){
+  const c = state.snipeConfig;
+  if(!c) return;
+  if($("snipeEth")) $("snipeEth").value = c.amountEth ?? 0.005;
+  if($("snipeTp")) $("snipeTp").value = c.takeProfitX ?? 1.6;
+  if($("snipeTp2")) $("snipeTp2").value = c.takeProfit2X ?? 3;
+  if($("snipePartial")) $("snipePartial").value = c.partialSellPct ?? 50;
+  if($("snipeTrail")) $("snipeTrail").value = c.trailPct ?? 25;
+  if($("snipeSl")) $("snipeSl").value = c.stopLossPct ?? 35;
+  if($("snipeMaxAge")) $("snipeMaxAge").value = c.maxAgeSec ?? 90;
+  if($("snipeMaxInit")) $("snipeMaxInit").value = c.maxInitialBuyEth ?? 1;
+  if($("snipeMaxOpen")) $("snipeMaxOpen").value = c.maxOpenPositions ?? 40;
+  if($("snipeAuto")) $("snipeAuto").checked = !!c.enabled;
+  if($("snipeAutoSell")) $("snipeAutoSell").checked = c.autoSell !== false;
+  if($("snipeSkipSerial")) $("snipeSkipSerial").checked = !!c.skipSerialCreators;
+  const sn = state.sniper;
+  if($("snipeStatus")) {
+    if(!sn) $("snipeStatus").textContent = "Import a sniper wallet above — separate from the bundler funder";
+    else {
+      const parts = [
+        c.enabled ? "Auto-buy ON" : "Auto-buy OFF",
+        c.autoSell !== false
+          ? `Exits ON (TP1 ${c.takeProfitX}x→${c.partialSellPct||50}% · trail ${c.trailPct||25}% · SL ${c.stopLossPct}%)`
+          : "Exits OFF",
+        `bal ${sn.balance!=null?fmt(sn.balance,5)+" ETH":"—"}`,
+      ];
+      $("snipeStatus").textContent = `Sniper ${short(sn.address)} · ${parts.join(" · ")}`;
+    }
+  }
+}
+function renderSniper(){
+  const box = $("sniperBox");
+  if(!box) return;
+  const sn = state.sniper;
+  const rem = $("btnSniperRemove");
+  const pkBtn = $("btnSniperPk");
+  if(!sn){
+    box.className = "empty";
+    box.innerHTML = `No sniper wallet yet — create or import one below. Snipes and P&amp;L track that wallet only (not the bundler funder).`;
+    if(rem) rem.style.display = "none";
+    if(pkBtn) pkBtn.style.display = "none";
+    return;
+  }
+  box.className = "";
+  box.innerHTML = `<div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+    <span class="tag sniper">sniper</span>
+    <div>
+      <div style="font-family:JetBrains Mono,monospace;font-size:13px">${sn.address}</div>
+      <div style="font-size:12px;color:var(--text-muted);margin-top:4px">Balance: <strong style="color:var(--accent-green)">${sn.balance!=null?fmt(sn.balance,5):"—"} ETH</strong> · snipes + P&amp;L use this wallet</div>
+    </div>
+    <a href="https://robinhoodchain.blockscout.com/address/${sn.address}" target="_blank" rel="noopener" style="color:var(--accent-blue);font-size:12px">Explorer</a>
+  </div>`;
+  if(rem) rem.style.display = "";
+  if(pkBtn) pkBtn.style.display = "";
+}
+function pnlColor(n){ return n==null?"var(--text-muted)": n>=0?"var(--accent-green)":"var(--accent-red)"; }
+function urgencyTone(u){
+  if(u==="critical") return "bad";
+  if(u==="high") return "warn";
+  if(u==="low") return "ok";
+  return "info";
+}
+function regimeTone(r){
+  if(r==="pump"||r==="bid_support") return "ok";
+  if(r==="dump"||r==="distribution") return "bad";
+  return "warn";
+}
+
+function renderSellHistory(){
+  const box = $("sellHistoryBox");
+  if(!box) return;
+  const rows = state.sellHistory || [];
+  const sum = state.sellHistorySummary || {};
+  if(!rows.length){
+    box.style.display = "none";
+    box.innerHTML = "";
+    return;
+  }
+  const token = ($("sellToken")?.value||$("token")?.value||state.lastToken||"").toLowerCase();
+  const filtered = token
+    ? rows.filter(r => String(r.token||"").toLowerCase()===token)
+    : rows;
+  const show = filtered.length ? filtered : rows;
+  box.style.display = "block";
+  box.innerHTML = `
+    <div class="intel-card" style="position:static;max-height:none;margin:0">
+      <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <h3 style="margin:0">Sells taken · profit banked</h3>
+        <div style="display:flex;gap:8px;align-items:center">
+          <span class="sig ok">Taken out ${sum.ethOutUsdLabel||money(sum.ethOutUsd,0)}</span>
+          <span class="sig ${Number(sum.profitUsd||0)>=0?"ok":"bad"}">Profit ${sum.profitUsdLabel||moneySigned(sum.profitUsd,0)}</span>
+          <button class="btn-ghost" id="btnClearSellHistory" style="padding:6px 10px;font-size:11px">Clear</button>
+        </div>
+      </div>
+      <div class="stats" style="margin-bottom:12px">
+        <div class="stat"><div class="label">Sells</div><div class="value" style="font-size:18px">${sum.count||show.length}</div><div class="sub">recorded</div></div>
+        <div class="stat"><div class="label">ETH out</div><div class="value c-green" style="font-size:18px">${fmt(sum.ethOut,4)}</div><div class="sub">${sum.ethOutUsdLabel||"—"}</div></div>
+        <div class="stat"><div class="label">Cost basis sold</div><div class="value c-orange" style="font-size:18px">${money(sum.costUsd,0)}</div><div class="sub">${fmt(sum.costEth,4)} ETH</div></div>
+        <div class="stat"><div class="label">Profit taken</div><div class="value" style="font-size:18px;color:${pnlColor(sum.profitUsd)}">${sum.profitUsdLabel||moneySigned(sum.profitUsd,0)}</div><div class="sub">${sum.profitEthLabel||"—"}</div></div>
+      </div>
+      <div style="max-height:280px;overflow:auto">
+        <table>
+          <thead style="position:sticky;top:0;background:var(--bg-card);z-index:1"><tr>
+            <th>When</th><th>Wallet</th><th>%</th><th>Got</th><th>Cost</th><th>Profit</th><th>Running profit</th><th>Tx</th>
+          </tr></thead>
+          <tbody>${show.slice(0,60).map(e => {
+            const when = e.at ? new Date(e.at).toLocaleTimeString() : "—";
+            const tx = e.hash ? `<a href="https://robinhoodchain.blockscout.com/tx/${e.hash}" target="_blank" rel="noopener" style="color:var(--accent-blue)">${short(e.hash)}</a>` : "—";
+            return `<tr>
+              <td style="white-space:nowrap;font-size:11px;color:var(--text-muted)">${when}</td>
+              <td title="${e.wallet}">${e.name||short(e.wallet)}</td>
+              <td><strong>${e.percent||100}%</strong></td>
+              <td><strong style="color:var(--accent-green)">${money(e.ethOutUsd,2)}</strong> <span style="color:var(--text-muted);font-size:10px">${fmt(e.ethOut,4)}Ξ</span></td>
+              <td style="color:var(--accent-orange)">${money(e.costUsd,2)}</td>
+              <td style="color:${pnlColor(e.profitUsd)}">${moneySigned(e.profitUsd,2)}</td>
+              <td style="color:${pnlColor(e.cumProfitUsd)}"><strong>${moneySigned(e.cumProfitUsd,0)}</strong></td>
+              <td>${tx}</td>
+            </tr>`;
+          }).join("")}</tbody>
+        </table>
+      </div>
+      <p style="margin:8px 0 0;font-size:11px;color:var(--text-muted)">Running profit = cumulative realized P&amp;L after each sell (this token). Hit <strong>Refresh next sells</strong> after banking to see the next least-impact wallets.</p>
+    </div>`;
+  const clr = $("btnClearSellHistory");
+  if(clr){
+    clr.onclick = async () => {
+      if(!confirm("Clear sell history for this token?")) return;
+      try {
+        const token = $("sellToken").value.trim() || $("token").value.trim();
+        const r = await api("/api/sell/history/clear", { method:"POST", body: JSON.stringify({ token }) });
+        state.sellHistory = [];
+        state.sellHistorySummary = r.summary || null;
+        // reload from state
+        const st = await api("/api/state");
+        state.sellHistory = st.sellHistory || [];
+        state.sellHistorySummary = st.sellHistorySummary || null;
+        renderSellHistory();
+      } catch(e){ alert(e.message); }
+    };
+  }
+}
+
+async function refreshRecommendations(opts={}){
+  const quiet = !!opts.quiet;
+  try {
+    if(!quiet) setBusy(true, "Refreshing next sells…");
+    const token = $("sellToken").value.trim() || $("token").value.trim();
+    if(!token){ if(!quiet) setBusy(false); return; }
+    state.sellPlan = await api("/api/sell/plan", { method:"POST", body: JSON.stringify({
+      token,
+      strategy: $("sellPlanStrategy")?.value || "auto",
+      targetMcapUsd: Number($("targetMcapUsd")?.value) || 1000000,
+    })});
+    try {
+      state.sellPreview = await api("/api/sell/preview", { method:"POST", body: JSON.stringify({ token }) });
+    } catch(_){}
+    // Only pull sell history — do NOT replace sticky wallets / sellPlan elsewhere
+    try {
+      const st = await api("/api/state");
+      state.sellHistory = st.sellHistory || state.sellHistory || [];
+      state.sellHistorySummary = st.sellHistorySummary || state.sellHistorySummary;
+      mergeWallets(st.wallets);
+    } catch(_){}
+    renderSell();
+    if(!quiet) setBusy(false);
+  } catch(e){
+    if(!quiet) setBusy(false);
+    if(!opts.silent) alert(e.message);
+  }
+}
+
+
+function renderSellPlan(){
+  const box = $("sellPlanBox");
+  if(!box) return;
+  const sp = state.sellPlan;
+  if(!sp){ box.style.display="none"; box.innerHTML=""; return; }
+  const t = sp.tape || {};
+  const f = t.flow || {};
+  const mm = sp.marketMake || {};
+  const sim = sp.simulation || {};
+  const path = mm.pathToTarget || {};
+  const inv = mm.inventory || {};
+  const guide = mm.sellGuide || {};
+  const now = sp.sellTheseNow || {};
+  const ladder = sp.profitLadder || {};
+  const maxx = sp.maximize || {};
+  const hold = sp.holdings || {};
+  const liveMc = sp.liveMarketCap || hold.mcap || {};
+  const mcapUsdNow = Number(liveMc.mcapUsd || path.currentMcapUsd || ladder.mcapNowUsd || now.mcapStartUsd || 0);
+  const mcapEthNow = Number(liveMc.mcapEth || sim.mcapStartEth || 0);
+  const px = inv.ethUsd || sim.ethUsd || ethPx() || 0;
+  const safeN = inv.safeTrimWallets || 0;
+  const planRows = (sp.plan || []).slice(0, 50);
+  const more = Math.max(0, (sp.plan||[]).length - planRows.length);
+  const timingTone = mm.sellTiming==="sell_now_fast"||mm.sellTiming==="scale_out_now" ? "bad"
+    : mm.sellTiming==="ride_trim"||mm.sellTiming==="trim_into_bids" ? "ok" : "warn";
+
+  const nowRows = (now.wallets||[]).map(w => {
+    const wi = state.wallets.findIndex(x => x.address?.toLowerCase()===String(w.address||"").toLowerCase());
+    const ww = wi >= 0 ? state.wallets[wi] : null;
+    const pct = Number(w.sellPercent)||100;
+    const remCost = ww?.buyAmountEth != null ? Number(ww.buyAmountEth) : Number(w.costEth||0);
+    const remCostUsd = remCost * (px||ethPx()||0);
+    const banked = Number(ww?.realizedProfitEth || 0) * (px||ethPx()||0);
+    const ethBal = ww?.balance != null ? Number(ww.balance) : null;
+    const pctBtns = wi >= 0
+      ? `<div class="sell-pcts">${[5,10,25,50,100].map(p =>
+          `<button type="button" data-rec-sell="${wi}" data-rec-pct="${p}" data-rec-addr="${w.address}" title="Sell ${p}% of this wallet only" style="${p===pct?"outline:2px solid var(--accent-green)":""}">${p}%</button>`
+        ).join("")}</div>`
+      : `<span style="color:var(--text-muted);font-size:11px">—</span>`;
+    return `
+    <tr style="background:rgba(34,197,94,.1)">
+      <td><strong>${w.order}</strong></td>
+      <td title="${w.address}"><strong>${w.label||short(w.address)}</strong>
+        <div style="font-size:10px;color:var(--text-muted);margin-top:2px">left cost ${money(remCostUsd,2)} · ETH ${ethBal!=null?fmt(ethBal,4):"—"} · banked ${moneySigned(banked,2)}</div>
+      </td>
+      <td><strong style="color:var(--accent-green)">${w.getUsdLabel||money(w.getUsd,2)}</strong><div style="font-size:10px;color:var(--text-muted)">at ${pct}% probe</div></td>
+      <td style="color:${pnlColor(w.profitUsd)}">${w.profitUsdLabel||moneySigned(w.profitUsd,2)}${w.profitPct!=null?` <span style="color:var(--text-muted);font-size:10px">(${w.profitPct>=0?"+":""}${fmt(w.profitPct,0)}%)</span>`:""}</td>
+      <td>−${fmt(w.mcapDropPct,2)}%</td>
+      <td><strong>${pct}%</strong></td>
+      <td style="font-family:Inter,sans-serif;font-size:11px;color:var(--text-secondary)">${w.why||""}</td>
+      <td>${pctBtns}</td>
+    </tr>`;
+  }).join("");
+
+  const ladderRows = (ladder.rungs||[]).map(r => `
+    <tr style="${r.isCurrent?"background:rgba(59,130,246,.12)":""}">
+      <td>${r.isCurrent?"👉 ":""}<strong>${r.mcapUsdLabel}</strong></td>
+      <td>${r.multiple}×</td>
+      <td title="Alone-sum (optimistic)">${r.worthAloneUsdLabel||"—"}</td>
+      <td title="Dump-all (realistic)"><strong>${r.worthDumpUsdLabel}</strong></td>
+      <td style="color:${pnlColor(r.profitDumpUsd)}"><strong>${r.profitDumpUsdLabel}</strong></td>
+      <td style="color:var(--accent-green)">${r.harvestUsdLabel} <span style="color:var(--text-muted);font-size:11px">(${r.harvestPct}%)</span></td>
+      <td>${r.holdUsdLabel} <span style="color:var(--text-muted);font-size:11px">(${r.holdPct}%)</span></td>
+      <td style="font-family:Inter,sans-serif;font-size:11px;color:var(--text-secondary);max-width:280px;white-space:normal">${r.note||r.action}</td>
+    </tr>`).join("");
+
+  box.style.display = "block";
+  box.innerHTML = `
+    <div class="intel-card" style="position:static;max-height:none;margin:0">
+            <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:8px">
+        <h3 style="margin:0">Profit maximizer</h3>
+        <span class="sig ${timingTone}">${guide.headline || mm.sellTimingLabel || "—"}</span>
+        <span class="sig ok">${sp.strategyLabel||"least impact"}</span>
+        <span class="sig info">MC ${money(mcapUsdNow,0)} <span style="opacity:.7">(${liveMc.source||"live"})</span></span>
+        ${px?`<span class="sig info">ETH $${Math.round(px)}</span>`:""}
+        ${sp.noxaUrl?`<a href="${sp.noxaUrl}" target="_blank" rel="noopener" style="color:var(--accent-blue);font-size:12px">Chart ↗</a>`:""}
+      </div>
+      <p style="margin:0 0 14px;font-size:14px;line-height:1.45"><strong>${guide.whenToSell || t.action || ""}</strong><br><span style="color:var(--text-secondary);font-size:13px">${guide.tip || now.instruction || ""}</span></p>
+      ${liveMc.note?`<p style="margin:-8px 0 12px;font-size:11px;color:var(--text-muted)">${liveMc.note}</p>`:""}
+
+      <div class="stats" style="margin-bottom:14px">
+        <div class="stat"><div class="label">Live MC</div><div class="value" style="font-size:20px">${money(mcapUsdNow,0)}</div><div class="sub">${fmt(mcapEthNow,3)} ETH · ${liveMc.source||"quoter"}${liveMc.apiMcapUsd&&Math.abs(liveMc.apiMcapUsd-mcapUsdNow)/mcapUsdNow>0.2?` · API was ${money(liveMc.apiMcapUsd,0)}`:""}</div></div>
+        <div class="stat"><div class="label">Supply we hold</div><div class="value c-blue" style="font-size:20px">${hold.heldPctLabel||"—"}</div><div class="sub">${hold.heldTokensLabel||"—"} / ${hold.supplyLabel||"—"} · ${hold.walletsWithTokens||0} wallets</div></div>
+        <div class="stat"><div class="label">Spent</div><div class="value c-orange" style="font-size:20px">${money(inv.costUsd,0)}</div><div class="sub">cost basis</div></div>
+        <div class="stat"><div class="label">Realistic full exit now</div><div class="value" style="font-size:20px;color:${pnlColor(inv.profitDumpUsd)}">${money(inv.worthDumpUsd,0)}</div><div class="sub">profit ${moneySigned(inv.profitDumpUsd,0)} · one-shot dump quote</div></div>
+      </div>
+      <div class="stats" style="margin-bottom:14px">
+        <div class="stat"><div class="label">Sell NOW (safe)</div><div class="value c-green" style="font-size:20px">${now.totalUsdLabel||money(inv.safeTrimUsd,0)}</div><div class="sub">${now.count||safeN} probes · ${now.totalProfitUsdLabel||"—"} · MC −${fmt(now.cumulativeMcapDropPct,2)}%</div></div>
+        <div class="stat"><div class="label">Spot bag (price×tokens)</div><div class="value" style="font-size:20px">${hold.spotWorthUsdLabel||"—"}</div><div class="sub">naive FDV share · dump is more realistic</div></div>
+        <div class="stat"><div class="label">To $1M MC</div><div class="value" style="font-size:20px">${mcapUsdNow>0?(1000000/mcapUsdNow).toFixed(1)+"×":"—"}</div><div class="sub">from live MC</div></div>
+        <div class="stat"><div class="label">Token</div><div class="value" style="font-size:18px">${liveMc.symbol||sp.tape?.symbol||"—"}</div><div class="sub">supply ${hold.supplyLabel||"—"}</div></div>
+      </div>
+
+            <div style="padding:14px;border:1px solid rgba(34,197,94,.35);border-radius:12px;margin-bottom:16px;background:rgba(34,197,94,.07)">
+        <div style="display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;align-items:center;margin-bottom:8px">
+          <strong style="font-size:15px;color:var(--accent-green)">${now.headline||"Sell these wallets first"}</strong>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn-ghost" id="btnRefreshRecsInline" style="padding:8px 12px">Refresh next →</button>
+          </div>
+        </div>
+        <p style="margin:0 0 10px;font-size:12px;color:var(--text-secondary)">${now.instruction||""}</p>
+        <p style="margin:0 0 10px;font-size:11px;color:var(--text-muted)">Use the <strong>5% / 10% / 25% / 50% / 100%</strong> buttons on each row to sell that wallet only. No need to sell the whole recommended group.</p>
+        ${now.cumulativeMcapDropPct!=null?`<p style="margin:0 0 10px;font-size:12px;color:var(--accent-green)"><strong>Modeled total MC hit if you sell all rows: −${fmt(now.cumulativeMcapDropPct,2)}%</strong> (cap ${now.maxCumulativeMcapDropPct??"—"}%). Buttons sell the listed % only.</p>`:""}
+        <div style="max-height:220px;overflow:auto">
+          <table>
+            <thead><tr><th>#</th><th>Wallet</th><th>You get</th><th>Profit</th><th>MC hit</th><th>Sell %</th><th>Why</th><th></th></tr></thead>
+            <tbody>${nowRows||`<tr><td colspan="8" class="empty">Build plan to see wallets</td></tr>`}</tbody>
+          </table>
+        </div>
+      </div>
+
+      <div style="margin-bottom:16px">
+        <div style="font-size:12px;font-weight:600;margin-bottom:6px">Profit ladder — bag value at each MC</div>
+        <p style="margin:0 0 8px;font-size:12px;color:var(--text-muted)">Based on <strong>live MC ${money(mcapUsdNow,0)}</strong> (${liveMc.source||"quoter"}). Dump-all = today's dump $ × (target÷now). Rungs below current MC are hidden. ${ladder.method||""}</p>
+        <div style="max-height:320px;overflow:auto">
+          <table>
+            <thead style="position:sticky;top:0;background:var(--bg-card);z-index:1"><tr>
+              <th>MC</th><th>× now</th><th>Alone</th><th>Dump-all</th><th>Profit (dump)</th><th>Bank</th><th>Hold</th><th>Plan</th>
+            </tr></thead>
+            <tbody>${ladderRows||`<tr><td colspan="8" class="empty">No ladder yet</td></tr>`}</tbody>
+          </table>
+        </div>
+      </div>
+
+      <div style="padding:12px 14px;border:1px solid var(--border-primary);border-radius:10px;margin-bottom:14px">
+        <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;margin-bottom:6px">${maxx.title||"Maximize profits"}</div>
+        <ul style="margin:0;padding-left:18px;font-size:13px;color:var(--text-secondary);line-height:1.55">
+          ${(maxx.items||[]).map(i=>`<li>${i.text}</li>`).join("")||"<li>Build plan</li>"}
+        </ul>
+        <ol style="margin:10px 0 0;padding-left:18px;font-size:13px;color:var(--text-secondary);line-height:1.55">
+          <li><strong>Right now:</strong> sell the green wallets above (~${now.totalUsdLabel||money(inv.safeTrimUsd,0)}).</li>
+          <li><strong>On a pump:</strong> climb the ladder — at each MC rung bank the “Bank now” % and hold the rest.</li>
+          <li><strong>Volume dies / dump:</strong> stop waiting for higher MC — Sell all / largest-first. Floor ≈ ${money(inv.worthDumpUsd,0)}.</li>
+          <li><strong>Never</strong> sell biggest wallets first while trying to run the chart — that nukes MC and kills later profits.</li>
+        </ol>
+      </div>
+
+      <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;margin-bottom:6px">Full exit order · least impact ${more?`(first ${planRows.length} of ${planRows.length+more})`:""}</div>
+      <div style="max-height:360px;overflow:auto">
+        <table>
+          <thead style="position:sticky;top:0;background:var(--bg-card);z-index:1"><tr>
+            <th>#</th><th>Wallet</th><th>Alone $</th><th>Profit</th><th>In dump order $</th><th>MC after $</th><th>MC hit</th><th>Sell %</th><th></th>
+          </tr></thead>
+          <tbody>${planRows.map(p => {
+            const wi = state.wallets.findIndex(x => x.address?.toLowerCase()===String(p.address||"").toLowerCase());
+            const pct = Number(p.suggestedPercent)||100;
+            const pctBtns = wi >= 0
+              ? `<div class="sell-pcts">${[5,10,25,50,100].map(pp =>
+                  `<button type="button" data-rec-sell="${wi}" data-rec-pct="${pp}" data-rec-addr="${p.address}" title="Sell ${pp}% of this wallet only" style="${pp===pct?"outline:2px solid var(--accent-green)":""}">${pp}%</button>`
+                ).join("")}</div>`
+              : "";
+            return `
+            <tr style="${p.sellNow||p.inSafeTrim?"background:rgba(34,197,94,.08)":""}">
+              <td>${p.order}</td>
+              <td title="${p.address}">${p.label||short(p.address)}</td>
+              <td><strong>${p.worthUsdLabel||money(p.worthAloneUsd??p.worthUsd,2)}</strong></td>
+              <td style="color:${pnlColor(p.profitAloneUsd??p.profitUsd)}">${p.profitUsdLabel||moneySigned(p.profitAloneUsd??p.profitUsd,2)}</td>
+              <td style="color:var(--text-muted)">${p.worthDumpUsdLabel||money(p.worthDumpUsd,2)}</td>
+              <td>${p.mcapAfterUsdLabel||"—"}</td>
+              <td style="color:${(p.mcapDropPct||0)>1?"var(--accent-red)":"var(--text-muted)"}">−${fmt(p.mcapDropPct,2)}%</td>
+              <td><strong>${pct}%</strong></td>
+              <td>${pctBtns}${p.sellNow?` <span style="font-size:10px;color:var(--accent-green)">NOW</span>`:""}</td>
+            </tr>`;
+          }).join("")}</tbody>
+        </table>
+      </div>
+      <p style="margin-top:8px;font-size:11px;color:var(--text-muted)">Net flow 3m: ${(f.netFlowEth||0)>=0?"+":""}${money(toUsd(f.netFlowEth),0)} · ${f.buys||0}B/${f.sells||0}S · Dump haircut ${fmt(inv.dumpHaircutPct,0)}%</p>
+    </div>`;
+
+  const btnRef = $("btnRefreshRecsInline");
+  if(btnRef){
+    btnRef.onclick = () => refreshRecommendations();
+  }
+  box.querySelectorAll("[data-rec-sell]").forEach(btn => {
+    btn.onclick = () => {
+      const wi = Number(btn.dataset.recSell);
+      const pct = Number(btn.dataset.recPct) || 100;
+      const addr = btn.dataset.recAddr || "";
+      sellRecommendedOne(wi, pct, addr);
+    };
+  });
+}
+
+function renderSell(){
+  const box = $("sellTable");
+  const sum = $("sellSummary");
+  const p = state.sellPreview;
+  renderSellHistory();
+  renderSellPlan();
+  if(!p){ box.innerHTML = `<div class="empty">Click <strong>Refresh P&amp;L</strong> after buys to see each wallet’s cost vs worth. Each row gets 5% / 10% / 25% / 50% / 100% sell buttons.</div>`; sum.style.display="none"; return; }
+  const s = p.summary || {};
+  const sellPcts = [5, 10, 25, 50, 100];
+  const px = p.ethUsd || s.ethUsd || ethPx();
+  sum.style.display = "grid";
+  sum.innerHTML = `
+    <div class="stat"><div class="label">Spent</div><div class="value c-orange">${s.totalCostUsdLabel||money(s.totalCostUsd,0)}</div><div class="sub">${fmt(s.totalCostEth,4)} ETH · ETH $${px?Math.round(px):"?"}</div></div>
+    <div class="stat"><div class="label">Optimistic (ignore impact)</div><div class="value" style="color:${pnlColor(s.totalProfitAloneUsd)}">${s.totalWorthAloneUsdLabel||money(s.totalWorthAloneUsd,0)}</div><div class="sub">NOT exit cash · each bag quoted alone · profit ${s.totalProfitAloneUsdLabel||moneySigned(s.totalProfitAloneUsd,0)}</div></div>
+    <div class="stat"><div class="label">Realistic full exit</div><div class="value" style="color:${pnlColor(s.totalProfitDumpUsd)}">${s.totalWorthDumpUsdLabel||money(s.totalWorthDumpUsd,0)}</div><div class="sub">dump-all quote · profit ${s.totalProfitDumpUsdLabel||moneySigned(s.totalProfitDumpUsd,0)} · haircut ${fmt(s.dumpImpactPct,0)}%</div></div>
+    <div class="stat"><div class="label">Holding</div><div class="value c-blue">${s.withTokens||0}/${s.wallets||0}</div><div class="sub">wallets with tokens</div></div>`;
+  box.innerHTML = `<div style="max-height:560px;overflow:auto">
+    <table>
+    <thead style="position:sticky;top:0;background:var(--bg-card);z-index:1"><tr>
+      <th>#</th><th>Wallet</th><th>Cost</th><th>Optimistic</th><th>Profit</th><th>In full exit</th><th>Sell</th>
+    </tr></thead>
+    <tbody>${(p.rows||[]).map((r,i) => {
+      const wi = state.wallets.findIndex(w => w.address?.toLowerCase()===r.address?.toLowerCase());
+      const costU = r.costUsd ?? toUsd(r.costEth);
+      const worthU = r.worthUsd ?? toUsd(r.ethOut);
+      const profitU = r.profitUsd ?? toUsd(r.profitEth);
+      const dumpU = r.worthIfDumpUsd ?? toUsd(r.ethOutIfDump);
+      const mult = costU > 0 && r.hasTokens ? worthU / costU : null;
+      const pctBtns = r.hasTokens && wi >= 0
+        ? `<div class="sell-pcts">${sellPcts.map(pct =>
+            `<button type="button" data-sell-one="${wi}" data-pct="${pct}" title="Sell ${pct}% of this wallet only">${pct}%</button>`
+          ).join("")}</div>`
+        : `<span style="color:var(--text-muted);font-size:11px">${r.hasTokens?"no wallet idx":"empty"}</span>`;
+      return `<tr style="${r.hasTokens?"":"opacity:.55"}">
+        <td style="color:var(--text-muted)">${i+1}</td>
+        <td title="${r.address}">${r.name||short(r.address)}</td>
+        <td><strong style="color:var(--accent-orange)">${r.costUsdLabel||money(costU,2)}</strong></td>
+        <td>${r.hasTokens?`<strong style="color:var(--accent-green)">${r.worthUsdLabel||money(worthU,2)}</strong>${mult!=null?` <span style="color:var(--text-muted);font-size:11px">(${mult.toFixed(1)}x)</span>`:""}`:"—"}</td>
+        <td style="color:${pnlColor(profitU)}">${r.hasTokens?(r.profitUsdLabel||moneySigned(profitU,2))+(r.profitPct!=null?` <span style="font-size:11px">(${r.profitPct>=0?"+":""}${fmt(r.profitPct,0)}%)</span>`:""):"—"}</td>
+        <td style="color:var(--text-muted)">${r.hasTokens?(r.worthIfDumpUsdLabel||money(dumpU,2)):"—"}</td>
+        <td>${pctBtns}</td>
+      </tr>`;
+    }).join("")}</tbody></table>
+  </div>
+    <p style="margin-top:10px;font-size:12px;color:var(--text-muted)">Row buttons sell <strong>that wallet only</strong> at 5% / 10% / 25% / 50% / 100%.</p>`;
+  box.querySelectorAll("[data-sell-one]").forEach(btn => {
+    btn.onclick = async () => {
+      const pct = Number(btn.dataset.pct) || 100;
+      const wi = Number(btn.dataset.sellOne);
+      const row = (state.sellPreview?.rows || []).find(r => {
+        const idx = state.wallets.findIndex(w => w.address?.toLowerCase()===r.address?.toLowerCase());
+        return idx === wi;
+      });
+      const label = row?.name || short(state.wallets[wi]?.address);
+      const costU = row?.costUsd ?? toUsd(row?.costEth);
+      const worthU = row?.worthUsd ?? toUsd(row?.ethOut);
+      if(!confirm(`Sell ${pct}% from ${label}?\n\nCost ${money(costU,2)} · worth ~${money(worthU,2)}`)) return;
+      try {
+        setBusy(true, `Selling ${pct}%…`);
+        if($("logSell")) $("logSell").innerHTML = "";
+        await api("/api/sell/one", { method:"POST", body: JSON.stringify({
+        launchpad: currentLaunchpad(),
+          token: $("sellToken").value.trim() || $("token").value.trim(),
+          launchpad: currentLaunchpad(),
+          index: wi,
+          percent: pct,
+        })});
+      } catch(e){ setBusy(false); alert(e.message); }
+    };
+  });
+}
+function appendLog(el, entry){
+  const line = document.createElement("div");
+  line.className = entry.kind || "info";
+  line.textContent = `[${new Date(entry.t).toLocaleTimeString()}] ${entry.msg}`;
+  el.appendChild(line);
+  el.scrollTop = el.scrollHeight;
+}
+function renderOverview(){
+  const funder = state.wallets.find(w => w.role === "funder");
+  const buyers = state.wallets.filter(w => w.role === "buyer");
+  const budget = buyers.reduce((s,w)=> s + (Number(w.buyAmountEth)||0), 0);
+  $("statFunder").textContent = funder ? short(funder.address) : "missing";
+  $("statFunder").title = funder ? funder.address : "";
+  if($("funderFull")) $("funderFull").textContent = funder ? funder.address : "—";
+  if($("funderLink") && funder) $("funderLink").href = "https://robinhoodchain.blockscout.com/address/"+funder.address;
+  $("statBuyers").textContent = String(buyers.length);
+  $("statBudget").textContent = fmt(budget, 4) + " ETH";
+  $("statToken").textContent = state.token?.symbol ? "$"+state.token.symbol : (state.plan?.token?.symbol ? "$"+state.plan.token.symbol : "—");
+}
+function renderWallets(opts = {}){
+  const soft = !!opts.soft;
+  const box = $("walletTable");
+  if(!box) return;
+  // Bundler UI: hide infra wallets that live on other dashboards
+  const all = (state.wallets || []).filter(w => {
+    const role = String(w.role || "buyer").toLowerCase();
+    return role !== "sniper" && role !== "txbot";
+  });
+  if(!all.length){
+    box.innerHTML = `<div class="empty">No wallets yet — import your <strong>Bank</strong>, then create a <strong>Creator</strong> and some <strong>Helpers</strong>.</div>`;
+    renderOverview(); return;
+  }
+  const buyers = all.filter(w => w.role === "buyer");
+  const others = all.filter(w => w.role !== "buyer");
+  // Always show EVERY wallet (no paging) — keep table open while bundling
+  const rows = [...others, ...buyers];
+
+  // Soft update: only patch balances so scroll / inputs stay open
+  const table = box.querySelector("table.wallet-full");
+  if(soft && table){
+    const existing = table.querySelectorAll("tbody tr[data-addr]").length;
+    // Rebuild if wallet count changed (adds/removes) — don't leave stale/missing rows
+    if(existing === rows.length){
+      rows.forEach(w => {
+        const key = String(w.address||"").toLowerCase();
+        const cell = box.querySelector(`tr[data-addr="${key}"] td[data-bal]`)
+          || box.querySelector(`tr[data-i="${w.index}"] td[data-bal]`);
+        if(!cell) return;
+        if(w.balance!=null){
+          const n = Number(w.balance);
+          cell.innerHTML = `<strong style="color:${n>0.001?"var(--accent-green)":"var(--text-muted)"}">${fmt(n,5)}</strong>`;
+        }
+      });
+      renderOverview();
+      return;
+    }
+  }
+
+  const scrollTop = soft ? (box.querySelector(".wallet-scroll")?.scrollTop || 0) : 0;
+  box.innerHTML = `<p style="font-size:12px;color:var(--text-muted);margin:6px 0">${buyers.length} helpers · ${all.length} wallets total · balances update live</p>
+    <div class="wallet-scroll" style="max-height:min(70vh,720px);overflow:auto;border:1px solid var(--border-primary);border-radius:10px">
+    <table class="wallet-full">
+    <thead style="position:sticky;top:0;background:var(--bg-card);z-index:1"><tr><th>Role</th><th>Address</th><th>Balance</th><th>History</th><th>Buy ETH</th><th>Wait (s)</th><th></th></tr></thead>
+    <tbody>${rows.map(w => `
+      <tr data-i="${w.index}" data-addr="${String(w.address||"").toLowerCase()}">
+        <td><span class="tag ${w.role}">${roleLabel(w.role)}</span></td>
+        <td title="${w.address}">${short(w.address)}</td>
+        <td data-bal="1">${w.balance!=null?`<strong style="color:${Number(w.balance)>0.001?"var(--accent-green)":"var(--text-muted)"}">${fmt(w.balance,5)}</strong>`:`<span style="color:var(--text-muted)">…</span>`}</td>
+        <td>${w.role==="buyer"?(w.seasoned?`<span style="color:var(--accent-green)">seasoned · ${w.seasonTxCount||0} txs</span>`:`<span style="color:var(--accent-yellow)">fresh</span>`):"—"}</td>
+        <td>${w.role==="buyer"?`<input data-f="buyAmountEth" type="number" step="0.0001" value="${w.buyAmountEth??""}">`:"—"}</td>
+        <td>${w.role==="buyer"?`<input data-f="delaySec" type="number" value="${w.delaySec??0}">`:"—"}</td>
+        <td>
+          <button class="btn-ghost" data-act="pk" style="padding:6px 8px;font-size:11px">Key</button>
+          <button class="btn-red" data-act="del" style="padding:6px 8px;font-size:11px">Remove</button>
+        </td>
+      </tr>`).join("")}</tbody></table></div>`;
+  const sc = box.querySelector(".wallet-scroll");
+  if(sc && scrollTop) sc.scrollTop = scrollTop;
+  box.querySelectorAll("tr[data-i]").forEach(tr => {
+    const i = Number(tr.dataset.i);
+    tr.querySelectorAll("input").forEach(inp => {
+      inp.onchange = async () => {
+        const body = {}; body[inp.dataset.f] = inp.value==="" ? null : Number(inp.value);
+        try {
+          await api(`/api/wallets/${i}`, { method:"PATCH", body: JSON.stringify(body) });
+          const w = state.wallets.find(x => x.index === i);
+          if(w) w[inp.dataset.f] = body[inp.dataset.f];
+          renderOverview();
+        } catch(e){ alert(e.message); }
+      };
+    });
+    tr.querySelectorAll("button[data-act]").forEach(btn => {
+      btn.onclick = async () => {
+        try {
+          if(btn.dataset.act==="del"){
+            await api(`/api/wallets/${i}`, { method:"DELETE" });
+            await refresh();
+          }
+          if(btn.dataset.act==="pk"){
+            const j = await api(`/api/wallets/${i}/pk`);
+            prompt("Copy private key", j.privateKey);
+          }
+        } catch(e){ alert(e.message); }
+      };
+    });
+  });
+  renderOverview();
+}
+function buyerForPlanRow(r){
+  const buyers = state.wallets.filter(w => w.role === "buyer");
+  // Plan rows are 1-based index into buyer order
+  const idx = Number(r.index);
+  if(Number.isFinite(idx) && idx >= 1 && idx <= buyers.length) return buyers[idx - 1];
+  if(r.address){
+    const key = String(r.address).toLowerCase();
+    return state.wallets.find(w => String(w.address||"").toLowerCase() === key) || null;
+  }
+  return null;
+}
+function fundedStatus(w, needEth){
+  const bal = w?.balance != null ? Number(w.balance) : null;
+  const need = Number(needEth) || 0;
+  const gas = 0.002;
+  if(bal == null) return { label: "…", tone: "muted", ok: null, bal };
+  if(need <= 0) return { label: bal > 0 ? "has ETH" : "empty", tone: bal > 0 ? "ok" : "muted", ok: bal > 0, bal };
+  const target = need + gas;
+  if(bal >= target * 0.85) return { label: "funded", tone: "ok", ok: true, bal };
+  if(bal >= need * 0.5) return { label: "short", tone: "warn", ok: false, bal };
+  return { label: "unfunded", tone: "bad", ok: false, bal };
+}
+function renderPlan(){
+  const box = $("planBox");
+  const p = state.plan;
+  const warn = $("planWarn");
+  if(!p){
+    // Still show saved buyer allocations after refresh even if plan object is thin
+    const buyers = state.wallets.filter(w => w.role === "buyer" && Number(w.buyAmountEth) > 0);
+    if(!buyers.length){ box.innerHTML = `<div class="empty">No buy plan yet — build one above, or apply a plan so buyers have Buy ETH amounts.</div>`; if(warn){ warn.style.display="none"; warn.innerHTML=""; } return; }
+    const funded = buyers.filter(w => fundedStatus(w, w.buyAmountEth).ok).length;
+    box.innerHTML = `<p style="font-size:12px;color:var(--text-muted);margin:0 0 8px">Saved buyer allocations (rebuild plan for % supply quotes). <strong style="color:var(--accent-green)">${funded}/${buyers.length} funded</strong></p>
+      <div style="max-height:520px;overflow:auto"><table>
+      <thead style="position:sticky;top:0;background:var(--bg-card);z-index:1"><tr><th>#</th><th>Wallet</th><th>Buy ETH</th><th>Balance</th><th>Status</th><th>Wait</th></tr></thead>
+      <tbody>${buyers.map((w,i)=>{
+        const st = fundedStatus(w, w.buyAmountEth);
+        const color = st.tone==="ok"?"var(--accent-green)":st.tone==="warn"?"var(--accent-yellow)":st.tone==="bad"?"var(--accent-red)":"var(--text-muted)";
+        return `<tr><td>${i+1}</td><td title="${w.address}">${short(w.address)}</td><td>${fmt(w.buyAmountEth,5)}</td>
+          <td>${st.bal!=null?`<strong style="color:${Number(st.bal)>0.001?"var(--accent-green)":"var(--text-muted)"}">${fmt(st.bal,5)}</strong>`:"…"}</td>
+          <td style="color:${color}">${st.label}</td><td>${w.delaySec??0}s</td></tr>`;
+      }).join("")}</tbody></table></div>`;
+    return;
+  }
+  const rows = p.rows || [];
+  if(warn){
+    if(p.warnings?.length){
+      warn.style.display = "block";
+      warn.innerHTML = p.warnings.map(w => `⚠️ ${w}`).join("<br>");
+    } else {
+      warn.style.display = "none";
+      warn.innerHTML = "";
+    }
+  }
+  let fundedN = 0, knownN = 0;
+  const body = rows.map(r => {
+    const w = buyerForPlanRow(r);
+    const st = fundedStatus(w, r.eth);
+    if(st.ok != null) knownN++;
+    if(st.ok) fundedN++;
+    const color = st.tone==="ok"?"var(--accent-green)":st.tone==="warn"?"var(--accent-yellow)":st.tone==="bad"?"var(--accent-red)":"var(--text-muted)";
+    return `<tr>
+      <td>#${r.index}${w?` <span style="color:var(--text-muted);font-size:11px" title="${w.address}">${short(w.address)}</span>`:""}</td>
+      <td>${r.eth} ETH</td>
+      <td>${st.bal!=null?`<strong style="color:${Number(st.bal)>0.001?"var(--accent-green)":"var(--text-muted)"}">${fmt(st.bal,5)}</strong>`:"…"}</td>
+      <td style="color:${color};font-weight:600">${st.label}</td>
+      <td>${r.tokensLabel||fmt(r.tokensEst,2)}</td>
+      <td class="${r.overMax?"warn":""}">${r.pctSupply.toFixed(3)}%${r.overMax?` (over ${p.token?.maxWalletPct??2}% max-wallet)`:""}</td>
+      <td style="color:var(--text-muted)">${r.targetPctSupply!=null?r.targetPctSupply.toFixed(2)+"%":"—"}</td>
+      <td>${r.delaySec}s</td></tr>`;
+  }).join("");
+  box.innerHTML = `<div style="max-height:520px;overflow:auto">
+    <table>
+    <thead style="position:sticky;top:0;background:var(--bg-card);z-index:1"><tr><th>Wallet</th><th>Buys with</th><th>Balance</th><th>Funded</th><th>~Tokens</th><th>% of supply</th><th>Target %</th><th>Wait</th></tr></thead>
+    <tbody>${body}</tbody></table>
+  </div>
+    <p style="margin-top:10px;font-size:12px;color:var(--text-muted)">${rows.length} wallets · <strong style="color:var(--accent-green)">${fundedN}/${knownN||rows.length} funded</strong> (bal ≥ ~85% of buy+0.002 gas) · ramp ${p.startPctSupply??"?"}% → ${p.endPctSupply??"?"}% · <strong style="color:var(--accent-green)">budget ${fmt(p.totalEth ?? p.budgetEth,4)} ETH</strong>${p.suggestedTotalEth!=null?` · ref ~${fmt(p.suggestedTotalEth,4)} ETH`:""} · ~${p.totalTokensLabel||""} (${(p.totalPctSupply||0).toFixed(3)}% of supply)${p.impactMode&&p.impactMode!=="spot"?` · <span style="color:var(--accent-blue)">impact: ${p.impactMode}${p.simulatedMcapEndEth!=null?` · MC ~${fmt(p.token?.mcapEth,3)}→${fmt(p.simulatedMcapEndEth,3)} ETH`:""}</span>`:""}.</p>`;
+}
+function renderBuyReady(){
+  const box = $("buyReadyBox");
+  if(!box) return;
+  const buyers = state.wallets.filter(w => w.role === "buyer" && Number(w.buyAmountEth) > 0);
+  if(!buyers.length){
+    box.innerHTML = `<div class="empty">No buyers with Buy ETH yet — go to Step 2, build &amp; save a plan.</div>`;
+    return;
+  }
+  let funded = 0, short = 0, unknown = 0, totalBuy = 0, totalBal = 0;
+  const rows = buyers.map((w,i) => {
+    const st = fundedStatus(w, w.buyAmountEth);
+    totalBuy += Number(w.buyAmountEth)||0;
+    if(st.bal!=null) totalBal += Number(st.bal)||0;
+    if(st.ok === true) funded++;
+    else if(st.ok === false) short++;
+    else unknown++;
+    const color = st.tone==="ok"?"var(--accent-green)":st.tone==="warn"?"var(--accent-yellow)":st.tone==="bad"?"var(--accent-red)":"var(--text-muted)";
+    return `<tr>
+      <td>${i+1}</td>
+      <td title="${w.address}">${short(w.address)}</td>
+      <td>${fmt(w.buyAmountEth,5)}</td>
+      <td>${st.bal!=null?`<strong style="color:${Number(st.bal)>0.001?"var(--accent-green)":"var(--text-muted)"}">${fmt(st.bal,5)}</strong>`:"…"}</td>
+      <td style="color:${color};font-weight:600">${st.label}</td>
+      <td style="color:var(--text-muted)">${w.delaySec??0}s</td>
+    </tr>`;
+  }).join("");
+  const tok = state.plan?.token?.symbol || state.token?.symbol || "";
+  const tokAddr = (typeof state.plan?.token === "object" ? state.plan?.token?.address : state.plan?.token) || $("token")?.value || "";
+  box.innerHTML = `
+    <div class="stats" style="margin-bottom:10px">
+      <div class="stat"><div class="label">Ready</div><div class="value c-green">${funded}/${buyers.length}</div><div class="sub">funded buyers</div></div>
+      <div class="stat"><div class="label">Short / unknown</div><div class="value ${short?"c-orange":""}">${short}${unknown?` · ${unknown}…`:""}</div><div class="sub">need more ETH</div></div>
+      <div class="stat"><div class="label">Buy budget</div><div class="value">${fmt(totalBuy,4)} ETH</div><div class="sub">on buyers now ~${fmt(totalBal,4)} ETH</div></div>
+      <div class="stat"><div class="label">Token</div><div class="value c-blue">${tok?("$"+tok):"—"}</div><div class="sub" title="${tokAddr}">${tokAddr?short(tokAddr):"set in Step 2"}</div></div>
+    </div>
+    <div style="max-height:360px;overflow:auto">
+      <table>
+        <thead style="position:sticky;top:0;background:var(--bg-card);z-index:1"><tr><th>#</th><th>Wallet</th><th>Will buy</th><th>Balance</th><th>Status</th><th>Wait</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+    <p style="margin-top:8px;font-size:12px;color:var(--text-muted)">Green = balance covers ~buy + 0.002 gas. Balances fill in the background after refresh.</p>`;
+}
+function renderFundJobs(){
+  const p = state.fundingPreview;
+  const box = $("fundJobs");
+  if(!p){ box.innerHTML=""; $("fundProgress").classList.add("hidden"); return; }
+  const s = p.summary || {};
+  const pct = s.total ? Math.round(((s.complete||0)/s.total)*100) : 0;
+  $("fundProgress").classList.remove("hidden");
+  $("fundBar").style.width = pct+"%";
+  $("fundLabel").textContent = `${s.complete||0}/${s.total||0} done · sending ~${s.totalEth||0} ETH`;
+  const jobs = p.jobs || [];
+  const pending = jobs.filter(j => j.status === "pending" || j.status === "failed").slice(0, 30);
+  const show = jobs.length <= 40 ? jobs : [...jobs.filter(j => j.status==="complete").slice(-5), ...pending].slice(0, 40);
+  box.innerHTML = (jobs.length > 40
+    ? `<p style="font-size:12px;color:var(--text-muted);margin-bottom:6px">${jobs.length} jobs — showing recent/pending</p>`
+    : "") + show.map(j => `<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border-primary);font-family:JetBrains Mono,monospace;font-size:11px">
+    <span>${j.to}</span><span>${j.amountEth} ETH${j.gasBufferEth?` <span style="color:var(--text-muted)">(buy ${j.buyAmountEth}+gas)</span>`:""} · <span style="color:${j.status==="complete"?"var(--accent-green)":j.status==="failed"?"var(--accent-red)":"var(--text-muted)"}">${j.status}</span></span>
+  </div>`).join("");
+}
+async function refresh(opts = {}){
+  const force = opts.forceBalances ? "?refresh=1" : "";
+  const s = await api("/api/state" + force);
+  state.mode = s.mode || "bundler";
+  state.sniperHostEnabled = !!s.sniperHostEnabled;
+  state.lastBuyFailures = s.lastBuyFailures || [];
+  state.projects = s.projects || [];
+  state.activeProjectId = s.activeProjectId || null;
+  if($("btnBuyRetry")){
+    const n = state.lastBuyFailures.length;
+    $("btnBuyRetry").textContent = n ? `Retry failed buys (${n})` : "Retry failed buys";
+  }
+  // Sticky wallets: merge by address so balances / plan amounts never blank mid-bundle
+  if(opts.replaceWallets) state.wallets = Array.isArray(s.wallets) ? s.wallets : [];
+  else mergeWallets(s.wallets);
+  // Keep lastPlan if server temporarily returns null (don't wipe Step 2 mid-launch)
+  if(opts.replaceWallets) {
+    state.plan = s.lastPlan || null;
+    state.sellPlan = s.lastSellPlan || null;
+    state.sellPreview = s.lastSellPreview || null;
+    state.fundingPreview = s.fundingPreview || null;
+    state.lastToken = s.lastToken || "";
+    state.launchpad = s.launchpad || state.launchpad || "noxa";
+    syncLaunchpadUI(state.launchpad);
+  } else {
+    if(s.lastPlan) state.plan = s.lastPlan;
+    else if(!state.plan) state.plan = null;
+    if(s.lastSellPlan) state.sellPlan = s.lastSellPlan;
+    if(s.lastSellPreview) state.sellPreview = s.lastSellPreview;
+    state.lastToken = s.lastToken || state.lastToken;
+    state.fundingPreview = s.fundingPreview || state.fundingPreview;
+  }
+  state.sellHistory = s.sellHistory || [];
+  state.sellHistorySummary = s.sellHistorySummary || null;
+  state.dev = s.dev || null;
+  state.pairs = s.pairs || state.pairs;
+  state.snipes = s.snipes || state.snipes;
+  state.snipeConfig = s.snipeConfig || state.snipeConfig;
+  state.sniper = s.sniper || null;
+  if(s.meta?.maxBundleWallets) state.maxBundleWallets = s.meta.maxBundleWallets;
+  if(opts.replaceWallets){
+    if($("token")) $("token").value = s.lastToken || "";
+    if($("sellToken")) $("sellToken").value = s.lastToken || "";
+  } else {
+    if(s.lastToken && $("token") && !$("token").value) $("token").value = s.lastToken;
+    if(s.lastToken && $("sellToken") && !$("sellToken").value) $("sellToken").value = s.lastToken;
+  }
+  // Restore sell strategy / target MC from saved plan (don't overwrite if user is mid-edit)
+  if(s.lastSellPlan && $("sellPlanStrategy") && !$("sellPlanStrategy").dataset.touched){
+    const strat = s.lastSellPlan.strategyUsed || s.lastSellPlan.strategy;
+    if(strat) $("sellPlanStrategy").value = strat === "auto" || [...$("sellPlanStrategy").options].some(o => o.value===strat) ? (strat === "auto" ? "auto" : strat) : $("sellPlanStrategy").value;
+  }
+  if(s.lastSellPlan?.targetMcapUsd && $("targetMcapUsd") && !$("targetMcapUsd").dataset.touched){
+    $("targetMcapUsd").value = s.lastSellPlan.targetMcapUsd;
+  }
+  const jobLabel = s.job?.projectLabel || s.job?.projectId;
+  if(s.job?.running) setBusy(true, (s.job.type === "fund" ? "Funding…" : s.job.type === "buy" ? "Buying…" : s.job.type === "launch" ? "Launching…" : s.job.type === "season" ? "Seasoning…" : s.job.type === "sell" ? "Selling…" : s.job.type === "recall" ? "Recalling…" : "Working…") + (jobLabel ? ` (${jobLabel})` : ""));
+  else setBusy(false);
+  if(s.job?.progress?.total){
+    const pct = Math.round((s.job.progress.done/s.job.progress.total)*100);
+    if(s.job.type === "season"){
+      $("seasonProgress").classList.remove("hidden");
+      $("seasonBar").style.width = pct+"%";
+      $("seasonLabel").textContent = `${s.job.progress.done}/${s.job.progress.total} ${s.job.progress.label||""}`;
+    } else if(s.job.type !== "sell") {
+      $("fundProgress").classList.remove("hidden");
+      $("fundBar").style.width = pct+"%";
+      $("fundLabel").textContent = `${s.job.progress.done}/${s.job.progress.total} ${s.job.progress.label||""}`;
+    }
+  }
+  syncSnipeForm();
+  renderSniper();
+  renderProjectTabs(s.job);
+  renderDevBox();
+  // Only re-render heavy tables for the active step
+  renderOverview();
+  // Soft-render wallets so the table stays open (no scroll jump / collapse)
+  if(state.step === 1) renderWallets({ soft: true });
+  else if(state.step === 2) renderPlan();
+  else if(state.step === 3) renderFundJobs();
+  else if(state.step === 4) renderBuyReady();
+  else if(state.step === 5) renderSell(); // sellPlan / sellPreview are sticky — not cleared here
+}
+
+function renderProjectTabs(job){
+  const box = $("projectTabs");
+  if(!box) return;
+  const projects = state.projects || [];
+  box.innerHTML = projects.map(p => {
+    const active = p.id === state.activeProjectId;
+    const tok = p.token ? short(p.token) : "empty";
+    const meta = `${p.buyerCount||0} helpers · ${tok}`;
+    return `<div class="project-tab${active?" active":""}" data-project="${p.id}">
+      <button type="button" class="tab-main" data-switch="${p.id}" style="border:none;background:transparent;color:inherit;padding:0;cursor:pointer;font:inherit;text-align:left">
+        ${p.label||p.id}<span class="meta">${meta}</span>
+      </button>
+      <button type="button" class="x" data-del="${p.id}" title="Delete this tab">×</button>
+    </div>`;
+  }).join("");
+  box.querySelectorAll("button[data-switch]").forEach(btn => {
+    btn.onclick = () => switchProject(btn.dataset.switch);
+  });
+  box.querySelectorAll("button[data-del]").forEach(btn => {
+    btn.onclick = (e) => { e.stopPropagation(); deleteProject(btn.dataset.del); };
+  });
+  const banner = $("projectBanner");
+  const bannerText = $("projectBannerText");
+  if(banner && bannerText){
+    if(job?.running && job.projectId && job.projectId !== state.activeProjectId){
+      banner.style.display = "";
+      bannerText.textContent = `Job running on ${job.projectLabel||job.projectId} — this tab is view-only until it finishes.`;
+    } else {
+      banner.style.display = "none";
+    }
+  }
+}
+
+async function switchProject(projectId){
+  if(!projectId || projectId === state.activeProjectId) return;
+  try {
+    setBusy(true, "Switching…");
+    const j = await api("/api/projects/switch", {
+      method: "POST",
+      body: JSON.stringify({ projectId }),
+    });
+    if(j.warning) console.warn(j.warning);
+    await refresh({ replaceWallets: true });
+    setBusy(false);
+  } catch(e){
+    setBusy(false);
+    alert(e.message);
+  }
+}
+
+async function createProject(){
+  const label = prompt("Name for the new coin tab?", `Coin ${(state.projects||[]).length+1}`);
+  if(label == null) return;
+  try {
+    setBusy(true, "Creating…");
+    const j = await api("/api/projects", {
+      method: "POST",
+      body: JSON.stringify({ label: label.trim() || undefined }),
+    });
+    const id = j.project?.id;
+    if(id) await switchProject(id);
+    else await refresh({ replaceWallets: true });
+    setBusy(false);
+  } catch(e){
+    setBusy(false);
+    alert(e.message);
+  }
+}
+async function deleteProject(projectId){
+  if(!projectId) return;
+  const p = (state.projects||[]).find(x => x.id === projectId);
+  const label = p?.label || projectId;
+  const n = (state.projects||[]).length;
+  if(n <= 1){
+    alert("Keep at least one tab. Create a new one first if you want a blank slate.");
+    return;
+  }
+  if(!confirm(`Delete tab "${label}"?\n\nRemoves this coin's helper wallets from the dashboard (bank/creator stay).`)) return;
+  try {
+    setBusy(true, "Deleting…");
+    await api("/api/projects/" + encodeURIComponent(projectId), { method: "DELETE" });
+    await refresh({ replaceWallets: true });
+    setBusy(false);
+  } catch(e){
+    setBusy(false);
+    alert(e.message);
+  }
+}
+document.querySelectorAll("nav button[data-step], #flowPath .flow-step").forEach(b => b.onclick = () => showStep(Number(b.dataset.step)));
+$("goto2").onclick = () => showStep(2);
+$("goto3").onclick = () => showStep(3);
+$("goto4").onclick = () => showStep(4);
+$("goto5").onclick = () => showStep(5);
+$("goto1b").onclick = () => showStep(1);
+$("goto2b").onclick = () => showStep(2);
+$("goto3b").onclick = () => showStep(3);
+if($("goto4b")) $("goto4b").onclick = () => showStep(4);
+$("btnImportFunder").onclick = async () => {
+  const pk = prompt("Paste your BANK wallet private key\n\n(This is the wallet that holds your ETH)");
+  if(!pk) return;
+  try { await api("/api/wallets/import", { method:"POST", body: JSON.stringify({ privateKey: pk.trim(), role: "funder" }) }); await refresh(); }
+  catch(e){ alert(e.message); }
+};
+if($("btnCreateDev")) $("btnCreateDev").onclick = async () => {
+  try {
+    setBusy(true, "Creating creator wallet…");
+    await api("/api/wallets/create", { method:"POST", body: JSON.stringify({ count:1, role:"dev" }) });
+    await refresh({ replaceWallets: true });
+    setBusy(false);
+  } catch(e){ setBusy(false); alert(e.message); }
+};
+if($("btnImportDev")) $("btnImportDev").onclick = async () => {
+  const pk = prompt("Paste CREATOR wallet private key");
+  if(!pk) return;
+  try {
+    await api("/api/wallets/import", { method:"POST", body: JSON.stringify({ privateKey: pk.trim(), role: "dev", name: "Dev" }) });
+    await refresh({ replaceWallets: true });
+  } catch(e){ alert(e.message); }
+};
+if($("btnFundDev")) $("btnFundDev").onclick = async () => {
+  const amt = prompt("How much ETH should the bank send to the creator?", "0.08");
+  if(amt == null) return;
+  const amountEth = Number(amt);
+  if(!(amountEth > 0)) return alert("Invalid amount");
+  try {
+    setBusy(true, "Sending cash to creator…");
+    await api("/api/dev/fund", { method:"POST", body: JSON.stringify({ amountEth }) });
+    // job runs async — SSE will update; soft refresh after a beat
+    setTimeout(() => refresh().catch(()=>{}), 2500);
+  } catch(e){ setBusy(false); alert(e.message); }
+};
+async function runLaunch({ buyAfter }){
+  const name = ($("launchName")?.value || "").trim();
+  const symbol = ($("launchSymbol")?.value || "").trim();
+  const devBuyEth = Number($("launchDevBuy")?.value || 0.02);
+  if(!name || !symbol) return alert("Name and symbol required");
+  if(!(devBuyEth >= 0.001)) return alert("Creator’s first buy must be at least 0.001 ETH");
+  const buyMode = $("launchBuyMode")?.value || $("buyMode")?.value || "burst";
+  let dipPct = Number($("organicMaxDipPct")?.value);
+  if(!Number.isFinite(dipPct)) dipPct = 15;
+  dipPct = Math.min(20, Math.max(10, dipPct));
+  const body = {
+    name,
+    symbol,
+    launchpad: currentLaunchpad(),
+    devBuyEth,
+    metadataURI: ($("launchUri")?.value || "").trim(),
+    twitter: ($("launchTwitter")?.value || "").trim(),
+    website: ($("launchWebsite")?.value || "").trim(),
+    telegram: ($("launchTelegram")?.value || "").trim(),
+    buyAfter: !!buyAfter,
+    buyMode,
+    organicPaceSec: Number($("organicPaceSec")?.value)||10,
+    organicQuietSec: Number($("organicQuietSec")?.value)||12,
+    organicMaxDipPct: dipPct / 100,
+    organicSellPct: Number($("organicSellPct")?.value)||25,
+    foreignMinEth: Number($("foreignMinEth")?.value)||0.008,
+  };
+  try {
+    setBusy(true, buyAfter ? `Launch + ${buyMode} buy…` : "Launching…");
+    if($("logLaunch")) $("logLaunch").innerHTML = "";
+    if($("launchResult")) $("launchResult").textContent = "";
+    const j = await api("/api/launch", { method:"POST", body: JSON.stringify(body) });
+    // Poll job until done
+    const tick = async () => {
+      const st = await api("/api/state");
+      const logs = st.job?.logs || [];
+      if($("logLaunch")){
+        $("logLaunch").innerHTML = logs.slice(-40).map(e => {
+          const t = new Date(e.t||Date.now()).toLocaleTimeString();
+          return `<div class="${e.kind||"info"}">[${t}] ${e.msg}</div>`;
+        }).join("");
+        $("logLaunch").scrollTop = $("logLaunch").scrollHeight;
+      }
+      if(st.job?.running){
+        setTimeout(tick, 1200);
+        return;
+      }
+      setBusy(false);
+      const token = st.job?.result?.token || st.lastToken;
+      if(token){
+        if($("token")) $("token").value = token;
+        if($("sellToken")) $("sellToken").value = token;
+        if($("launchResult")){
+          const pad = currentLaunchpad();
+          const url = pad === "apestore"
+            ? `https://ape.store/robinhood/${token}`
+            : `https://fun.noxa.fi/robinhood/${token}`;
+          const label = pad === "apestore" ? "Open on ApeStore" : "Open on NOXA";
+          $("launchResult").innerHTML = `Token <code>${token}</code> · <a href="${url}" target="_blank" rel="noopener">${label}</a>`;
+        }
+      }
+      if(st.job?.result?.error) alert(st.job.result.error);
+      await refresh({ replaceWallets: true });
+    };
+    setTimeout(tick, 800);
+  } catch(e){
+    setBusy(false);
+    if(e.needConfirm && e.code === "tight_reserve"){
+      if(confirm(`${e.message}\n\nContinue anyway? (not recommended)`)){
+        body.confirmTightReserve = true;
+        try {
+          setBusy(true, buyAfter ? `Launch + ${buyMode} buy…` : "Launching…");
+          await api("/api/launch", { method:"POST", body: JSON.stringify(body) });
+          // fall through — user can watch logs; simple re-entry
+          showStep(1);
+          alert("Launch started with tight reserve confirmation. Watch the Launch log.");
+          setBusy(false);
+          return;
+        } catch(e2){ setBusy(false); alert(e2.message); return; }
+      }
+      return;
+    }
+    if(e.code === "readiness" || e.code === "reserve" || e.code === "kill"){
+      alert(e.message);
+      return;
+    }
+    alert(e.message);
+  }
+}
+if($("btnLaunchBuy")) $("btnLaunchBuy").onclick = () => {
+  $("btnLaunchBuy").classList.add("is-selected");
+  $("btnLaunchOnly")?.classList.remove("is-selected");
+  if($("launchBuyAfter")) $("launchBuyAfter").checked = true;
+  runLaunch({ buyAfter: true });
+};
+if($("btnLaunchOnly")) $("btnLaunchOnly").onclick = () => {
+  $("btnLaunchOnly").classList.add("is-selected");
+  $("btnLaunchBuy")?.classList.remove("is-selected");
+  runLaunch({ buyAfter: false });
+};
+$("btnCreate4").onclick = async () => { await api("/api/wallets/create", { method:"POST", body: JSON.stringify({ count:4, role:"buyer" }) }); await refresh(); };
+$("btnCreate1").onclick = async () => { await api("/api/wallets/create", { method:"POST", body: JSON.stringify({ count:1, role:"buyer" }) }); await refresh(); };
+$("btnClearBuyers").onclick = async () => {
+  const n = state.wallets.filter(w => w.role === "buyer").length;
+  if(!n){ alert("No helper wallets to remove."); return; }
+  if(!confirm(`Remove all ${n} helper wallet(s)?\n\nBank and creator wallets are kept.\nExport keys first if you still need them.`)) return;
+  try {
+    setBusy(true, "Removing buyers…");
+    const j = await api("/api/wallets/clear-buyers", { method:"POST", body:"{}" });
+    await refresh();
+    setBusy(false);
+    alert(`Removed ${j.removed} helper(s). ${j.kept} wallet(s) kept (bank/creator/etc).`);
+  } catch(e){ setBusy(false); alert(e.message); }
+};
+$("btnCreateN").onclick = async () => {
+  const max = state.maxBundleWallets || 500;
+  const have = state.wallets.filter(w => w.role === "buyer").length;
+  const raw = prompt(`How many helper wallets to create?\n(Have ${have} · max ${max} total)`, "8");
+  if(raw == null) return;
+  const n = Math.floor(Number(raw));
+  if(!(n > 0)) return alert("Enter a positive number");
+  if(have + n > max) return alert(`That would be ${have + n} buyers — max is ${max}`);
+  try {
+    setBusy(true, `Creating ${n} buyers…`);
+    // Chunk creates so UI stays responsive
+    let left = n;
+    while(left > 0){
+      const chunk = Math.min(50, left);
+      await api("/api/wallets/create", { method:"POST", body: JSON.stringify({ count: chunk, role:"buyer" }) });
+      left -= chunk;
+      $("statusText").textContent = `Creating… ${n - left}/${n}`;
+    }
+    await refresh({ forceBalances: false });
+    setBusy(false);
+  } catch(e){ setBusy(false); alert(e.message); }
+};
+$("btnExportKeys").onclick = () => {
+  const n = state.wallets.length;
+  if(!n){ alert("No wallets to export"); return; }
+  if(!confirm(`Download CSV with private keys for all ${n} wallets?\n\nKeep this file offline and delete it when done — anyone with these keys controls the funds.`)) return;
+  const a = document.createElement("a");
+  a.href = "/api/wallets/export.csv";
+  a.download = "";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+};
+$("btnSeason").onclick = async () => {
+  try {
+    setBusy(true, "Seasoning…");
+    $("logSeason").innerHTML = "";
+    $("seasonProgress").classList.remove("hidden");
+    await api("/api/season", {
+      method: "POST",
+      body: JSON.stringify({
+        intensity: $("seasonIntensity").value,
+        budgetEth: Number($("seasonBudget").value) || 0.008,
+        recallLeftover: true,
+        onlyUnseasoned: true,
+      }),
+    });
+  } catch(e){ setBusy(false); alert(e.message); }
+};
+$("btnPlan").onclick = async () => {
+  try {
+    let token = ($("token").value || "").trim();
+    // Allow pasting ape.store / noxa / explorer URLs
+    const urlAddr = token.match(/0x[a-fA-F0-9]{40}/);
+    if (urlAddr) token = urlAddr[0];
+    if ($("token")) $("token").value = token;
+    const pad = currentLaunchpad();
+    state.token = await api(`/api/token/${token}?launchpad=${encodeURIComponent(pad)}`);
+    const meta = $("tokenMeta");
+    meta.style.display = "grid";
+    meta.innerHTML = `
+      <div class="stat"><div class="label">Token</div><div class="value c-blue">$${state.token.symbol}</div><div class="sub">${state.token.name||""}${pad==="apestore"?" · ApeStore":" · NOXA"}</div></div>
+      <div class="stat"><div class="label">MC now</div><div class="value c-green">${state.token.mcapUsdLabel||fmt(state.token.mcapEth,3)}</div><div class="sub">${state.token.mcapUsdLabel?"USD":"ETH"}${state.token.ethUsd?` · ETH $${Math.round(state.token.ethUsd)}`:""}</div></div>
+      <div class="stat"><div class="label">Supply</div><div class="value">${Number(state.token.supply).toLocaleString()}</div><div class="sub">max wallet 2%</div></div>
+      <div class="stat"><div class="label">Start MC</div><div class="value c-orange">${state.token.startingMcUsdLabel||"~$"+Math.round(1.36*(state.token.ethUsd||3500)).toLocaleString()}</div><div class="sub">typical launch</div></div>`;
+    state.plan = await api("/api/plan", { method:"POST", body: JSON.stringify({
+      token,
+      launchpad: pad,
+      totalEth: Number($("totalEth").value),
+      walletCount: Number($("walletCount").value),
+      baseDelaySec: Number($("delayStep").value)||0,
+      startPctSupply: Number($("startPct").value)||0.4,
+      endPctSupply: Number($("endPct").value)||1.2,
+    })});
+    renderPlan(); renderOverview();
+  } catch(e){ alert(e.message); }
+};
+$("btnApply").onclick = async () => {
+  try { await api("/api/plan/apply", { method:"POST", body:"{}" }); await refresh(); alert("Plan saved to buyer wallets."); }
+  catch(e){ alert(e.message); }
+};
+$("btnPreview").onclick = async () => {
+  try {
+    state.fundingPreview = await api("/api/fund/preview", { method:"POST", body: JSON.stringify({ hops: Number($("hops").value), useDistributors:false, skipFunded:true }) });
+    renderFundJobs();
+  } catch(e){ alert(e.message); }
+};
+$("btnFund").onclick = async () => {
+  try {
+    setBusy(true, "Funding…");
+    $("logFund").innerHTML = "";
+    if(!state.fundingPreview){
+      state.fundingPreview = await api("/api/fund/preview", { method:"POST", body: JSON.stringify({ hops: Number($("hops").value), useDistributors:false, skipFunded:true }) });
+      renderFundJobs();
+    }
+    await api("/api/fund/execute", { method:"POST", body: JSON.stringify({ onlyRemaining: true, hops: Number($("hops").value) }) });
+  } catch(e){ setBusy(false); alert(e.message); }
+};
+$("btnFundContinue").onclick = async () => {
+  try {
+    setBusy(true, "Continuing funding…");
+    $("logFund").innerHTML = "";
+    // Rebuild preview skipping wallets that already hold ETH (Buyers 1–12 stay funded)
+    state.fundingPreview = await api("/api/fund/preview", { method:"POST", body: JSON.stringify({ hops: Number($("hops").value), useDistributors:false, skipFunded:true }) });
+    renderFundJobs();
+    const n = state.fundingPreview?.jobs?.length || 0;
+    if(!n){ setBusy(false); alert("Nothing left to fund — remaining buyers already look funded."); return; }
+    await api("/api/fund/execute", { method:"POST", body: JSON.stringify({ onlyRemaining: true, hops: Number($("hops").value) }) });
+  } catch(e){ setBusy(false); alert(e.message); }
+};
+$("btnFundPause").onclick = async () => {
+  try { await api("/api/fund/pause", { method:"POST", body:"{}" }); setBusy(true, "Funding paused…"); }
+  catch(e){ alert(e.message); }
+};
+$("btnFundResume").onclick = async () => {
+  try {
+    await api("/api/fund/resume", { method:"POST", body: JSON.stringify({ hops: Number($("hops").value) }) });
+    setBusy(true, "Funding…");
+  } catch(e){ alert(e.message); }
+};
+$("btnFundCancel").onclick = async () => {
+  try { await api("/api/fund/cancel", { method:"POST", body:"{}" }); }
+  catch(e){ alert(e.message); }
+};
+$("btnBuy").onclick = async () => {
+  const mode = $("buyMode")?.value || "burst";
+  const policy = $("foreignBuyPolicy")?.value || "bump";
+  const n = state.wallets.filter(w => w.role==="buyer" && Number(w.buyAmountEth)>0).length;
+  if(!n){ alert("No buyers with Buy ETH — apply a plan / fund first."); return; }
+  // Pipeline concurrency — public RPC hangs if we open 78 sendTransaction at once
+  let concurrency = Number($("buyConcurrency")?.value);
+  if(!Number.isFinite(concurrency) || concurrency < 6) concurrency = 12;
+  concurrency = Math.min(16, Math.max(6, concurrency));
+  if($("buyConcurrency")) $("buyConcurrency").value = String(concurrency);
+  const slipPct = Number($("buySlippage")?.value);
+  const slip = Number.isFinite(slipPct) ? slipPct : 8;
+  let dipPct = Number($("organicMaxDipPct")?.value);
+  if(!Number.isFinite(dipPct)) dipPct = 15;
+  dipPct = Math.min(20, Math.max(10, dipPct));
+  if($("organicMaxDipPct")) $("organicMaxDipPct").value = String(dipPct);
+  const pace = Number($("organicPaceSec")?.value)||10;
+  const quiet = Number($("organicQuietSec")?.value)||12;
+  const sellPct = Number($("organicSellPct")?.value)||25;
+  const msg = mode === "burst"
+    ? `ONE click → buy from all ${n} wallets.\n\nMode: BURST pipeline · ${concurrency} in-flight (not ${n} at once)\nSlippage ${slip}% · tip ×1.6 · if outsider: ${policy}\nAuto-retry ×3 (gas→shrink buy) · 18s timeout per tx\n\nAll wallets still buy — paced so the RPC doesn’t hang.`
+    : mode === "organic"
+      ? `ORGANIC buy from ${n} wallets?\n\n~${pace}s between buys · on foreign buy: pause + soft-sell (≤${dipPct}% MC dip)\nResume after ${quiet}s quiet tape · soft-sell ${sellPct}% per bag\nChart stays organic — no full dumps.`
+      : `Sequential buy from ${n} wallets (honors wait delays)?\n\nWorse vs snipes — long gaps between wallets.`;
+  if(!confirm(msg)) return;
+  try {
+    setBusy(true, mode === "burst" ? `Burst buying ${n}…` : mode === "organic" ? `Organic buying ${n}…` : "Buying…");
+    $("logBuy").innerHTML = "";
+    await api("/api/buy", { method:"POST", body: JSON.stringify({
+      token: $("token").value.trim() || state.plan?.token?.address || state.plan?.token,
+      launchpad: currentLaunchpad(),
+      mode,
+      concurrency,
+      slippageBps: Math.round(slip * 100),
+      priorityMultiplier: mode === "burst" ? 1.6 : mode === "organic" ? 1.05 : 1,
+      retries: 3,
+      buyTimeoutMs: 18000,
+      staggerMs: 35,
+      tapeGuard: mode === "burst" || mode === "organic",
+      foreignBuyPolicy: mode === "organic" ? "organic" : policy,
+      foreignMinEth: Number($("foreignMinEth")?.value)||0.008,
+      organicPaceSec: pace,
+      organicPaceJitterSec: 6,
+      organicQuietSec: quiet,
+      organicMaxDipPct: dipPct / 100,
+      organicSellPct: sellPct,
+    })});
+  } catch(e){ setBusy(false); alert(e.message); }
+};
+function syncOrganicOpts(){
+  const mode = $("buyMode")?.value || "burst";
+  if($("organicOpts")) $("organicOpts").style.display = mode === "organic" ? "" : "none";
+}
+if($("buyMode")) $("buyMode").onchange = syncOrganicOpts;
+syncOrganicOpts();
+wireLaunchpadSeg(); syncLaunchpadUI(currentLaunchpad());
+$("btnBuyRetry").onclick = async () => {
+  const fails = state.lastBuyFailures || [];
+  const n = fails.length;
+  if(!n){
+    alert("No failed buys recorded yet. Run Start buying first — failures are saved automatically for retry.");
+    return;
+  }
+  if(!confirm(`Retry ${n} failed wallet(s)?\n\nOnly those that errored last run.\nAuto-retries with gas clamp (shrink buy) + tip bump.\nWallets that already bought are skipped.`)) return;
+  try {
+    setBusy(true, `Retrying ${n} failed…`);
+    $("logBuy").innerHTML = "";
+    const slipPct = Number($("buySlippage")?.value);
+    const slip = Number.isFinite(slipPct) ? slipPct : 8;
+    await api("/api/buy", { method:"POST", body: JSON.stringify({
+      token: $("token").value.trim() || state.plan?.token?.address || state.plan?.token,
+      launchpad: currentLaunchpad(),
+      mode: "burst",
+      onlyFailed: true,
+      concurrency: Math.max(n, 8),
+      slippageBps: Math.round(Math.max(slip, 10) * 100),
+      priorityMultiplier: 1.8,
+      retries: 4,
+      tapeGuard: false,
+      foreignBuyPolicy: "bump",
+      foreignMinEth: Number($("foreignMinEth")?.value)||0.008,
+    })});
+  } catch(e){ setBusy(false); alert(e.message); }
+};
+$("btnBuyCancel").onclick = async () => {
+  try {
+    await api("/api/buy/cancel", { method:"POST", body:"{}" });
+  } catch(e){ alert(e.message); }
+};
+
+function sellTokenAddress(){
+  const raw = ($("sellToken")?.value || $("token")?.value || state.plan?.token?.address || state.plan?.token || "").toString().trim();
+  return raw;
+}
+function loadSellChart(force, opts = {}){
+  const token = sellTokenAddress();
+  const frame = $("sellChartFrame");
+  const link = $("sellDexLink");
+  const title = $("sellChartTitle");
+  const ph = $("sellChartPlaceholder");
+  if(!frame) return;
+  if(!token || token.length < 10){
+    if(title) title.textContent = "DexScreener — paste a token above";
+    if(link) link.style.display = "none";
+    if(ph) ph.style.display = "flex";
+    frame.style.display = "none";
+    frame.removeAttribute("src");
+    return;
+  }
+  const addr = token.toLowerCase();
+  const pageUrl = `https://dexscreener.com/robinhood/${addr}`;
+  const embedUrl = `${pageUrl}?embed=1&theme=dark&trades=0&info=0`;
+  if(link){
+    link.href = pageUrl;
+    link.style.display = "inline-flex";
+  }
+  if(title) title.textContent = `DexScreener · ${addr.slice(0,6)}…${addr.slice(-4)}`;
+  const wantEmbed = opts.embed !== false;
+  if(!wantEmbed){
+    // Wire link only — don't pull the heavy iframe until user asks
+    if(ph) ph.style.display = "flex";
+    frame.style.display = "none";
+    return;
+  }
+  if(force || frame.dataset.token !== addr || !frame.src){
+    frame.dataset.token = addr;
+    if(ph){
+      ph.style.display = "flex";
+      ph.innerHTML = `<div>Loading DexScreener…</div><div style="font-size:12px">If this hangs, use <strong>Open DexScreener ↗</strong>.</div>`;
+    }
+    frame.style.display = "block";
+    frame.onload = () => { if(ph) ph.style.display = "none"; };
+    frame.src = embedUrl;
+    // Safety: hide spinner after 12s even if iframe never fires onload
+    setTimeout(() => { if(ph && frame.dataset.token === addr) ph.style.display = "none"; }, 12000);
+  }
+}
+if($("btnSellChartRefresh")) $("btnSellChartRefresh").onclick = () => loadSellChart(true, { embed: true });
+if($("btnSellChartLoad")) $("btnSellChartLoad").onclick = () => loadSellChart(true, { embed: true });
+if($("sellToken")){
+  $("sellToken").addEventListener("change", () => loadSellChart(false, { embed: false }));
+  $("sellToken").addEventListener("blur", () => loadSellChart(false, { embed: false }));
+}
+$("btnSellPreview").onclick = async () => {
+  try {
+    setBusy(true, "Quoting…");
+    const token = $("sellToken").value.trim() || $("token").value.trim();
+    state.sellPreview = await api("/api/sell/preview", { method:"POST", body: JSON.stringify({ token }) });
+    renderSell();
+    setBusy(false);
+  } catch(e){ setBusy(false); alert(e.message); }
+};
+$("btnSellPlan").onclick = async () => {
+  try {
+    setBusy(true, "Building MM sell plan…");
+    const token = $("sellToken").value.trim() || $("token").value.trim();
+    state.sellPlan = await api("/api/sell/plan", { method:"POST", body: JSON.stringify({
+      token,
+      strategy: $("sellPlanStrategy")?.value || "auto",
+      targetMcapUsd: Number($("targetMcapUsd")?.value) || 1000000,
+    })});
+    if(state.sellPlan?.positions){
+      state.sellPreview = {
+        ...(state.sellPreview||{}),
+        summary: state.sellPlan.positions,
+        symbol: state.sellPlan.tape?.symbol,
+        rows: state.sellPreview?.rows,
+      };
+    }
+    // Also refresh full P&L rows so table stays in sync
+    try {
+      state.sellPreview = await api("/api/sell/preview", { method:"POST", body: JSON.stringify({ token }) });
+    } catch(_){}
+    renderSell();
+    setBusy(false);
+  } catch(e){ setBusy(false); alert(e.message); }
+};
+
+if($("btnRefreshRecs")) $("btnRefreshRecs").onclick = () => refreshRecommendations();
+
+async function sellRecommendedOne(wi, pct, addr){
+  const w = state.wallets[wi];
+  if(!w){ alert("Wallet not found — refresh wallets and rebuild plan."); return; }
+  const fromNow = (state.sellPlan?.sellTheseNow?.wallets||[]).find(x => String(x.address).toLowerCase()===String(addr||w.address).toLowerCase());
+  const planW = fromNow
+    || (state.sellPlan?.plan||[]).find(x => String(x.address).toLowerCase()===String(addr||w.address).toLowerCase());
+  const label = planW?.label || w.name || short(w.address);
+  // Only trust getUsd from sellTheseNow when selling the SAME recommended %
+  const recPct = Number(fromNow?.sellPercent);
+  const sameProbe = fromNow && recPct > 0 && Math.abs(recPct - pct) < 0.5;
+  const getU = sameProbe ? fromNow.getUsd
+    : (planW?.worthAloneUsd != null || planW?.worthUsd != null
+        ? Number(planW.worthAloneUsd ?? planW.worthUsd) * (pct/100)
+        : null);
+  const profitU = sameProbe ? fromNow.profitUsd
+    : (planW?.profitAloneUsd != null || planW?.profitUsd != null
+        ? Number(planW.profitAloneUsd ?? planW.profitUsd) * (pct/100)
+        : null);
+  const drop = sameProbe ? fromNow.mcapDropPct
+    : (planW?.mcapDropPct != null ? Number(planW.mcapDropPct) * (pct/100) : null);
+  const msg = `Sell ONLY ${pct}% from ${label}?\n\n` +
+    (getU!=null?`You get ~${money(getU,2)}`:"") +
+    (profitU!=null?` · profit ~${moneySigned(profitU,2)}`:"") +
+    (drop!=null?`\nModeled MC hit ≈ −${Number(drop).toFixed(2)}%`:"") +
+    `\n\nThis sells ${pct}% of this wallet only — not the full bag, not other wallets.`;
+  if(!confirm(msg)) return;
+  try {
+    setBusy(true, `Selling ${pct}% · ${label}…`);
+    if($("logSell")) $("logSell").innerHTML = "";
+    await api("/api/sell/one", { method:"POST", body: JSON.stringify({
+      token: $("sellToken").value.trim() || $("token").value.trim(),
+      index: wi,
+      percent: pct,
+    })});
+  } catch(e){ setBusy(false); alert(e.message); }
+}
+
+async function sellTheseNowOnly(){
+  const sp = state.sellPlan;
+  const wallets = sp?.sellTheseNow?.wallets || [];
+  if(!wallets.length){
+    alert("Build a sell plan first — no least-impact wallets yet.");
+    return;
+  }
+  const n = wallets.length;
+  const usd = sp?.sellTheseNow?.totalUsdLabel || "?";
+  const cum = sp?.sellTheseNow?.cumulativeMcapDropPct;
+  const lines = wallets.map(w => `• ${w.label||short(w.address)} — ${w.sellPercent}% (~${w.getUsdLabel||"?"})`).join("\n");
+  if(!confirm(`Sell ONLY the recommended sizes for ${n} wallets (~${usd})?\n\n${lines}\n\nModeled MC hit ≈ −${cum!=null?cum:"?"}% — not full dumps.`)) return;
+  try {
+    setBusy(true, `Selling ${n} recommended probes…`);
+    if($("logSell")) $("logSell").innerHTML = "";
+    const token = $("sellToken").value.trim() || $("token").value.trim();
+    // Sell one-by-one at EACH wallet's recommended % (never a blanket 100%)
+    for(const rec of wallets){
+      const wi = state.wallets.findIndex(w => w.address?.toLowerCase()===String(rec.address).toLowerCase());
+      if(wi < 0) continue;
+      const pct = Math.min(100, Math.max(1, Number(rec.sellPercent)||5));
+      if($("logSell")) appendLog($("logSell"), { kind:"info", text:`Probe sell ${pct}% · ${rec.label||short(rec.address)}` });
+      await api("/api/sell/one", { method:"POST", body: JSON.stringify({
+        launchpad: currentLaunchpad(),
+        token,
+        index: wi,
+        percent: pct,
+      })});
+      await waitForSellJobIdle();
+    }
+    setBusy(false);
+  } catch(e){ setBusy(false); alert(e.message); }
+}
+
+async function waitForSellJobIdle(){
+  // Poll until server job is idle so we don't 409 on the next sell/one
+  // Fast path unlocks as soon as the swap is broadcast (no receipt wait)
+  for(let i=0;i<200;i++){
+    try {
+      const st = await api("/api/state");
+      if(!st?.job?.running) return;
+    } catch(_){}
+    await new Promise(r => setTimeout(r, 120));
+  }
+}
+
+if($("btnSellByPlan")) $("btnSellByPlan").onclick = async () => {
+  const hint = state.sellPlan?.executeHint || {};
+  if(!confirm("Sell in plan order? Prefer per-wallet % buttons when you only want specific wallets.")) return;
+  try {
+    setBusy(true, "Selling by plan…");
+    $("logSell").innerHTML = "";
+    const token = $("sellToken").value.trim() || $("token").value.trim();
+    const body = {
+      token,
+      usePlan: true,
+      strategy: $("sellPlanStrategy")?.value || "auto",
+      percent: Number($("sellPct")?.value)||100,
+      fast: true,
+      waitForReceipt: false,
+      priorityMultiplier: 1.75,
+    };
+    if(hint.order?.length){
+      body.walletOrder = hint.order;
+      body.mode = hint.mode || "sequential";
+      // Cap plan delays — old 800–2500ms felt stuck between wallets
+      body.delayMs = Math.min(Number(hint.delayMs)||200, 400);
+    }
+    body.launchpad = currentLaunchpad();
+    await api("/api/sell", { method:"POST", body: JSON.stringify(body) });
+  } catch(e){ setBusy(false); alert(e.message); }
+};
+if($("btnSellAll")) $("btnSellAll").onclick = async () => {
+  if(!confirm("Sell tokens from ALL buyer wallets?")) return;
+  try {
+    setBusy(true, "Selling…");
+    $("logSell").innerHTML = "";
+    await api("/api/sell", { method:"POST", body: JSON.stringify({
+      token: $("sellToken").value.trim() || $("token").value.trim(),
+      launchpad: currentLaunchpad(),
+      percent: Number($("sellPct")?.value)||100,
+      mode: $("sellMode")?.value || "parallel",
+      delayMs: ($("sellMode")?.value==="sequential") ? 200 : 0,
+      fast: true,
+      waitForReceipt: false,
+      priorityMultiplier: 1.75,
+    })});
+  } catch(e){ setBusy(false); alert(e.message); }
+};
+async function doRecall(logEl){
+  if(!confirm("Send leftover ETH from helper wallets back to the bank?\n(Leaves a tiny bit for network fees.)")) return;
+  try {
+    setBusy(true, "Recalling…");
+    if(logEl) logEl.innerHTML = "";
+    await api("/api/recall", { method:"POST", body: JSON.stringify({ unwrapWeth: true }) });
+  } catch(e){ setBusy(false); alert(e.message); }
+}
+$("btnRecall").onclick = () => doRecall($("logRecall"));
+$("btnRecallSell").onclick = () => doRecall($("logSell"));
+$("btnRecoverHops").onclick = async () => {
+  try {
+    const status = await api("/api/recover/hops");
+    const pending = status.pending || 0;
+    if(!pending){
+      alert("No stuck hop wallets to recover.");
+      return;
+    }
+    const lines = (status.hops||[]).slice(0,8).map(h =>
+      `${(h.address||"").slice(0,10)}… bal ${h.balance!=null?Number(h.balance).toFixed(5):"?"} ETH → ${h.destName||h.dest||"?"}`
+    ).join("\n");
+    if(!confirm(`Recover ${pending} hop wallet(s) back to the bank?\n\n${lines}\n\nThis sweeps any leftover ETH from privacy hops.`)) return;
+    setBusy(true, "Recovering hops…");
+    $("logRecall").innerHTML = "";
+    await api("/api/recover/hops", { method:"POST", body: JSON.stringify({ onlyPending: true }) });
+  } catch(e){ setBusy(false); alert(e.message); }
+};
+if($("btnSnipeSave")) $("btnSnipeSave").onclick = async () => {
+  try {
+    if(($("snipeAuto").checked || $("snipeAutoSell")?.checked) && !state.sniper){
+      alert("Import or create a sniper wallet first (Pairs tab)");
+      if($("snipeAuto")) $("snipeAuto").checked = false;
+      if($("snipeAutoSell")) $("snipeAutoSell").checked = false;
+      return;
+    }
+    if($("snipeAuto").checked){
+      if(!confirm("Turn AUTO-SNIPE ON?\n\nBuys will spend ETH from your sniper wallet until you turn it off.")){
+        $("snipeAuto").checked = false;
+        return;
+      }
+    }
+    if($("snipeAutoSell")?.checked === false && $("snipeAuto").checked){
+      if(!confirm("Auto-buy ON but Auto-exits OFF — you'll stack bags with no TP/SL. Continue?")){
+        return;
+      }
+    }
+    if($("snipeAutoSell")?.checked && state.snipeConfig?.autoSell === false){
+      if(!confirm(`Turn AUTO-EXITS ON?\n\nTP1 ${$("snipeTp").value}x → bank ${$("snipePartial")?.value||50}% and hold rest\nTrail ${$("snipeTrail")?.value||25}% / TP2 ${$("snipeTp2")?.value||3}x\nStop ${$("snipeSl").value}%`)){
+        $("snipeAutoSell").checked = false;
+        return;
+      }
+    }
+    const cfg = await api("/api/snipe/config", { method:"POST", body: JSON.stringify({
+      enabled: !!$("snipeAuto").checked,
+      autoSell: !!$("snipeAutoSell")?.checked,
+      skipSerialCreators: !!$("snipeSkipSerial")?.checked,
+      amountEth: Number($("snipeEth").value)||0.005,
+      takeProfitX: Number($("snipeTp").value)||1.6,
+      takeProfit2X: Number($("snipeTp2")?.value)||3,
+      partialSellPct: Number($("snipePartial")?.value)||50,
+      trailPct: Number($("snipeTrail")?.value)||25,
+      stopLossPct: Number($("snipeSl").value)||35,
+      maxAgeSec: Number($("snipeMaxAge").value)||90,
+      maxInitialBuyEth: Number($("snipeMaxInit").value)||1,
+      maxOpenPositions: Number($("snipeMaxOpen")?.value)||40,
+    })});
+    state.snipeConfig = cfg.config;
+    if(cfg.sniper) state.sniper = { ...(state.sniper||{}), ...cfg.sniper };
+    syncSnipeForm();
+    renderSniper();
+    if(state.step===6) loadSniperPortfolio();
+    alert(`Saved · auto-buy ${cfg.config.enabled?"ON":"OFF"} · auto-sell ${cfg.config.autoSell?"ON":"OFF"}${cfg.openCount!=null?` · watching ${cfg.openCount} bag(s)`:""}`);
+  } catch(e){ alert(e.message); }
+};
+if($("btnSnipeStop")) $("btnSnipeStop").onclick = async () => {
+  try {
+    await api("/api/snipe/stop", { method:"POST", body:"{}" });
+    if($("snipeAuto")) $("snipeAuto").checked = false;
+    if(state.snipeConfig) state.snipeConfig.enabled = false;
+    syncSnipeForm();
+    alert("Auto-snipe stopped");
+  } catch(e){ alert(e.message); }
+};
+if($("btnSniperSellAll")) $("btnSniperSellAll").onclick = () => sellSniperOpen({ all: true });
+if($("btnSnipeReset")) $("btnSnipeReset").onclick = async () => {
+  if(!confirm("Reset ALL snipes, P&L, and logs?\n\nStarts tracking from zero. Wallets and ETH are not touched. Old data is archived on disk.")) return;
+  try {
+    const j = await api("/api/sniper/reset", { method:"POST", body: JSON.stringify({ clearAutoSell: false }) });
+    state.snipes = [];
+    state.sniperPortfolio = null;
+    if(j.config) state.snipeConfig = j.config;
+    if($("logSnipe")) $("logSnipe").innerHTML = "";
+    if($("snipeHistory")) $("snipeHistory").innerHTML = `<div class="empty">Fresh start — no snipes yet</div>`;
+    if($("sniperOpenTable")) $("sniperOpenTable").innerHTML = `<div class="empty">No open holdings</div>`;
+    ["snStatBal","snStatOpen","snStatUnreal","snStatReal","snStatTotal","snStatSpent","snStatBuys","snStatBags"].forEach(id => {
+      if($(id)) $(id).textContent = id==="snStatBuys" ? "0 / 0" : (id==="snStatBags" ? "0" : "$0.00");
+    });
+    if($("snStatUnreal")) $("snStatUnreal").style.color = "";
+    if($("snStatReal")) $("snStatReal").style.color = "";
+    if($("snStatTotal")) $("snStatTotal").style.color = "";
+    syncSnipeForm();
+    renderSniper();
+    if(state.step===6) loadSniperPortfolio();
+    alert(`Cleared ${j.cleared||0} records. P&L and logs start fresh at $0.`);
+  } catch(e){ alert(e.message); }
+};
+if($("btnSniperRecall")) $("btnSniperRecall").onclick = async () => {
+  if(!confirm("Send leftover ETH from the sniper wallet back to the funder?\n(Does not sell tokens — only ETH/WETH.)")) return;
+  try {
+    setBusy(true, "Recalling sniper…");
+    if($("logSnipe")) $("logSnipe").innerHTML = "";
+    if($("snipeAuto")) $("snipeAuto").checked = false;
+    await api("/api/sniper/recall", { method:"POST", body:"{}" });
+  } catch(e){ setBusy(false); alert(e.message); }
+};
+if($("btnSniperCreate")) $("btnSniperCreate").onclick = async () => {
+  if(state.sniper && !confirm("Replace the current sniper wallet?")) return;
+  try {
+    const j = await api("/api/wallets/create", { method:"POST", body: JSON.stringify({ count:1, role:"sniper" }) });
+    const created = j.created?.[0];
+    if(created?.privateKey) prompt("SAVE this sniper private key", created.privateKey);
+    await refresh();
+  } catch(e){ alert(e.message); }
+};
+if($("btnSniperImport")) $("btnSniperImport").onclick = async () => {
+  const pk = prompt("Paste sniper private key");
+  if(!pk) return;
+  try {
+    await api("/api/wallets/import", { method:"POST", body: JSON.stringify({ privateKey: pk.trim(), role: "sniper", name: "Sniper" }) });
+    await refresh();
+  } catch(e){ alert(e.message); }
+};
+if($("btnSniperPk")) $("btnSniperPk").onclick = async () => {
+  if(!state.sniper) return alert("No sniper wallet");
+  try {
+    const j = await api(`/api/wallets/${state.sniper.index}/pk`);
+    prompt("Sniper private key", j.privateKey);
+  } catch(e){ alert(e.message); }
+};
+if($("btnSniperRemove")) $("btnSniperRemove").onclick = async () => {
+  if(!state.sniper) return;
+  if(!confirm("Remove sniper wallet from the dashboard? (Does not drain on-chain funds)")) return;
+  try {
+    await api(`/api/wallets/${state.sniper.index}`, { method:"DELETE" });
+    await refresh();
+  } catch(e){ alert(e.message); }
+};
+if($("btnSniperFund")) $("btnSniperFund").onclick = async () => {
+  if(!state.sniper) return alert("Import/create a sniper wallet first");
+  const amountEth = Number($("sniperFundEth").value)||0.05;
+  if(!confirm(`Send ${amountEth} ETH from bundler funder → sniper?`)) return;
+  try {
+    setBusy(true, "Funding sniper…");
+    if($("logSnipe")) $("logSnipe").innerHTML = "";
+    await api("/api/sniper/fund", { method:"POST", body: JSON.stringify({ amountEth }) });
+  } catch(e){ setBusy(false); alert(e.message); }
+};
+if($("btnPairsRefresh")) $("btnPairsRefresh").onclick = async () => {
+  try {
+    const j = await api("/api/pairs?limit=40");
+    state.pairsFeedNote = j.feedNote || (j.source ? `source: ${j.source}` : "");
+    state.pairs = sortPairsNewest((j.tokens || []).map(t => ({
+      ...t,
+      ageSec: t.createdAt ? Math.max(0,(Date.now()-new Date(t.createdAt).getTime())/1000) : t.ageSec
+    })));
+    renderPairs();
+    if(state.step===6) loadSniperPortfolio();
+  } catch(e){ alert(e.message); }
+};
+if($("btnSnipePortfolio")) $("btnSnipePortfolio").onclick = () => loadSniperPortfolio();
+if($("snipeRange")) $("snipeRange").onchange = () => loadSniperPortfolio();
+const es = new EventSource("/api/events");
+es.onmessage = (ev) => {
+  try {
+    const msg = JSON.parse(ev.data);
+    if(msg.type==="log" && msg.entry){
+      const t = msg.job?.type;
+      const txt = msg.entry.msg || "";
+      const isSnipe = /SNIPE|sniped|Auto-snipe|exit \$|sold \$/.test(txt) || state.step===6;
+      const target = t === "buy" ? $("logBuy")
+        : t === "season" ? $("logSeason")
+        : t === "sell" ? $("logSell")
+        : t === "recall" ? (state.step === 5 ? $("logSell") : $("logRecall"))
+        : isSnipe ? $("logSnipe")
+        : $("logFund");
+      if(target) appendLog(target, msg.entry);
+      if($("logSnipe") && /SNIPE|sniped|Auto-snipe|exit \$/.test(txt) && target !== $("logSnipe")) {
+        appendLog($("logSnipe"), msg.entry);
+      }
+    }
+    if(msg.type==="pairs" && msg.tokens){
+      if(msg.feedNote) state.pairsFeedNote = msg.feedNote;
+      else if(msg.source) state.pairsFeedNote = `Live feed · ${msg.source}`;
+      state.pairs = sortPairsNewest(msg.tokens.map(t => ({
+        ...t,
+        ageSec: t.createdAt ? Math.max(0,(Date.now()-new Date(t.createdAt).getTime())/1000) : t.ageSec
+      })));
+      if(state.step===6) renderPairs();
+    }
+    if(msg.type==="snipe_start"){ setBusy(true, "Sniping…"); }
+    if(msg.type==="snipe_done"){
+      setBusy(false);
+      if(msg.snipe){
+        state.snipes = [msg.snipe, ...(state.snipes||[])].slice(0,30);
+        renderSnipeHistory();
+        if(state.step===6) loadSniperPortfolio();
+      }
+    }
+    if(msg.type==="snipe_reset"){
+      state.snipes = [];
+      state.sniperPortfolio = null;
+      if($("logSnipe")) $("logSnipe").innerHTML = "";
+      if(state.step===6) loadSniperPortfolio();
+      else renderSnipeHistory();
+    }
+    if(msg.type==="snipe_exit"){
+      setBusy(false);
+      refresh();
+      if(state.step===6) loadSniperPortfolio();
+    }
+    if(msg.fundingPreview){ state.fundingPreview = msg.fundingPreview; renderFundJobs(); }
+    if(msg.type==="balances" && Array.isArray(msg.updates)){
+      for(const u of msg.updates){
+        const key = String(u.address||"").toLowerCase();
+        const w = state.wallets.find(x => String(x.address||"").toLowerCase()===key || (u.index!=null && x.index===u.index));
+        if(w && u.balance!=null) w.balance = u.balance;
+      }
+      renderOverview();
+      if(state.step===1) renderWallets({ soft: true });
+      if(state.step===2) renderPlan();
+      if(state.step===3) renderFundJobs();
+      if(state.step===4) renderBuyReady();
+    }
+    if(msg.type==="fund_paused"){
+      setBusy(true, "Funding paused…");
+      if(msg.fundingPreview){ state.fundingPreview = msg.fundingPreview; renderFundJobs(); }
+    }
+    if(msg.job?.running){
+      const paused = msg.job.paused || msg.job.pause;
+      setBusy(true, msg.job.type==="buy"?"Buying…": msg.job.type==="fund"?(paused?"Funding paused…":"Funding…"): msg.job.type==="season"?"Seasoning…": msg.job.type==="sell"?"Selling…": msg.job.type==="recall"?"Recalling…":"Working…");
+    }
+    if(msg.job?.progress?.total){
+      const pct = Math.round((msg.job.progress.done/msg.job.progress.total)*100);
+      if(msg.job.type === "season"){
+        $("seasonProgress").classList.remove("hidden");
+        $("seasonBar").style.width = pct+"%";
+        $("seasonLabel").textContent = `${msg.job.progress.done}/${msg.job.progress.total} ${msg.job.progress.label||""}`;
+      } else if(msg.job.type === "fund") {
+        $("fundProgress").classList.remove("hidden");
+        $("fundBar").style.width = pct+"%";
+        $("fundLabel").textContent = `${msg.job.progress.done}/${msg.job.progress.total} ${msg.job.progress.label||""}`;
+      }
+    }
+    if(msg.type==="job_done"){
+      setBusy(false);
+      // Soft wallet/balance refresh only — never auto-rebuild sell plan
+      refresh({ forceBalances: true }).then(async () => {
+        if(msg.job?.type === "sell"){
+          // Update sell history bank only — keep sticky sellPlan until you click refresh
+          try {
+            const st = await api("/api/state");
+            state.sellHistory = st.sellHistory || [];
+            state.sellHistorySummary = st.sellHistorySummary || null;
+            mergeWallets(st.wallets);
+          } catch(_){}
+          if(state.step === 5){
+            renderSellHistory();
+            // Soft-update P&L rows only if user already has a preview open
+            const token = $("sellToken")?.value?.trim() || $("token")?.value?.trim();
+            if(token && state.sellPreview){
+              try {
+                state.sellPreview = await api("/api/sell/preview", { method:"POST", body: JSON.stringify({ token }) });
+              } catch(_){}
+            }
+            renderSell(); // re-paints sticky sellPlan + updated history/preview
+          }
+        } else if(msg.job?.type === "buy"){
+          const token = $("sellToken")?.value?.trim() || $("token")?.value?.trim();
+          if(token) api("/api/sell/preview", { method:"POST", body: JSON.stringify({ token }) })
+            .then(p => { state.sellPreview = p; if(state.step===5) renderSell(); })
+            .catch(()=>{});
+        }
+      });
+    }
+    if(msg.type==="sell_history"){
+      if(msg.summary) state.sellHistorySummary = msg.summary;
+      // prepend new entries
+      if(Array.isArray(msg.entries) && msg.entries.length){
+        state.sellHistory = [...msg.entries.reverse(), ...(state.sellHistory||[])];
+      }
+      renderSellHistory();
+    }
+  } catch(_){}
+};
+showStep(1);
+// Instant paint from disk/cache, then background balance sweep via SSE
+refresh({ forceBalances: false })
+  .then(() => api("/api/balances/refresh", { method:"POST", body:"{}" }))
+  .catch(console.error);
+// Soft balance polls only — never wipe sticky wallets / sell plan
+setInterval(() => {
+  if(state._fundingBusy || state._buyingBusy || state.jobRunning) return;
+  // Only kick RPC balances (SSE patches UI). Do NOT full-refresh state on a timer —
+  // that was causing blank balances / flaky sell plan mid-bundle.
+  if(![1,2,4,5].includes(state.step)) return;
+  api("/api/balances/refresh", { method:"POST", body:"{}" }).catch(()=>{});
+}, 25000);
+$("btnRefresh").onclick = () => {
+  api("/api/balances/refresh", { method:"POST", body:"{}" }).catch(()=>{});
+  refresh({ forceBalances: false }).catch(()=>{});
+};
+
+async function forceRestartBundle(){
+  const buyers = (state.wallets||[]).filter(w => w.role === "buyer").length;
+  const tab = (state.projects||[]).find(p => p.id === state.activeProjectId);
+  const tabName = tab?.label || state.activeProjectId || "this tab";
+  if(!confirm(`Reset ${tabName}?\n\nThis will:\n• Remove all ${buyers} helper wallet(s) on THIS tab only\n• Clear buy plan + sell plan for this tab\n• Keep the shared bank and other coin tabs\n\nOnly do this when you've sold out / finished this launch.`)) return;
+  if(!confirm("Really wipe this tab's helpers + sell plan? Export keys CSV first if you still need them.")) return;
+  try {
+    setBusy(true, "Resetting tab…");
+    const j = await api("/api/wallets/clear-buyers", { method:"POST", body:"{}" });
+    state.plan = null;
+    state.sellPlan = null;
+    state.sellPreview = null;
+    state.fundingPreview = null;
+    state.lastBuyFailures = [];
+    state.lastToken = "";
+    if($("token")) $("token").value = "";
+    if($("sellToken")) $("sellToken").value = "";
+    if($("sellTable")) $("sellTable").innerHTML = "";
+    if($("sellPlanBox")){ $("sellPlanBox").style.display="none"; $("sellPlanBox").innerHTML=""; }
+    if($("sellSummary")) $("sellSummary").style.display="none";
+    if($("walletTable")) $("walletTable").innerHTML = "";
+    await refresh({ replaceWallets: true });
+    renderOverview();
+    if(state.step===1) renderWallets();
+    else if(state.step===5) renderSell();
+    setBusy(false);
+    showStep(1);
+    alert(`Reset done on ${tabName}. Removed ${j.removed} helper(s). Other tabs untouched. Bank kept.`);
+  } catch(e){ setBusy(false); alert(e.message); }
+}
+if($("btnForceRestart")) $("btnForceRestart").onclick = () => forceRestartBundle();
+if($("btnForceRestartSell")) $("btnForceRestartSell").onclick = () => forceRestartBundle();
+if($("btnNewProject")) $("btnNewProject").onclick = () => createProject();
+
+/* ─── Money Desk (USD, plain English) ─── */
+let moneyState = null;
+function moneyCard(title, big, rows, plain, tone){
+  const rowHtml = (rows||[]).map(r => `<div class="money-row"><span>${r[0]}</span><span>${r[1]}</span></div>`).join("");
+  const cls = tone === "block" || tone === "bad" ? "bad" : tone === "warn" ? "warn" : "ok";
+  return `<div class="money-card"><h3>${title}</h3>${big?`<div class="money-big">${big}</div>`:""}${rowHtml}${plain?`<div class="money-plain ${cls}">${plain}</div>`:""}</div>`;
+}
+function fillMoneyConfig(m){
+  const ethUsd = Number(m.ethUsd)||0;
+  const c = m.config || {};
+  const t = c.treasury || {};
+  const toUsd = (eth) => ethUsd > 0 ? (Number(eth)||0)*ethUsd : 0;
+  if($("cfgMinReserveUsd")) $("cfgMinReserveUsd").value = Math.round(toUsd(t.minReserveEth));
+  if($("cfgMinReservePct")) $("cfgMinReservePct").value = t.minReservePct ?? 30;
+  if($("cfgLiqUsd")) $("cfgLiqUsd").value = Math.round(toUsd(t.liquidityAllocationEth));
+  if($("cfgMktUsd")) $("cfgMktUsd").value = Math.round(toUsd(t.marketingBudgetEth));
+  if($("cfgEmergUsd")) $("cfgEmergUsd").value = Math.round(toUsd(t.emergencyBufferEth));
+  const r = c.readiness || {};
+  if($("cfgLeafOn")) $("cfgLeafOn").checked = !!r.greenLeafActive;
+  if($("cfgLeafHours")) $("cfgLeafHours").value = r.minRunwayHours || 48;
+  if($("cfgLeafEnds") && r.greenLeafExpiresAt){
+    try {
+      const d = new Date(r.greenLeafExpiresAt);
+      const local = new Date(d.getTime() - d.getTimezoneOffset()*60000).toISOString().slice(0,16);
+      $("cfgLeafEnds").value = local;
+    } catch(_){}
+  }
+  [["cfgWeb","websiteReady"],["cfgSocial","socialsReady"],["cfgPromo","promoScheduleConfirmed"],["cfgCallers","callersConfirmed"],["cfgCommunity","minCommunityReached"],["cfgMeta","metadataComplete"],["cfgBuyOk","buyPlanApproved"],["cfgExitOk","exitPlanApproved"]].forEach(([id,key])=>{
+    if($(id)) $(id).checked = !!r[key];
+  });
+  const lp = c.lp || {};
+  if($("lpEth")) $("lpEth").value = lp.ethAllocated ?? 0;
+  if($("lpOwn")) $("lpOwn").value = lp.ownershipPct ?? 0;
+  if($("lpFees")) $("lpFees").value = lp.feesEarnedEth ?? 0;
+  if($("lpIl")) $("lpIl").value = lp.impermanentLossEth ?? 0;
+  if($("lpLocked")) $("lpLocked").checked = !!lp.locked;
+  const ks = c.killSwitch || {};
+  if($("ksMinFunder")) $("ksMinFunder").value = ks.minFunderEth ?? 1;
+  if($("ksDrawdown")) $("ksDrawdown").value = ks.maxProjectDrawdownPct ?? 30;
+  if($("ksDaily")) $("ksDaily").value = ks.maxDailyLossEth ?? 0.5;
+  if($("ksFail")) $("ksFail").value = ks.maxFailedTxSpendEth ?? 0.05;
+  if($("capDeployed") && m.capital) $("capDeployed").value = m.capital.deployedEth ?? "";
+  if($("capHeldPct") && m.breakEven) $("capHeldPct").value = m.breakEven.remainingSupplyPct ?? 8;
+}
+function renderMoneyDesk(m){
+  moneyState = m;
+  const tr = m.treasury || {};
+  const tone = tr.status || "ok";
+  if($("moneyTopGrid")){
+    $("moneyTopGrid").innerHTML = [
+      moneyCard("Cash in bank", tr.labels?.funder, [
+        ["Protected reserve", tr.labels?.protected],
+        ["Liquidity set-aside", tr.labels?.liquidity],
+        ["Est. gas & fees", tr.labels?.gas],
+        ["Marketing budget", tr.labels?.marketing],
+        ["Emergency cushion", tr.labels?.emergency],
+        ["LP capital (locked out)", tr.labels?.lp],
+      ], tr.plainEnglish, tone),
+      moneyCard("What you can still spend", tr.labels?.maxDeployable, [
+        ["Your planned buys", tr.labels?.planned],
+        ["Safety margin left", tr.labels?.margin],
+      ], tr.status==="block"?"Too big — shrink the plan.":tr.status==="warn"?"Almost no cushion.":"Plan fits inside your rules.", tone),
+      moneyCard("Is this buy size smart?", m.sizing?.labels?.prudent, [
+        ["You asked for", m.sizing?.labels?.requested],
+        ["Careful max", m.sizing?.labels?.prudent],
+      ], m.sizing?.plainEnglish, m.sizing?.ok ? "ok" : "warn"),
+    ].join("");
+  }
+  const kill = m.kill || {};
+  const kb = $("moneyKillBanner");
+  if(kb){
+    if(!kill.ok){
+      kb.classList.remove("hidden");
+      kb.textContent = kill.plainEnglish || "Safety stop is on.";
+    } else kb.classList.add("hidden");
+  }
+  const rd = m.readiness || {};
+  if($("moneyReadiness")){
+    const checks = (rd.checks||[]).map(c => `<li><span class="check-dot ${c.ok?"yes":"no"}">${c.ok?"✓":"!"}</span><div><strong>${c.label}</strong><div style="color:var(--text-muted);font-size:12px">${c.detail||""}</div></div></li>`).join("");
+    $("moneyReadiness").innerHTML = `
+      <div class="money-card">
+        <h3>Launch score</h3>
+        <div class="score-ring" style="color:${rd.tone==="block"?"var(--accent-red)":rd.tone==="warn"?"var(--accent-yellow)":"var(--accent-green)"}">${rd.score}<span style="font-size:14px;color:var(--text-muted)">/100</span></div>
+        <div class="money-plain ${rd.tone==="block"?"bad":rd.tone==="warn"?"warn":"ok"}">${rd.plainEnglish||""}</div>
+        <ul class="check-list">${checks}</ul>
+      </div>`;
+  }
+  const np = m.netProfit || {};
+  if($("moneyNet")){
+    $("moneyNet").innerHTML = [
+      moneyCard("True net profit", np.labels?.net, [
+        ["Gross trading profit", np.labels?.gross],
+        ["− Gas & launch fees", np.labels?.gas],
+        ["− Failed txs", np.labels?.failed],
+        ["− Infrastructure", np.labels?.infra],
+        ["− Liquidity losses", np.labels?.liq],
+        ["− Marketing", np.labels?.marketing],
+        ["− Slippage", np.labels?.slip],
+        ["+ LP fees earned", np.labels?.lpFees],
+      ], np.plainEnglish, (np.trueNetEth||0)>=0?"ok":"bad"),
+    ].join("");
+  }
+  const be = m.breakEven || {};
+  if($("moneyBE")){
+    $("moneyBE").innerHTML = [
+      moneyCard("Break-even market cap", be.labels?.be, [
+        ["Cash put in", be.labels?.deployed],
+        ["Cash already back", be.labels?.recovered],
+        ["Still at risk", be.labels?.atRisk],
+        ["Supply you still hold", `${be.remainingSupplyPct||"—"}%`],
+        ["1.5× treasury needs", be.labels?.x15],
+        ["2× treasury needs", be.labels?.x2],
+        ["3× treasury needs", be.labels?.x3],
+      ], be.plainEnglish, "ok"),
+    ].join("");
+  }
+  const ladder = m.ladder || {};
+  if($("moneyLadder")){
+    const rows = (ladder.rungs||[]).map(r => `<div class="money-row"><span>${r.atMcX}× · ${r.recoverLabel||r.id} <em style="color:var(--text-muted)">(${r.status})</em></span><span>${r.targetMcapLabel}</span></div><div style="font-size:12px;color:var(--text-secondary);margin:-4px 0 8px">${r.sellHint||""}</div>`).join("");
+    $("moneyLadder").innerHTML = `<div class="money-card"><h3>Ladder ${ladder.approved?(ladder.active?"· ON":"· approved"):"· needs approval"}</h3>${rows}<div class="money-plain ${ladder.active?"ok":"warn"}">${ladder.plainEnglish||""}</div></div>`;
+  }
+  const ex = m.exitSim || {};
+  if($("moneyExit")){
+    const erows = (ex.rows||[]).map(r => [`Sell ${r.pct}%`, `${r.label} (~${r.slippagePct.toFixed(0)}% haircut)`]);
+    $("moneyExit").innerHTML = moneyCard("Realistic exit value", ex.labels?.bag, [
+      ["What wallets show", ex.labels?.bag],
+      ["If you sell half", ex.labels?.half],
+      ["If you sell everything", ex.labels?.full],
+      ...erows,
+    ], ex.plainEnglish, "warn");
+  }
+  const pf = m.portfolio || {};
+  if($("moneyPortfolio")){
+    $("moneyPortfolio").innerHTML = moneyCard("Whole treasury", pf.labels?.treasury, [
+      ["Protected reserves", pf.labels?.protected],
+      ["Deployed across coins", pf.labels?.deployed],
+      ["Still available to spend", pf.labels?.available],
+      ["Cash recovered from sells", pf.labels?.recovered],
+      ["Paper (unrealized)", pf.labels?.unrealized],
+      ["Biggest single exposure", `${(pf.maxCorrelatedExposurePct||0).toFixed(0)}% ${pf.maxCorrelatedLabel||""}`],
+    ], pf.plainEnglish, (pf.warnings||[]).length?"warn":"ok");
+  }
+  if($("moneyRpcLine")){
+    const rpc = m.rpc || {};
+    $("moneyRpcLine").textContent = rpc.healthy
+      ? `Network OK · ${rpc.latencyMs||"—"}ms · prices in ${m.ethUsdLabel||"USD"}`
+      : `Network slow/unhealthy — don’t trust stale quotes.`;
+  }
+  fillMoneyConfig(m);
+}
+async function loadMoneyDesk(){
+  try {
+    const m = await api("/api/money");
+    renderMoneyDesk(m);
+  } catch(e){
+    if($("moneyTopGrid")) $("moneyTopGrid").innerHTML = `<div class="money-plain bad">${e.message}</div>`;
+  }
+}
+function usdToEth(usd, ethUsd){
+  const p = Number(ethUsd)||0;
+  if(!(p>0)) return 0;
+  return Number(usd)/p;
+}
+if($("btnMoneyRefresh")) $("btnMoneyRefresh").onclick = () => loadMoneyDesk();
+if($("btnKillPause")) $("btnKillPause").onclick = async () => {
+  const reason = prompt("Why are you stopping? (shown on dashboard)", "Manual safety stop");
+  if(reason==null) return;
+  try {
+    await api("/api/money/kill", { method:"POST", body: JSON.stringify({ pause:true, reason }) });
+    await loadMoneyDesk();
+  } catch(e){ alert(e.message); }
+};
+if($("btnKillResume")) $("btnKillResume").onclick = async () => {
+  if(!confirm("Clear the emergency stop and allow buys/launches again?")) return;
+  try {
+    await api("/api/money/kill", { method:"POST", body: JSON.stringify({ resume:true }) });
+    await loadMoneyDesk();
+  } catch(e){ alert(e.message); }
+};
+if($("btnSaveTreasury")) $("btnSaveTreasury").onclick = async () => {
+  const ethUsd = Number(moneyState?.ethUsd)||0;
+  if(!(ethUsd>0)) return alert("Need ETH price — hit Refresh first");
+  try {
+    await api("/api/money/config", { method:"POST", body: JSON.stringify({
+      treasury: {
+        minReserveEth: usdToEth($("cfgMinReserveUsd").value, ethUsd),
+        minReservePct: Number($("cfgMinReservePct").value)||30,
+        liquidityAllocationEth: usdToEth($("cfgLiqUsd").value, ethUsd),
+        marketingBudgetEth: usdToEth($("cfgMktUsd").value, ethUsd),
+        emergencyBufferEth: usdToEth($("cfgEmergUsd").value, ethUsd),
+      }
+    })});
+    await loadMoneyDesk();
+    alert("Cash rules saved.");
+  } catch(e){ alert(e.message); }
+};
+if($("btnSaveReadiness")) $("btnSaveReadiness").onclick = async () => {
+  let expires = "";
+  if($("cfgLeafEnds")?.value){
+    expires = new Date($("cfgLeafEnds").value).toISOString();
+  }
+  try {
+    await api("/api/money/config", { method:"POST", body: JSON.stringify({
+      readiness: {
+        greenLeafActive: !!$("cfgLeafOn")?.checked,
+        greenLeafExpiresAt: expires,
+        minRunwayHours: Number($("cfgLeafHours")?.value)||48,
+        websiteReady: !!$("cfgWeb")?.checked,
+        socialsReady: !!$("cfgSocial")?.checked,
+        promoScheduleConfirmed: !!$("cfgPromo")?.checked,
+        callersConfirmed: !!$("cfgCallers")?.checked,
+        minCommunityReached: !!$("cfgCommunity")?.checked,
+        metadataComplete: !!$("cfgMeta")?.checked,
+        buyPlanApproved: !!$("cfgBuyOk")?.checked,
+        exitPlanApproved: !!$("cfgExitOk")?.checked,
+      }
+    })});
+    await loadMoneyDesk();
+  } catch(e){ alert(e.message); }
+};
+if($("btnAddExpense")) $("btnAddExpense").onclick = async () => {
+  const usd = Number($("expUsd")?.value);
+  if(!(usd>0)) return alert("Enter a dollar amount");
+  const ethUsd = Number(moneyState?.ethUsd)||0;
+  const cat = $("expCat")?.value || "other";
+  const kind = cat === "lp_fees" ? "income" : "expense";
+  try {
+    await api("/api/money/expense", { method:"POST", body: JSON.stringify({
+      eth: ethUsd>0 ? usd/ethUsd : 0,
+      usd,
+      ethUsd,
+      category: cat,
+      label: $("expNote")?.value || cat,
+      note: $("expNote")?.value || "",
+      kind,
+    })});
+    if($("expUsd")) $("expUsd").value = "";
+    await loadMoneyDesk();
+  } catch(e){ alert(e.message); }
+};
+if($("btnSaveCapital")) $("btnSaveCapital").onclick = async () => {
+  try {
+    await api("/api/money/capital", { method:"POST", body: JSON.stringify({
+      deployedEth: Number($("capDeployed")?.value)||0,
+      remainingSupplyPct: Number($("capHeldPct")?.value)||8,
+    })});
+    await loadMoneyDesk();
+  } catch(e){ alert(e.message); }
+};
+if($("btnLadderApprove")) $("btnLadderApprove").onclick = async () => {
+  if(!confirm("Approve this profit ladder? Nothing sells until you also Turn it on.")) return;
+  try { await api("/api/money/ladder", { method:"POST", body: JSON.stringify({ approve:true }) }); await loadMoneyDesk(); }
+  catch(e){ alert(e.message); }
+};
+if($("btnLadderOn")) $("btnLadderOn").onclick = async () => {
+  if(!confirm("Turn the ladder ON? Sells still respect max-% and liquidity rules. You should watch the first rung.")) return;
+  try { await api("/api/money/ladder", { method:"POST", body: JSON.stringify({ active:true }) }); await loadMoneyDesk(); }
+  catch(e){ alert(e.message); }
+};
+if($("btnLadderOff")) $("btnLadderOff").onclick = async () => {
+  try { await api("/api/money/ladder", { method:"POST", body: JSON.stringify({ active:false }) }); await loadMoneyDesk(); }
+  catch(e){ alert(e.message); }
+};
+if($("btnSaveLp")) $("btnSaveLp").onclick = async () => {
+  try {
+    await api("/api/money/config", { method:"POST", body: JSON.stringify({
+      lp: {
+        ethAllocated: Number($("lpEth")?.value)||0,
+        ownershipPct: Number($("lpOwn")?.value)||0,
+        feesEarnedEth: Number($("lpFees")?.value)||0,
+        impermanentLossEth: Number($("lpIl")?.value)||0,
+        locked: !!$("lpLocked")?.checked,
+        unlockAt: $("lpUnlock")?.value ? new Date($("lpUnlock").value).toISOString() : "",
+      }
+    })});
+    await loadMoneyDesk();
+    alert("LP saved — this cash stays out of buy budgets.");
+  } catch(e){ alert(e.message); }
+};
+if($("btnSaveKill")) $("btnSaveKill").onclick = async () => {
+  try {
+    await api("/api/money/config", { method:"POST", body: JSON.stringify({
+      killSwitch: {
+        minFunderEth: Number($("ksMinFunder")?.value)||1,
+        maxProjectDrawdownPct: Number($("ksDrawdown")?.value)||30,
+        maxDailyLossEth: Number($("ksDaily")?.value)||0.5,
+        maxFailedTxSpendEth: Number($("ksFail")?.value)||0.05,
+      }
+    })});
+    await loadMoneyDesk();
+  } catch(e){ alert(e.message); }
+};
+if($("btnMoneyReview")) $("btnMoneyReview").onclick = async () => {
+  const whatWorked = prompt("What worked on this project?", "") || "";
+  const whatChange = prompt("What should change next time?", "") || "";
+  try {
+    const j = await api("/api/money/review", { method:"POST", body: JSON.stringify({ whatWorked, whatChange }) });
+    alert(j.review?.plainEnglish || "Report saved.");
+  } catch(e){ alert(e.message); }
+};
+
+/* ─── Campaigns ─── */
+let campActiveId = null;
+let campEthUsd = 0;
+function ethUsdLabel(eth){
+  const e = Number(eth)||0;
+  if(campEthUsd>0) return `$${(e*campEthUsd).toFixed(0)} · ${e.toFixed(3)} ETH`;
+  return `${e.toFixed(3)} ETH`;
+}
+function renderCampaignCenter(center){
+  if(!center || !$("campCenter")) return;
+  campEthUsd = Number(state?.meta?.ethUsd)||campEthUsd;
+  const rec = center.recommendation || {};
+  $("campCenter").innerHTML = [
+    moneyCard("Realized test profit", ethUsdLabel(center.realizedNetProfitEth), [
+      ["Profit per launch", ethUsdLabel(center.profitPerLaunchEth)],
+      ["Profit per ETH deployed", `${((center.profitPerEthDeployed||0)*100).toFixed(1)}%`],
+      ["Win rate", `${((center.winRate||0)*100).toFixed(0)}%`],
+      ["Tests finished", String(center.testsCompleted||0)],
+    ], center.plainEnglish, (center.realizedNetProfitEth||0)>=0?"ok":"bad"),
+    moneyCard("Next recommended setup", rec.predictedNetReturnPct!=null?`${Number(rec.predictedNetReturnPct).toFixed(1)}% expected`:"Learning…", [
+      ["Creator buy", `${rec.config?.devBuyEth??"—"} ETH`],
+      ["Budget", `${rec.config?.totalEth??"—"} ETH`],
+      ["Wallets", String(rec.config?.walletCount??"—")],
+      ["LP", `${rec.config?.lpAllocationPct??0}%`],
+      ["Exit", rec.config?.exitStrategy||"—"],
+      ["Confidence", rec.confidence!=null?`${(rec.confidence*100).toFixed(0)}%`:"—"],
+    ], rec.plainEnglish||"", "ok"),
+    moneyCard("Where to put the next $", ethUsdLabel(center.allocation?.best?.ev), [
+      ...(center.allocation?.options||[]).map(o=>[o.label, ethUsdLabel(o.ev)]),
+    ], center.allocation?.plainEnglish||"", "ok"),
+  ].join("");
+}
+function renderCampaignList(campaigns){
+  if(!$("campList")) return;
+  if(!campaigns?.length){
+    $("campList").innerHTML = `<div class="empty">No campaigns yet — create one above.</div>`;
+    return;
+  }
+  $("campList").innerHTML = campaigns.map(c=>{
+    const active = c.id===campActiveId ? "border-color:var(--accent-blue)" : "";
+    return `<div class="money-card" style="cursor:pointer;${active}" data-camp="${c.id}">
+      <h3>${c.name} · ${c.status}</h3>
+      <div class="money-row"><span>Tests</span><span>${c.counts.completed}/${c.counts.total} done · ${c.counts.profitable} profitable</span></div>
+      <div class="money-row"><span>Deployed</span><span>${ethUsdLabel(c.totals.deployedEth)}</span></div>
+      <div class="money-row"><span>Recovered</span><span>${ethUsdLabel(c.totals.recoveredEth)}</span></div>
+      <div class="money-row"><span>Net</span><span>${ethUsdLabel(c.netTestProfitEth)}</span></div>
+      <div class="money-row"><span>Avg time</span><span>${c.avgMinutesPerTest!=null?c.avgMinutesPerTest.toFixed(1)+" min":"—"}</span></div>
+      <div class="money-plain ${c.status==="running"?"ok":"warn"}">Click to select · ${c.counts.running} running · ${c.counts.queued} queued</div>
+    </div>`;
+  }).join("");
+  $("campList").querySelectorAll("[data-camp]").forEach(el=>{
+    el.onclick = ()=>{ campActiveId = el.dataset.camp; loadCampaigns(); };
+  });
+}
+function renderCampQueue(queue){
+  if(!$("campQueue")) return;
+  const active = (queue?.active||[]).map(j=>`<div class="money-row"><span>${j.label}</span><span>${j.stage}</span></div>`).join("")||"<div class='money-row'><span>None</span><span>—</span></div>";
+  const waiting = (queue?.waiting||[]).slice(0,8).map(j=>`<div class="money-row"><span>${j.label}</span><span>waiting</span></div>`).join("");
+  $("campQueue").innerHTML = `
+    <div class="money-card"><h3>Running now (${queue?.activeCount||0}/${queue?.maxConcurrent||0})</h3>${active}</div>
+    <div class="money-card"><h3>Waiting (${queue?.waitingCount||0})</h3>${waiting||"<div class='money-row'><span>Empty</span><span>—</span></div>"}</div>`;
+}
+async function loadCampaigns(){
+  try {
+    const j = await api("/api/campaigns");
+    if(j.center) renderCampaignCenter(j.center);
+    renderCampaignList(j.campaigns||[]);
+    renderCampQueue(j.queue);
+    if(!campActiveId && j.campaigns?.[0]) campActiveId = j.campaigns[0].id;
+    if(campActiveId){
+      const one = (j.campaigns||[]).find(c=>c.id===campActiveId);
+      if(one && $("logCamp")){
+        $("logCamp").innerHTML = (one.logs||[]).slice(-30).map(e=>{
+          const t = new Date(e.t||Date.now()).toLocaleTimeString();
+          return `<div class="${e.kind||"info"}">[${t}] ${e.msg}</div>`;
+        }).join("");
+      }
+    }
+  } catch(e){
+    if($("campCenter")) $("campCenter").innerHTML = `<div class="money-plain bad">${e.message}</div>`;
+  }
+}
+if($("btnCampCreate")) $("btnCampCreate").onclick = async () => {
+  try {
+    setBusy(true, "Creating campaign…");
+    const body = {
+      name: $("campName")?.value || "Batch test",
+      count: Number($("campCount")?.value)||5,
+      maxConcurrent: Number($("campConcurrent")?.value)||2,
+      autoRecycle: !!$("campRecycle")?.checked,
+      autoStartNext: true,
+      maxTestDurationSec: (Number($("campMins")?.value)||15)*60,
+      useMatrix: !!$("campMatrix")?.checked,
+      defaults: {
+        devBuyEth: Number($("campDevBuy")?.value)||0.02,
+        totalEth: Number($("campTotal")?.value)||0.25,
+        walletCount: Number($("campWallets")?.value)||6,
+        buyMode: $("campBuyMode")?.value || "organic",
+        exitStrategy: $("campExit")?.value || "early_recovery",
+        maxTestDurationSec: (Number($("campMins")?.value)||15)*60,
+        capitalRecoveryTargetX: 1.0,
+      },
+      template: { namePrefix: "Test", symbolPrefix: "T" },
+    };
+    const j = await api("/api/campaigns", { method:"POST", body: JSON.stringify(body) });
+    campActiveId = j.campaign?.id;
+    setBusy(false);
+    await loadCampaigns();
+    alert(`Created ${j.campaign?.counts?.total||0} tests. Hit Start when ready.\n\nMake sure the bank has enough ETH — each test spends its budget.`);
+  } catch(e){ setBusy(false); alert(e.message); }
+};
+if($("btnCampStart")) $("btnCampStart").onclick = async () => {
+  if(!campActiveId) return alert("Create or select a campaign first");
+  if(!confirm("Start this campaign? Tests will fund, launch, buy, exit, and sweep cash back automatically.")) return;
+  try {
+    setBusy(true, "Starting campaign…");
+    await api("/api/campaigns/start", { method:"POST", body: JSON.stringify({
+      id: campActiveId,
+      maxConcurrent: Number($("campConcurrent")?.value)||2,
+    })});
+    setBusy(false);
+    await loadCampaigns();
+  } catch(e){ setBusy(false); alert(e.message); }
+};
+if($("btnCampPause")) $("btnCampPause").onclick = async () => {
+  if(!campActiveId) return;
+  try { await api("/api/campaigns/pause", { method:"POST", body: JSON.stringify({ id: campActiveId }) }); await loadCampaigns(); }
+  catch(e){ alert(e.message); }
+};
+if($("btnCampResume")) $("btnCampResume").onclick = async () => {
+  if(!campActiveId) return;
+  try { await api("/api/campaigns/resume", { method:"POST", body: JSON.stringify({ id: campActiveId }) }); await loadCampaigns(); }
+  catch(e){ alert(e.message); }
+};
+if($("btnCampRefresh")) $("btnCampRefresh").onclick = () => loadCampaigns();
+</script>
+</body>
+</html>
