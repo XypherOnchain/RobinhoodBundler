@@ -985,6 +985,26 @@ try {
     console.warn("[betty/routes] mount failed:", e.message);
 }
 
+// Holders indexer + airdrop desk + exit radar
+try {
+    require("./airdrop/routes").mountAirdropRoutes(app, {
+        chain,
+        getDashStore: () => store,
+    });
+} catch (e) {
+    console.warn("[airdrop/routes] mount failed:", e.message);
+}
+
+// Mission Control + playbooks + whale alerts
+try {
+    require("./playbooks/routes").mountMissionRoutes(app, {
+        chain,
+        getDashStore: () => store,
+    });
+} catch (e) {
+    console.warn("[mission/playbooks] mount failed:", e.message);
+}
+
 app.use(auth.authMiddleware);
 
 // Each host gets its own dashboard; bundler keeps index.html
@@ -2183,6 +2203,24 @@ app.post("/api/launch", async (req, res) => {
             "ok"
         );
         pushLog(`🔗 ${launched.apeUrl || launched.koaUrl || launched.noxaUrl || token}`, "info");
+
+        // Enroll holders indexer for new token
+        try {
+            const holdersCol = require("./collectors/evm-holders");
+            holdersCol.enroll(token);
+            holdersCol
+                .scan(chain.provider, token, { weth: chain.WETH })
+                .catch((e) =>
+                    console.warn("[holders] post-launch scan", e.message)
+                );
+            try {
+                const mission = require("./mission/risk");
+                const mc = await chain.resolveLiveMarketCap(token).catch(() => null);
+                if (mc?.mcapUsd) mission.noteMcap(token, mc.mcapUsd, { isEntry: true });
+            } catch (_) {}
+        } catch (e) {
+            console.warn("[holders] enroll failed", e.message);
+        }
 
         // Brief wait so pool is queryable; creator swap already happened in create tx
         await chain.sleep(800);

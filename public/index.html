@@ -542,6 +542,7 @@
         <button type="button" data-tab="wallets">Wallets</button>
         <button type="button" data-tab="launch">Launch</button>
         <button type="button" data-tab="trade">Trade</button>
+        <button type="button" data-tab="airdrop">Airdrop</button>
         <button type="button" data-tab="guide">Guide</button>
       </nav>
       <div style="display:flex;align-items:center;gap:12px">
@@ -576,6 +577,16 @@
       <p class="desc" id="funderLine" style="margin-top:8px;margin-bottom:8px">Treasury: <a id="funderLink" href="#" target="_blank" rel="noopener" style="color:var(--accent-blue);font-family:JetBrains Mono,monospace;font-size:12px"><span id="funderFull">—</span></a></p>
       <div class="panel-head" style="margin-top:18px">Needs you</div>
       <div class="needs-list" id="needsList"></div>
+
+      <div class="panel-head" style="margin-top:22px">Mission Control</div>
+      <div id="missionControl" class="panel" style="margin-top:8px;padding:14px">
+        <div class="empty" style="padding:8px">Create or select a live token to open Mission Control.</div>
+      </div>
+
+      <div class="panel-head" style="margin-top:22px">Playbooks</div>
+      <div id="playbooksBox" class="panel" style="margin-top:8px;padding:14px">
+        <div class="empty" style="padding:8px">Loading playbooks…</div>
+      </div>
     </div>
 
     <div id="guidePanel">
@@ -586,7 +597,8 @@
           <li><strong style="color:var(--text-primary)">Wallets</strong> — import treasury, create deployer + sniper helpers</li>
           <li><strong style="color:var(--text-primary)">Launch</strong> — plan budget → fund helpers → create coin → buy</li>
           <li><strong style="color:var(--text-primary)">Trade</strong> — chart, sell, automations (patterns / bump / guards)</li>
-          <li><strong style="color:var(--text-primary)">Overview</strong> — always shows what to do next</li>
+          <li><strong style="color:var(--text-primary)">Airdrop</strong> — send tokens to your tape or competitor buyers</li>
+          <li><strong style="color:var(--text-primary)">Overview</strong> — Mission Control + what to do next</li>
         </ol>
         <p class="desc" style="margin-top:14px">Live automations need <code>EVM_ARM_LIVE=true</code> on the server plus ARM LIVE on the job.</p>
       </section>
@@ -982,6 +994,22 @@
         <div id="vsTable"><div class="empty" style="padding:16px">Refresh holders after a token is live to see top external bags.</div></div>
       </div>
 
+      <!-- Exit Liquidity Radar -->
+      <div class="panel" style="margin-top:14px" id="exitRadarPanel">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+          <div class="panel-head" style="margin:0">Exit Liquidity Radar</div>
+          <button class="btn-ghost" id="btnExitRadarRefresh" type="button" style="padding:4px 10px;font-size:11px">Scan</button>
+        </div>
+        <p class="desc" style="margin:8px 0">Sells into organic foreign buys — not into empty tape.</p>
+        <div id="exitRadarStatus" class="empty" style="padding:12px">Scan a live token to detect exit liquidity.</div>
+        <div class="row" style="margin-top:10px;align-items:end">
+          <div class="field" style="max-width:120px"><span>Min ETH</span><input id="exitMinEth" type="number" step="0.01" value="0.02" /></div>
+          <div class="field" style="max-width:120px"><span>Window (s)</span><input id="exitWindowSec" type="number" value="180" /></div>
+          <div class="field" style="max-width:120px"><span>Peel %</span><input id="exitPeelPct" type="number" value="25" min="1" max="100" /></div>
+          <button class="btn-orange" id="btnExitPeel" type="button">Stagger peel</button>
+        </div>
+      </div>
+
       <!-- Chart Patterns -->
       <div class="panel" id="bettyPanel" style="margin-top:14px">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
@@ -1151,6 +1179,73 @@
       </div>
     </section>
 
+    <!-- Airdrop desk -->
+    <section class="card hidden" id="airdropPanel">
+      <h2>Airdrop</h2>
+      <p class="desc">Send your token to high-activity wallets on your tape — or siphon buyers from a competitor.</p>
+
+      <div class="row" style="align-items:end;flex-wrap:wrap">
+        <div class="field" style="max-width:180px">
+          <span>Source</span>
+          <select id="airdropSourceMode">
+            <option value="our">Our token tape</option>
+            <option value="competitor">Competitor siphon</option>
+          </select>
+        </div>
+        <div class="field" style="flex:1;min-width:220px">
+          <span>Source token</span>
+          <input id="airdropSourceToken" placeholder="0x… activity to score" />
+        </div>
+        <div class="field" style="flex:1;min-width:220px">
+          <span>Send token (yours)</span>
+          <input id="airdropSendToken" placeholder="0x… ERC-20 to transfer" />
+        </div>
+      </div>
+
+      <div class="row" style="align-items:end;flex-wrap:wrap;margin-top:10px">
+        <div class="field" style="max-width:140px">
+          <span>Amount mode</span>
+          <select id="airdropMode">
+            <option value="fixed">Fixed each</option>
+            <option value="split">Split total</option>
+            <option value="tiered">Tiered</option>
+          </select>
+        </div>
+        <div class="field" style="max-width:140px"><span>Each (fixed)</span><input id="airdropAmountEach" value="50" /></div>
+        <div class="field" style="max-width:140px"><span>Total bag</span><input id="airdropTotalAmount" value="5000" /></div>
+        <div class="field" style="max-width:100px"><span>Limit</span>
+          <div class="chip-row" id="airdropLimitChips">
+            <button type="button" data-n="10">10</button>
+            <button type="button" data-n="50" class="on">50</button>
+            <button type="button" data-n="100">100</button>
+            <button type="button" data-n="250">250</button>
+          </div>
+          <input type="hidden" id="airdropLimit" value="50" />
+        </div>
+        <div class="field" style="max-width:100px"><span>Min buys</span><input id="airdropMinBuys" type="number" value="1" min="0" /></div>
+        <div class="field" style="max-width:120px"><span>Min vol ETH</span><input id="airdropMinVol" type="number" step="0.01" value="0" /></div>
+      </div>
+
+      <div class="actions" style="margin-top:12px">
+        <button type="button" id="airdropArmedBtn" class="arm-sim">ARM: SIMULATION</button>
+        <button class="btn" id="btnAirdropPreview" type="button">Preview list</button>
+        <button class="btn-orange" id="btnAirdropStart" type="button" disabled>Start airdrop</button>
+        <button class="btn-ghost" id="btnAirdropStop" type="button">Stop</button>
+        <button class="btn-ghost" id="btnAirdropRefreshJobs" type="button">Jobs</button>
+      </div>
+      <input type="hidden" id="airdropArmed" value="0" />
+
+      <div id="airdropPreviewBox" class="panel" style="margin-top:14px;padding:12px">
+        <div class="empty" style="padding:8px">Preview scores recipients from source tape, then transfers your send token.</div>
+      </div>
+      <div class="log" id="logAirdrop" style="margin-top:12px"></div>
+
+      <div class="panel-head" style="margin-top:18px">Smart-money CRM</div>
+      <div id="crmBox" class="panel" style="margin-top:8px;padding:12px">
+        <div class="empty" style="padding:8px">Tag wallets after airdrops / whale alerts. Diamond &amp; whale get boost next run.</div>
+      </div>
+    </section>
+
 
       </main>
 
@@ -1312,12 +1407,14 @@ function showTab(tab, focusStep){
   else if(t === "wallets") state.step = 1;
   else if(t === "launch") state.step = focusStep || state.step || 2;
   else if(t === "trade") state.step = 5;
+  else if(t === "airdrop") state.step = 6;
 
   const showOverview = t === "overview";
   const showGuide = t === "guide";
   const showWallets = t === "wallets";
   const showLaunch = t === "launch";
   const showTrade = t === "trade";
+  const showAirdrop = t === "airdrop";
 
   if($("overviewPanel")) $("overviewPanel").classList.toggle("show", showOverview);
   if($("guidePanel")) $("guidePanel").classList.toggle("show", showGuide);
@@ -1327,6 +1424,7 @@ function showTab(tab, focusStep){
     if(el) el.classList.toggle("hidden", !showLaunch);
   });
   if($("step5")) $("step5").classList.toggle("hidden", !showTrade);
+  if($("airdropPanel")) $("airdropPanel").classList.toggle("hidden", !showAirdrop);
 
   document.querySelectorAll("#mainNav button[data-tab]").forEach(b => {
     b.classList.toggle("active", b.dataset.tab === t);
@@ -1334,10 +1432,11 @@ function showTab(tab, focusStep){
 
   if($("footerHint")){
     $("footerHint").textContent = ({
-      overview: "Overview — what needs you next",
+      overview: "Overview — Mission Control + next actions",
       wallets: "Wallets — treasury, deployer, snipers",
       launch: "Launch — plan → fund → create → buy",
       trade: "Trade — chart, sell, automations",
+      airdrop: "Airdrop — tape + competitor siphon",
       guide: "Guide — how to run a launch",
     })[t] || "";
   }
@@ -1357,8 +1456,21 @@ function showTab(tab, focusStep){
     loadSellChart(false, { embed: false });
     renderSell();
     refreshBettyStatus();
+    refreshSupplyPanel();
+    refreshExitRadar();
   }
-  if(showOverview) renderNeedsYou();
+  if(showAirdrop){
+    const tok = state.lastToken || $("sellToken")?.value || $("token")?.value || "";
+    if(tok && $("airdropSendToken") && !$("airdropSendToken").value) $("airdropSendToken").value = tok;
+    if(tok && $("airdropSourceToken") && !$("airdropSourceToken").value && ($("airdropSourceMode")?.value||"our")==="our") $("airdropSourceToken").value = tok;
+    refreshCrmBox();
+    refreshAirdropJobs();
+  }
+  if(showOverview){
+    renderNeedsYou();
+    refreshMissionControl();
+    refreshPlaybooksBox();
+  }
 }
 function showStep(n){
   // Back-compat for old next/back buttons
@@ -2763,31 +2875,321 @@ async function refreshSupplyPanel(){
   const token = ($("sellToken")?.value || state.lastToken || "").trim();
   if(!token) return;
   try {
-    const tape = await api("/api/tape/" + token);
-    const buyers = (state.wallets||[]).filter(w => w.role==="buyer");
-    const usPct = 50; // approximate until holders API — refine from sell preview bags
-    const themPct = 100 - usPct;
+    let h = null;
+    try {
+      h = await api("/api/holders/" + token + "?limit=40");
+    } catch(_){
+      // enroll then retry once
+      await api("/api/holders/enroll", { method:"POST", body: JSON.stringify({ token }) }).catch(()=>{});
+      h = await api("/api/holders/" + token + "?limit=40").catch(()=>null);
+    }
+    const usPct = Math.round(Number(h?.usPct || 0));
+    const themPct = Math.round(Number(h?.themPct || Math.max(0, 100 - usPct)));
     if($("supplyUsBar")) $("supplyUsBar").style.width = usPct+"%";
     if($("supplyThemBar")) $("supplyThemBar").style.width = themPct+"%";
     if($("supplyUsPct")) $("supplyUsPct").textContent = usPct+"%";
     if($("supplyThemPct")) $("supplyThemPct").textContent = themPct+"%";
-    if($("supplySnipers")) $("supplySnipers").textContent = String(buyers.length);
+    const buyers = (state.wallets||[]).filter(w => w.role==="buyer");
+    if($("supplySnipers")) $("supplySnipers").textContent = String(h?.usCount ?? buyers.length);
     if($("supplyDev")) $("supplyDev").textContent = state.dev ? "1" : "0";
-    if($("supplyHolders")) $("supplyHolders").textContent = tape?.uniqueTraders || tape?.swaps || "—";
-    if($("supplyHolderCount")) $("supplyHolderCount").textContent = tape?.uniqueTraders || "—";
+    if($("supplyHolders")) $("supplyHolders").textContent = String(h?.themCount ?? h?.holderCount ?? "—");
+    if($("supplyHolderCount")) $("supplyHolderCount").textContent = String(h?.holderCount ?? "—");
+    try {
+      const tape = await api("/api/tape/" + token);
+      if(tape && !tape.error && $("supplyEthIn")){
+        $("supplyEthIn").textContent = tape.mcapUsd ? ("$"+Math.round(tape.mcapUsd).toLocaleString()) : "—";
+      }
+    } catch(_){}
     const vs = $("vsTable");
-    if(vs && Array.isArray(tape?.topTraders)){
-      vs.innerHTML = `<table><thead><tr><th>Wallet</th><th>Label</th><th>Side</th><th>ETH</th></tr></thead><tbody>
-        ${tape.topTraders.slice(0,10).map(t => `<tr><td>${short(t.address||t.wallet||"?")}</td><td>${t.label||"ext"}</td><td>${t.side||"—"}</td><td>${fmt(t.eth||t.amountEth||0,4)}</td></tr>`).join("") || "<tr><td colspan=4>No external tape yet</td></tr>"}
-      </tbody></table>`;
-    } else if(vs){
-      vs.innerHTML = `<div class="empty" style="padding:12px">Tape: ${tape?.swaps||0} swaps · load a live token for opposition view.</div>`;
+    const top = h?.topThem || [];
+    if(vs){
+      if(top.length){
+        vs.innerHTML = `<table><thead><tr><th>Wallet</th><th>%</th><th>Balance</th><th></th></tr></thead><tbody>
+          ${top.slice(0,12).map(t => `<tr>
+            <td>${short(t.address)}</td>
+            <td>${(t.pct||0).toFixed(2)}%</td>
+            <td style="font-size:11px;color:var(--text-muted)">${t.balanceLabel||t.balance||"—"}</td>
+            <td><button type="button" class="btn-ghost crm-tag" data-addr="${t.address}" data-tag="whale" style="padding:2px 6px;font-size:10px">whale</button>
+                <button type="button" class="btn-ghost crm-tag" data-addr="${t.address}" data-tag="dump" style="padding:2px 6px;font-size:10px">dump</button>
+                <button type="button" class="btn-ghost crm-tag" data-addr="${t.address}" data-tag="diamond" style="padding:2px 6px;font-size:10px">💎</button></td>
+          </tr>`).join("")}
+        </tbody></table>`;
+        vs.querySelectorAll(".crm-tag").forEach(btn => {
+          btn.onclick = async () => {
+            try {
+              await api("/api/crm/tag", { method:"POST", body: JSON.stringify({ address: btn.dataset.addr, tag: btn.dataset.tag }) });
+              bettyLog?.(`CRM ${btn.dataset.tag} → ${short(btn.dataset.addr)}`, "ok");
+            } catch(e){ alert(e.message); }
+          };
+        });
+      } else {
+        vs.innerHTML = `<div class="empty" style="padding:12px">Holders ${h?.holderCount||0}${h?.partial?" (partial scan)":""} · ${h?.updatedAt?("updated "+h.updatedAt):"scan pending"}. Click Refresh holders.</div>`;
+      }
     }
   } catch(e){
     const vs = $("vsTable");
     if(vs) vs.innerHTML = `<div class="empty" style="padding:12px">${e.message}</div>`;
   }
 }
+
+let _airdropPreview = null;
+let _airdropJobId = null;
+function airdropArmed(){ return $("airdropArmed")?.value === "1"; }
+function setAirdropArmed(on){
+  if($("airdropArmed")) $("airdropArmed").value = on ? "1" : "0";
+  const b = $("airdropArmedBtn");
+  if(b){
+    b.className = on ? "arm-live" : "arm-sim";
+    b.textContent = on ? "ARM: LIVE" : "ARM: SIMULATION";
+  }
+}
+function airdropLog(msg, cls){
+  const el = $("logAirdrop");
+  if(!el) return;
+  const line = document.createElement("div");
+  line.className = cls || "";
+  line.textContent = msg;
+  el.prepend(line);
+}
+async function refreshExitRadar(){
+  const token = ($("sellToken")?.value || state.lastToken || "").trim();
+  const box = $("exitRadarStatus");
+  if(!token || !box) return;
+  try {
+    const minEth = Number($("exitMinEth")?.value || 0.02);
+    const windowSec = Number($("exitWindowSec")?.value || 180);
+    const r = await api(`/api/exit-radar/${token}?minEth=${minEth}&windowSec=${windowSec}`);
+    const tone = r.hot ? "color:var(--accent-green)" : "color:var(--text-muted)";
+    box.innerHTML = `<div style="${tone};font-weight:600">${r.message}</div>
+      <div style="margin-top:8px;font-size:12px;color:var(--text-secondary)">${(r.buys||[]).slice(0,5).map(b => `${short(b.trader||"?")} bought ${fmt(b.ethAmount,4)} ETH`).join("<br>") || "No foreign buys in window"}</div>`;
+  } catch(e){
+    box.innerHTML = `<div class="empty" style="padding:8px">${e.message}</div>`;
+  }
+}
+async function refreshMissionControl(){
+  const box = $("missionControl");
+  if(!box) return;
+  try {
+    const tok = state.lastToken || $("sellToken")?.value || "";
+    const m = await api("/api/mission" + (tok ? ("?token="+encodeURIComponent(tok)) : ""));
+    if(!m.token){
+      box.innerHTML = `<div class="empty" style="padding:8px">No live token — Launch a coin first.</div>`;
+      return;
+    }
+    const pnl = m.stickyPnl;
+    const h = m.holders;
+    const er = m.exitRadar;
+    const rails = m.rails;
+    box.innerHTML = `
+      <div class="stats" style="margin-bottom:12px">
+        <div class="stat"><div class="label">MC</div><div class="value" style="font-size:18px">${m.tape?.mcapUsd?("$"+Math.round(m.tape.mcapUsd).toLocaleString()):"—"}</div><div class="sub">${short(m.token)}</div></div>
+        <div class="stat"><div class="label">Us / Them</div><div class="value c-blue" style="font-size:18px">${h?Math.round(h.usPct||0)+"%":"—"}</div><div class="sub">them ${h?Math.round(h.themPct||0):"—"}% · ${h?.holderCount??"—"} holders</div></div>
+        <div class="stat"><div class="label">Realistic exit</div><div class="value" style="font-size:18px;color:var(--accent-green)">${pnl?.worthDumpUsd!=null?("$"+Math.round(pnl.worthDumpUsd).toLocaleString()):"Build sell plan"}</div><div class="sub">${pnl?.profitDumpUsd!=null?("pnl $"+Math.round(pnl.profitDumpUsd).toLocaleString()):"Trade → Build plan"}</div></div>
+        <div class="stat"><div class="label">Exit radar</div><div class="value" style="font-size:18px;${er?.hot?"color:var(--accent-green)":""}">${er?.hot?"HOT":"quiet"}</div><div class="sub">${er?fmt(er.flowEth,3)+" ETH foreign":"—"}</div></div>
+      </div>
+      ${rails && !rails.ok ? `<p style="color:var(--accent-orange);font-size:12px;margin:0 0 10px">${(rails.violations||[]).map(v=>v.msg).join(" · ")}</p>` : ""}
+      <div class="actions" style="flex-wrap:wrap">
+        <button class="btn" type="button" data-mc="support">Support</button>
+        <button class="btn-orange" type="button" data-mc="peel">Sell into flow</button>
+        <button class="btn" type="button" data-mc="airdrop">Airdrop</button>
+        <button class="btn-red" type="button" data-mc="kill">Kill</button>
+      </div>`;
+    box.querySelectorAll("[data-mc]").forEach(btn => {
+      btn.onclick = () => {
+        const id = btn.dataset.mc;
+        if(id === "airdrop") return showTab("airdrop");
+        if(id === "support"){ showTab("trade"); $("btnBettyBump")?.click?.(); return; }
+        if(id === "peel"){ showTab("trade"); setTimeout(() => $("btnExitPeel")?.click(), 200); return; }
+        if(id === "kill"){
+          if(!confirm("Pause money desk kill switch?")) return;
+          api("/api/money/kill", { method:"POST", body: JSON.stringify({ pause: true, reason: "Mission Control kill" }) }).then(()=>alert("Kill switch paused")).catch(e=>alert(e.message));
+        }
+      };
+    });
+  } catch(e){
+    box.innerHTML = `<div class="empty" style="padding:8px">${e.message}</div>`;
+  }
+}
+async function refreshPlaybooksBox(){
+  const box = $("playbooksBox");
+  if(!box) return;
+  try {
+    const r = await api("/api/playbooks");
+    const tpls = r.templates || [];
+    const runs = r.runs || [];
+    box.innerHTML = `
+      <div style="display:flex;flex-direction:column;gap:10px">
+        ${tpls.map(t => `<div style="display:flex;justify-content:space-between;gap:10px;align-items:center;border-bottom:1px solid var(--border-primary);padding-bottom:8px">
+          <div><strong style="font-size:13px">${t.name}</strong><div style="font-size:11px;color:var(--text-muted)">${t.desc}</div></div>
+          <button class="btn" type="button" data-pb="${t.id}">Start</button>
+        </div>`).join("")}
+      </div>
+      ${runs.length?`<div style="margin-top:12px;font-size:12px;color:var(--text-secondary)">${runs.slice(0,3).map(x=>`${x.name}: ${x.status} · step ${x.stepIndex+1}/${x.steps?.length||"?"}`).join("<br>")}</div>`:""}`;
+    box.querySelectorAll("[data-pb]").forEach(btn => {
+      btn.onclick = async () => {
+        const token = state.lastToken || $("sellToken")?.value || "";
+        if(!token){ alert("Need a live token"); return; }
+        let competitorToken = "";
+        if(btn.dataset.pb.includes("siphon") || btn.dataset.pb === "fast-siphon" || btn.dataset.pb === "stealth-organic"){
+          competitorToken = prompt("Competitor token to siphon (optional):") || "";
+        }
+        try {
+          const out = await api("/api/playbooks/start", {
+            method:"POST",
+            body: JSON.stringify({
+              templateId: btn.dataset.pb,
+              token,
+              competitorToken: competitorToken || undefined,
+              armedLive: false,
+            }),
+          });
+          alert(out.hint || "Playbook queued");
+          refreshPlaybooksBox();
+        } catch(e){ alert(e.message); }
+      };
+    });
+  } catch(e){
+    box.innerHTML = `<div class="empty" style="padding:8px">${e.message}</div>`;
+  }
+}
+async function refreshCrmBox(){
+  const box = $("crmBox");
+  if(!box) return;
+  try {
+    const r = await api("/api/crm");
+    const entries = Object.entries(r.crm || {});
+    if(!entries.length){
+      box.innerHTML = `<div class="empty" style="padding:8px">No CRM tags yet. Tag whales from Trade VS table.</div>`;
+      return;
+    }
+    box.innerHTML = `<table><thead><tr><th>Wallet</th><th>Tag</th><th>Last airdrop</th></tr></thead><tbody>
+      ${entries.slice(0,40).map(([a,v]) => `<tr><td>${short(a)}</td><td>${v.tag||"—"}</td><td style="font-size:11px;color:var(--text-muted)">${v.lastAirdropAt||"—"}</td></tr>`).join("")}
+    </tbody></table>`;
+  } catch(e){
+    box.innerHTML = `<div class="empty" style="padding:8px">${e.message}</div>`;
+  }
+}
+async function refreshAirdropJobs(){
+  try {
+    const r = await api("/api/airdrop/jobs");
+    const jobs = r.jobs || [];
+    if(jobs[0]) airdropLog(`Latest job ${jobs[0].id} · ${jobs[0].status} · ${jobs[0].ok}/${jobs[0].done} ok${jobs[0].simulate?" (sim)":""}`, jobs[0].simulate?"info":"ok");
+  } catch(_){}
+}
+async function runAirdropPreview(){
+  const mode = $("airdropSourceMode")?.value || "our";
+  let sourceToken = ($("airdropSourceToken")?.value || "").trim();
+  let sendToken = ($("airdropSendToken")?.value || state.lastToken || "").trim();
+  if(mode === "our" && !sourceToken) sourceToken = sendToken || state.lastToken || "";
+  if(!sourceToken || !sendToken){ alert("Set source + send token"); return; }
+  try {
+    airdropLog("Building preview…", "info");
+    const prev = await api("/api/airdrop/preview", {
+      method:"POST",
+      body: JSON.stringify({
+        sourceToken,
+        airdropToken: sendToken,
+        mode: $("airdropMode")?.value || "fixed",
+        amountEach: $("airdropAmountEach")?.value || "50",
+        totalAmount: $("airdropTotalAmount")?.value || "5000",
+        limit: Number($("airdropLimit")?.value || 50),
+        minBuys: Number($("airdropMinBuys")?.value || 1),
+        minVolEth: Number($("airdropMinVol")?.value || 0),
+      }),
+    });
+    _airdropPreview = prev;
+    if($("btnAirdropStart")) $("btnAirdropStart").disabled = !prev.count;
+    const box = $("airdropPreviewBox");
+    if(box){
+      box.innerHTML = `
+        <div class="stats" style="margin-bottom:10px">
+          <div class="stat"><div class="label">Recipients</div><div class="value" style="font-size:18px">${prev.count}</div><div class="sub">${prev.symbol||"TOKEN"}</div></div>
+          <div class="stat"><div class="label">Total</div><div class="value" style="font-size:18px">${prev.totalHuman}</div><div class="sub">sender ${prev.senderOk===false?"LOW BAL":"ok"}</div></div>
+          <div class="stat"><div class="label">ARM</div><div class="value" style="font-size:16px">${prev.evmArmLive?"server live":"server sim"}</div><div class="sub">${short(prev.senderAddress||"—")}</div></div>
+        </div>
+        <table><thead><tr><th>Wallet</th><th>Score</th><th>Buys</th><th>Amount</th></tr></thead><tbody>
+          ${(prev.sample||prev.recipients||[]).slice(0,12).map(r => `<tr><td>${short(r.address)}</td><td>${(r.score||0).toFixed(1)}</td><td>${r.buys||0}</td><td>${r.amountHuman}</td></tr>`).join("")}
+        </tbody></table>`;
+    }
+    airdropLog(`Preview ${prev.count} · ${prev.totalHuman} ${prev.symbol}`, "ok");
+  } catch(e){
+    airdropLog(e.message, "err");
+    alert(e.message);
+  }
+}
+async function runAirdropStart(){
+  if(!_airdropPreview?.recipients?.length){ alert("Preview first"); return; }
+  if(airdropArmed() && !confirm(`LIVE airdrop ${_airdropPreview.count} wallets · ${_airdropPreview.totalHuman} ${_airdropPreview.symbol}?`)) return;
+  try {
+    const r = await api("/api/airdrop/start", {
+      method:"POST",
+      body: JSON.stringify({
+        preview: _airdropPreview,
+        armedLive: airdropArmed(),
+        concurrency: 3,
+        delayMs: 250,
+      }),
+    });
+    _airdropJobId = r.id;
+    airdropLog(`${r.hint} · job ${r.id}`, r.simulate ? "info" : "ok");
+    const poll = setInterval(async () => {
+      try {
+        const j = await api("/api/airdrop/jobs/" + r.id);
+        const job = j.job;
+        if(!job) return;
+        airdropLog(`Job ${job.status} · ${job.ok} ok / ${job.fail} fail / ${job.done}/${job.total}`, "info");
+        if(job.status !== "running") clearInterval(poll);
+      } catch(_){ clearInterval(poll); }
+    }, 2000);
+  } catch(e){
+    airdropLog(e.message, "err");
+    alert(e.message);
+  }
+}
+
+if($("airdropArmedBtn")) $("airdropArmedBtn").onclick = () => setAirdropArmed(!airdropArmed());
+if($("btnAirdropPreview")) $("btnAirdropPreview").onclick = () => runAirdropPreview();
+if($("btnAirdropStart")) $("btnAirdropStart").onclick = () => runAirdropStart();
+if($("btnAirdropStop")) $("btnAirdropStop").onclick = async () => {
+  if(!_airdropJobId) return;
+  try { await api("/api/airdrop/stop", { method:"POST", body: JSON.stringify({ id: _airdropJobId }) }); airdropLog("Stopped "+_airdropJobId,"info"); } catch(e){ alert(e.message); }
+};
+if($("btnAirdropRefreshJobs")) $("btnAirdropRefreshJobs").onclick = () => refreshAirdropJobs();
+if($("airdropLimitChips")){
+  $("airdropLimitChips").querySelectorAll("button").forEach(btn => {
+    btn.onclick = () => {
+      $("airdropLimitChips").querySelectorAll("button").forEach(b => b.classList.remove("on"));
+      btn.classList.add("on");
+      if($("airdropLimit")) $("airdropLimit").value = btn.dataset.n;
+    };
+  });
+}
+if($("airdropSourceMode")) $("airdropSourceMode").onchange = () => {
+  if($("airdropSourceMode").value === "our"){
+    const tok = state.lastToken || $("airdropSendToken")?.value || "";
+    if(tok && $("airdropSourceToken")) $("airdropSourceToken").value = tok;
+  } else if($("airdropSourceToken")) $("airdropSourceToken").value = "";
+};
+if($("btnExitRadarRefresh")) $("btnExitRadarRefresh").onclick = () => refreshExitRadar();
+if($("btnExitPeel")) $("btnExitPeel").onclick = async () => {
+  const token = ($("sellToken")?.value || state.lastToken || "").trim();
+  if(!token){ alert("Set token"); return; }
+  const percent = Number($("exitPeelPct")?.value || 25);
+  if(!confirm(`Stagger peel ${percent}% into organic flow?`)) return;
+  try {
+    const sug = await api("/api/exit-radar/peel", { method:"POST", body: JSON.stringify({ token, percent, delayMs: 1500 }) });
+    const body = sug.suggest?.body || { token, percent, mode: "sequential", delayMs: 1500, usePlan: true };
+    const r = await api("/api/sell", { method:"POST", body: JSON.stringify(body) });
+    bettyLog(`Peel started ${r.jobId || r.id || ""}`, "ok");
+  } catch(e){ alert(e.message); }
+};
+if($("btnRefreshHolders")) $("btnRefreshHolders").onclick = async () => {
+  const token = ($("sellToken")?.value || state.lastToken || "").trim();
+  if(token){
+    try { await api("/api/holders/scan", { method:"POST", body: JSON.stringify({ token }) }); } catch(_){}
+  }
+  refreshSupplyPanel();
+};
 function wireChips(rowId, hiddenId, attr, onChange){
   const row = $(rowId);
   if(!row) return;
@@ -2934,7 +3336,6 @@ if($("btnBettyGuard")) $("btnBettyGuard").onclick = async () => {
     refreshBettyStatus();
   } catch(e){ bettyLog(e.message, "err"); alert(e.message); }
 };
-if($("btnRefreshHolders")) $("btnRefreshHolders").onclick = () => refreshSupplyPanel();
 if($("btnBuyBack")) $("btnBuyBack").onclick = async () => {
   const token = ($("sellToken")?.value || state.lastToken || "").trim();
   if(!token){ alert("Set a token first"); return; }

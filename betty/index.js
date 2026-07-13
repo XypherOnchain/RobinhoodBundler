@@ -629,15 +629,183 @@ async function agentWatchdog() {
     }
 }
 
+async function agentHoldersIndexer() {
+    const dash = readDashboard();
+    const tokens = new Set();
+    if (dash?.lastToken) tokens.add(String(dash.lastToken).toLowerCase());
+    const pre = bettyStore.load();
+    for (const j of pre.automationJobs || []) {
+        if (j.status === "running" && j.mint)
+            tokens.add(String(j.mint).toLowerCase());
+    }
+    if (!tokens.size) {
+        bettyStore.mutate((s) => {
+            setAgent(s, "holders", "idle — no live token");
+            return s;
+        });
+        return;
+    }
+    let holders;
+    try {
+        holders = require(path.join(ROOT, "collectors", "evm-holders"));
+    } catch (e) {
+        return;
+    }
+    let n = 0;
+    for (const t of tokens) {
+        try {
+            holders.enroll(t);
+            if (typeof chain.fetchRecentSwaps === "function") {
+                const swaps = await chain.fetchRecentSwaps(t, { limit: 80 });
+                holders.mergeActivity(t, swaps);
+            }
+            await holders.scan(chain.provider, t, { weth: chain.WETH });
+            n++;
+        } catch (e) {
+            console.warn("[betty:holders]", t.slice(0, 10), e.message);
+        }
+    }
+    bettyStore.mutate((s) => {
+        setAgent(s, "holders", `scanned ${n}/${tokens.size} tokens`);
+        return s;
+    });
+}
+
+async function agentPlaybooks() {
+    let playbooks;
+    try {
+        playbooks = require(path.join(ROOT, "playbooks"));
+    } catch (_) {
+        return;
+    }
+    const runs = playbooks.listRuns().filter(
+        (r) => r.status === "queued" || r.status === "running"
+    );
+    if (!runs.length) return;
+    const dash = readDashboard();
+
+    for (const run of runs) {
+        try {
+            playbooks.markRunning(run.id);
+            const fresh = playbooks.getRun(run.id);
+            if (!fresh || fresh.status === "stopped") continue;
+            const step = fresh.steps[fresh.stepIndex];
+            if (!step) {
+                playbooks.completeStep(run.id, { done: true });
+                continue;
+            }
+            const token = fresh.token || dash?.lastToken;
+            if (step.type === "wait") {
+                const mins = Number(step.minutes || 1);
+                const waitKey = `_wait_${fresh.stepIndex}`;
+                if (!fresh[waitKey]) {
+                    playbooks.patchRun(run.id, (r) => {
+                        r[waitKey] = Date.now();
+                    });
+                    bettyStore.mutate((s) => {
+                        setAgent(
+                            s,
+                            "playbooks",
+                            `waiting ${mins}m · ${fresh.name}`
+                        );
+                        return s;
+                    });
+                    continue;
+                }
+                if (Date.now() - Number(fresh[waitKey]) < mins * 60 * 1000) {
+                    continue;
+                }
+                playbooks.completeStep(run.id, { waited: mins });
+                continue;
+            }
+            if (step.type === "chart_pattern" || step.type === "bump") {
+                // Enqueue automation job (same as /api/automation)
+                const jobType =
+                    step.type === "bump" ? "bump_bot" : "chart_pattern";
+                bettyStore.mutate((s) => {
+                    const id = require("crypto").randomBytes(6).toString("hex");
+                    s.automationJobs = s.automationJobs || [];
+                    s.automationJobs.unshift({
+                        id,
+                        jobType,
+                        mint: token,
+                        patternId: step.patternId || "organic-pump",
+                        durationMin: step.durationMin || 20,
+                        ethPerTrade: step.ethPerTrade || 0.005,
+                        status: "running",
+                        armedLive: !!fresh.armedLive,
+                        createdAt: new Date().toISOString(),
+                        config: { rotation: "sequential", loop: false },
+                    });
+                    s.automationJobs = s.automationJobs.slice(0, 40);
+                    return s;
+                });
+                playbooks.completeStep(run.id, {
+                    started: jobType,
+                    token,
+                });
+                continue;
+            }
+            if (step.type === "price_guard") {
+                bettyStore.mutate((s) => {
+                    s.priceGuards = s.priceGuards || [];
+                    s.priceGuards = s.priceGuards.filter(
+                        (g) =>
+                            String(g.token || "").toLowerCase() !==
+                            String(token || "").toLowerCase()
+                    );
+                    s.priceGuards.push({
+                        id: require("crypto").randomBytes(4).toString("hex"),
+                        token,
+                        enabled: true,
+                        stopLossPct: step.stopLossPct || 40,
+                        takeProfitUsd: step.takeProfitUsd || null,
+                        sellPct: step.sellPct || 100,
+                        armedLive: !!fresh.armedLive,
+                        createdAt: new Date().toISOString(),
+                    });
+                    return s;
+                });
+                playbooks.completeStep(run.id, { guard: true });
+                continue;
+            }
+            if (step.type === "airdrop" || step.type === "exit_radar") {
+                // Manual / UI-driven steps — mark ready for operator
+                playbooks.completeStep(run.id, {
+                    pendingOperator: step.type,
+                    hint:
+                        step.type === "airdrop"
+                            ? "Open Airdrop tab — preview + ARM LIVE"
+                            : "Open Trade — Exit Radar / Stagger Exit when hot",
+                    competitorToken: fresh.competitorToken,
+                    config: step,
+                });
+                continue;
+            }
+            playbooks.completeStep(run.id, { skipped: step.type });
+        } catch (e) {
+            playbooks.failStep(run.id, e.message);
+        }
+    }
+    bettyStore.mutate((s) => {
+        setAgent(s, "playbooks", `active runs ${runs.length}`);
+        return s;
+    });
+}
+
 async function tick() {
     await agentWatchdog().catch((e) => console.error("watchdog", e.message));
     await agentTapeCollector().catch((e) => console.error("tape", e.message));
+    await agentHoldersIndexer().catch((e) =>
+        console.error("holders", e.message)
+    );
     await agentBalanceSync().catch((e) => console.error("balance", e.message));
     await agentFundingMonitor().catch((e) => console.error("funding", e.message));
     await agentSeasoningMonitor().catch((e) => console.error("season", e.message));
     await agentLaunchReadiness().catch((e) => console.error("ready", e.message));
     await agentPostLaunchGuards().catch((e) => console.error("guards", e.message));
     await agentAutomation().catch((e) => console.error("auto", e.message));
+    await agentPlaybooks().catch((e) => console.error("playbooks", e.message));
 }
 
 // Faster loop for automation (10s) + slower full tick
