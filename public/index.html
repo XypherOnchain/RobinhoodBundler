@@ -3,26 +3,28 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>NOXA Launch Desk</title>
+  <title>NOXA Bundler</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
   <style>
     :root {
-      --bg-primary: #0a0e17;
-      --bg-secondary: #111827;
-      --bg-card: #1a1f2e;
-      --bg-hover: #232a3b;
-      --accent-green: #22c55e;
-      --accent-blue: #3b82f6;
+      /* Stealth-style tokens — near-black ground, electric blue */
+      --bg-primary: #08090c;
+      --bg-secondary: #0d0f13;
+      --bg-card: #14161c;
+      --bg-hover: #1b1e26;
+      --accent-green: #16c784;
+      --accent-blue: #4d7cff;
       --accent-purple: #a855f7;
-      --accent-orange: #f97316;
-      --accent-red: #ef4444;
+      --accent-orange: #f7a13a;
+      --accent-red: #f6465d;
       --accent-yellow: #eab308;
-      --text-primary: #f1f5f9;
-      --text-secondary: #94a3b8;
-      --text-muted: #64748b;
-      --border-primary: #1e293b;
-      --border-hover: #334155;
+      --text-primary: #eef1f5;
+      --text-secondary: #9aa1ad;
+      --text-muted: #5b616d;
+      --border-primary: #1b1e26;
+      --border-hover: #2a2e38;
+      --maxw: 1600px;
     }
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
@@ -43,7 +45,7 @@
       position: sticky; top: 0; z-index: 50;
     }
     .header-inner {
-      max-width: 1100px; margin: 0 auto; padding: 0 24px;
+      max-width: var(--maxw); margin: 0 auto; padding: 0 24px;
       height: 56px; display: flex; align-items: center; justify-content: space-between; gap: 16px;
     }
     .logo { display: flex; align-items: center; gap: 10px; }
@@ -73,7 +75,7 @@
     .status-pill.busy .dot { background: var(--accent-yellow); }
 
     .project-bar {
-      max-width: 1100px; margin: 0 auto; padding: 10px 24px 0;
+      max-width: var(--maxw); margin: 0 auto; padding: 10px 24px 0;
       display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
     }
     .project-tabs { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
@@ -95,7 +97,70 @@
       font-size: 12px; color: var(--text-muted); margin-left: auto;
     }
     .project-banner {
-      max-width: 1100px; margin: 8px auto 0; padding: 0 24px;
+      max-width: var(--maxw); margin: 8px auto 0; padding: 0 24px;
+    }
+    .pad-switch {
+      display: flex; align-items: center; gap: 2px; padding: 2px;
+      border-radius: 8px; background: var(--bg-card); border: 1px solid var(--border-primary);
+    }
+    .pad-switch button {
+      border: none; background: transparent; color: var(--text-secondary);
+      padding: 5px 10px; border-radius: 6px; font-size: 11px; font-weight: 600;
+      cursor: pointer; font-family: inherit;
+    }
+    .pad-switch button.active { background: rgba(77,124,255,.15); color: var(--accent-blue); }
+    .overview-panel { display: none; }
+    .overview-panel.show { display: block; animation: fadeIn 0.35s ease-out; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+    .needs-list { display: flex; flex-direction: column; gap: 8px; margin-top: 16px; }
+    .needs-item {
+      display: flex; align-items: center; justify-content: space-between; gap: 12px;
+      padding: 14px 16px; border-radius: 12px; border: 1px solid var(--border-primary);
+      background: var(--bg-card); cursor: pointer;
+    }
+    .needs-item:hover { border-color: var(--border-hover); background: var(--bg-hover); }
+    .needs-item .tag {
+      font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em;
+      padding: 3px 8px; border-radius: 999px;
+    }
+    .needs-item .tag.hi { background: rgba(246,70,93,.15); color: var(--accent-red); }
+    .needs-item .tag.go { background: rgba(22,199,132,.15); color: var(--accent-green); }
+    .needs-item .tag.md { background: rgba(247,161,58,.15); color: var(--accent-orange); }
+    .launch-stack .card { margin-bottom: 14px; }
+    .launch-stack .card h2 { font-size: 15px; }
+    .trade-grid {
+      display: grid; grid-template-columns: 3fr 1fr; gap: 14px; margin-bottom: 16px;
+    }
+    @media (max-width: 1100px) { .trade-grid { grid-template-columns: 1fr; } }
+    .panel-head {
+      font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em;
+      color: var(--text-muted); margin-bottom: 10px;
+    }
+    #guidePanel { display: none; }
+    #guidePanel.show { display: block; }
+    .status-bar {
+      position: fixed; bottom: 0; left: 0; right: 0; z-index: 40;
+      background: rgba(13,15,19,.92); backdrop-filter: blur(8px);
+      border-top: 1px solid var(--border-primary);
+      padding: 8px 24px; font-size: 12px; color: var(--text-secondary);
+      display: flex; justify-content: space-between; gap: 12px;
+    }
+    .howto { display: none; } /* demote essay blocks — use Overview triage instead */
+    .launchpad-bar { display: none !important; }
+    .quick-help {
+      position: fixed; right: 20px; bottom: 52px; z-index: 45;
+    }
+    .quick-help summary {
+      list-style: none; width: 40px; height: 40px; border-radius: 999px;
+      background: var(--bg-card); border: 1px solid var(--border-hover);
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; font-weight: 700; color: var(--text-secondary);
+      box-shadow: 0 8px 24px rgba(0,0,0,.35);
+    }
+    .quick-help[open] .help-body {
+      position: absolute; right: 0; bottom: 48px; width: min(320px, calc(100vw - 40px));
+      background: var(--bg-card); border: 1px solid var(--border-hover); border-radius: 12px;
+      padding: 14px; font-size: 12px; color: var(--text-secondary); line-height: 1.5;
     }
     .project-banner-inner {
       background: rgba(234,179,8,.1); border: 1px solid rgba(234,179,8,.35);
@@ -395,16 +460,21 @@
     <div class="header-inner">
       <div class="logo">
         <div class="logo-badge">NX</div>
-        <span class="logo-text">NOXA Launch Desk</span>
+        <span class="logo-text">NOXA</span>
       </div>
-      <nav class="main-nav">
-        <button class="active" data-step="1">1. Wallets</button>
-        <button data-step="2">2. Budget</button>
-        <button data-step="3">3. Send cash</button>
-        <button data-step="4">4. Go live</button>
-        <button data-step="5">5. Cash out</button>
+      <nav class="main-nav" id="mainNav">
+        <button type="button" class="active" data-tab="overview">Overview</button>
+        <button type="button" data-tab="wallets">Wallets</button>
+        <button type="button" data-tab="launch">Launch</button>
+        <button type="button" data-tab="trade">Trade</button>
+        <button type="button" data-tab="guide">Guide</button>
       </nav>
-      <div style="display:flex;align-items:center;gap:14px">
+      <div style="display:flex;align-items:center;gap:12px">
+        <div class="pad-switch" id="headerPadSwitch" title="Launchpad">
+          <button type="button" class="active" data-pad="noxa">NOXA</button>
+          <button type="button" data-pad="koa">KOA</button>
+          <button type="button" data-pad="apestore">Ape</button>
+        </div>
         <div class="status-pill" id="statusPill"><span class="dot"></span><span id="statusText">Ready</span></div>
       </div>
     </div>
@@ -413,36 +483,43 @@
   <div class="project-bar">
     <div class="project-tabs" id="projectTabs"></div>
     <button class="project-tab" id="btnNewProject" title="Start a fresh coin project">+ New coin</button>
-    <div class="project-note">Each tab = one coin. Click × to delete empty/old tabs. Bank wallet is shared.</div>
-  </div>
-  <div class="flow-path" id="flowPath">
-    <button type="button" class="flow-step active" data-step="1"><span class="num">1</span> Wallets</button>
-    <span class="flow-arrow">→</span>
-    <button type="button" class="flow-step" data-step="2"><span class="num">2</span> Budget</button>
-    <span class="flow-arrow">→</span>
-    <button type="button" class="flow-step" data-step="3"><span class="num">3</span> Send cash</button>
-    <span class="flow-arrow">→</span>
-    <button type="button" class="flow-step" data-step="4"><span class="num">4</span> Go live</button>
-    <span class="flow-arrow">→</span>
-    <button type="button" class="flow-step" data-step="5"><span class="num">5</span> Cash out</button>
+    <div class="project-note">One tab = one coin. Bank/treasury is shared.</div>
   </div>
   <div class="project-banner" id="projectBanner" style="display:none">
     <div class="project-banner-inner" id="projectBannerText"></div>
   </div>
 
-  <main style="max-width:1100px;margin:0 auto;padding:20px 24px">
+  <main style="max-width:var(--maxw);margin:0 auto;padding:20px 24px 72px">
 
-    <div class="stats hidden" id="overviewStats">
-      <div class="stat"><div class="label">Bank wallet</div><div class="value c-orange" id="statFunder">—</div><div class="sub">holds your cash</div></div>
-      <div class="stat"><div class="label">Helper wallets</div><div class="value c-blue" id="statBuyers">0</div><div class="sub">do the buys</div></div>
-      <div class="stat"><div class="label">Budget set</div><div class="value c-green" id="statBudget">0 ETH</div><div class="sub">ready to spend</div></div>
-      <div class="stat"><div class="label">Coin</div><div class="value c-purple" id="statToken">—</div><div class="sub">this project</div></div>
+    <div class="overview-panel" id="overviewPanel">
+      <div class="stats" id="overviewStats">
+        <div class="stat"><div class="label">Treasury</div><div class="value c-orange" id="statFunder">—</div><div class="sub">bank balance</div></div>
+        <div class="stat"><div class="label">Snipers</div><div class="value c-blue" id="statBuyers">0</div><div class="sub">helper wallets</div></div>
+        <div class="stat"><div class="label">Budget</div><div class="value c-green" id="statBudget">0 ETH</div><div class="sub">planned spend</div></div>
+        <div class="stat"><div class="label">Token</div><div class="value c-purple" id="statToken">—</div><div class="sub">this project</div></div>
+      </div>
+      <p class="desc" id="funderLine" style="margin-top:8px;margin-bottom:8px">Treasury: <a id="funderLink" href="#" target="_blank" rel="noopener" style="color:var(--accent-blue);font-family:JetBrains Mono,monospace;font-size:12px"><span id="funderFull">—</span></a></p>
+      <div class="panel-head" style="margin-top:18px">Needs you</div>
+      <div class="needs-list" id="needsList"></div>
     </div>
-    <p class="desc hidden" id="funderLine" style="margin-top:-8px;margin-bottom:16px">Bank wallet address: <a id="funderLink" href="#" target="_blank" rel="noopener" style="color:var(--accent-blue);font-family:JetBrains Mono,monospace;font-size:12px"><span id="funderFull">—</span></a></p>
 
-    <section class="card" id="step1">
-      <h2>Step 1 — Set up wallets</h2>
-      <p class="desc">You need three kinds of wallets. Think of them like roles on a team.</p>
+    <div id="guidePanel">
+      <section class="card">
+        <h2>Quick guide</h2>
+        <p class="desc">Same flow as Stealth Bundler — four tabs, one job each.</p>
+        <ol style="margin:12px 0 0 18px;color:var(--text-secondary);font-size:13px;line-height:1.7">
+          <li><strong style="color:var(--text-primary)">Wallets</strong> — import treasury, create deployer + sniper helpers</li>
+          <li><strong style="color:var(--text-primary)">Launch</strong> — plan budget → fund helpers → create coin → buy</li>
+          <li><strong style="color:var(--text-primary)">Trade</strong> — chart, sell, automations (patterns / bump / guards)</li>
+          <li><strong style="color:var(--text-primary)">Overview</strong> — always shows what to do next</li>
+        </ol>
+        <p class="desc" style="margin-top:14px">Live automations need <code>EVM_ARM_LIVE=true</code> on the server plus ARM LIVE on the job.</p>
+      </section>
+    </div>
+
+    <section class="card hidden" id="step1">
+      <h2>Wallets</h2>
+      <p class="desc">Treasury pays. Deployer creates the coin. Snipers buy.</p>
       <div class="howto">
         <strong>Do this in order:</strong>
         <ol>
@@ -455,8 +532,8 @@
       </div>
 
       <div class="action-group">
-        <h3>A. Bank wallet (shared)</h3>
-        <p class="hint">This is your treasury. It pays for everything. One bank is shared across all coin tabs.</p>
+        <h3>A. Treasury (bank)</h3>
+        <p class="hint">Shared across all coin tabs. Pays for funding + gas.</p>
         <div class="actions">
           <button class="btn" id="btnImportFunder">Import bank wallet</button>
           <button class="btn-ghost" id="btnRefresh">Refresh balances</button>
@@ -464,7 +541,7 @@
       </div>
 
       <div class="action-group">
-        <h3>B. Creator wallet (this coin only)</h3>
+        <h3>B. Deployer (creator)</h3>
         <p class="hint">Creates the token and does the first small buy. Keep it separate from the bank and helpers.</p>
         <div class="actions">
           <button class="btn" id="btnCreateDev">Create creator wallet</button>
@@ -475,8 +552,8 @@
       </div>
 
       <div class="action-group">
-        <h3>C. Helper wallets (buyers)</h3>
-        <p class="hint">These wallets buy after launch. More helpers = more buy transactions.</p>
+        <h3>C. Snipers (buyers)</h3>
+        <p class="hint">These wallets buy after launch.</p>
         <div class="actions">
           <button class="btn" id="btnCreate4">Create 4 helpers</button>
           <button class="btn-ghost" id="btnCreateN">Create many…</button>
@@ -519,59 +596,14 @@
 
       <div id="walletTable" style="margin-top:16px;max-height:420px;overflow:auto"></div>
       <div class="actions">
-        <button class="btn" id="goto2">Next: Set budget →</button>
+        <button class="btn" id="goto2">Next: Launch →</button>
       </div>
     </section>
 
-    <section class="card hidden" id="stepLaunch">
-      <h2>Create the coin</h2>
-      <p class="desc">Pick a launchpad, name the coin, then create. Helpers can buy right after.</p>
-      <div class="launchpad-bar" id="launchpadBarLaunch">
-        <strong style="font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--text-secondary)">Launchpad</strong>
-        <div class="seg" role="group" aria-label="Launchpad">
-          <button type="button" class="seg-btn active" data-pad="noxa" id="padLaunchNoxa">NOXA</button>
-          <button type="button" class="seg-btn" data-pad="koa" id="padLaunchKoa">KOA</button>
-          <button type="button" class="seg-btn" data-pad="apestore" id="padLaunchApe">ApeStore</button>
-        </div>
-        <span class="hint" id="launchpadHint">Creates on NOXA Fun (Robinhood)</span>
-      </div>
-      <div class="row">
-        <div class="field"><span>Coin name</span><input id="launchName" placeholder="e.g. Sunny Pengu" /></div>
-        <div class="field" style="max-width:140px"><span>Ticker</span><input id="launchSymbol" placeholder="e.g. SUNNY" /></div>
-        <div class="field" style="max-width:150px"><span>Creator buy (ETH)</span><input id="launchDevBuy" type="number" step="0.001" min="0.001" value="0.02" /></div>
-        <div class="field" style="max-width:200px">
-          <span>Helper buys after</span>
-          <select id="launchBuyMode">
-            <option value="burst" selected>Fast burst</option>
-            <option value="organic">Slow &amp; natural</option>
-            <option value="sequential">One-by-one</option>
-          </select>
-        </div>
-      </div>
-      <details class="advanced">
-        <summary>Optional links</summary>
-        <div class="row" style="margin-top:10px">
-          <div class="field"><span>Image / metadata</span><input id="launchUri" placeholder="ipfs://… or https://…" spellcheck="false" /></div>
-          <div class="field"><span>Twitter / X</span><input id="launchTwitter" placeholder="https://x.com/…" spellcheck="false" /></div>
-        </div>
-        <div class="row" style="margin-top:10px">
-          <div class="field"><span>Website</span><input id="launchWebsite" placeholder="https://…" spellcheck="false" /></div>
-          <div class="field"><span>Telegram</span><input id="launchTelegram" placeholder="https://t.me/…" spellcheck="false" /></div>
-        </div>
-      </details>
-      <div class="actions" style="margin-top:14px">
-        <button class="btn-green is-selected" id="btnLaunchBuy">Create coin + buy helpers</button>
-        <button class="btn-ghost" id="btnLaunchOnly">Create only</button>
-        <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-secondary);cursor:pointer">
-          <input type="checkbox" id="launchBuyAfter" checked style="width:auto" /> Helpers buy right after create
-        </label>
-      </div>
-      <div class="log" id="logLaunch" style="max-height:220px;margin-top:12px"></div>
-      <p class="desc" style="margin-top:8px" id="launchResult"></p>
-    </section>
-
-    <section class="card hidden" id="step2">
-      <h2>Step 2 — Set the budget</h2>
+    <div class="launch-stack" id="launchStack">
+<section class="card hidden" id="step2">
+      <h2>1 · Plan spend</h2>
+      <p class="desc">How much each sniper will buy.</p>
       <p class="desc">Decide how much ETH helpers will spend in total. We’ll split it across them (small buys first, larger later).</p>
       <div class="howto">
         <strong>Do this:</strong>
@@ -619,7 +651,8 @@
     </section>
 
     <section class="card hidden" id="step3">
-      <h2>Step 3 — Send cash to helpers</h2>
+      <h2>2 · Fund snipers</h2>
+      <p class="desc">Send ETH from treasury → snipers.</p>
       <p class="desc">Move ETH from your bank to each helper so they can buy. We send a little extra for network fees.</p>
       <div class="howto">
         <strong>Do this:</strong>
@@ -641,7 +674,7 @@
           </select>
         </div>
       </div>
-      <details class="advanced" open style="margin-top:12px">
+      <details class="advanced" style="margin-top:12px">
         <summary>Stronger privacy: ChangeNOW → Across (Base → Robinhood)</summary>
         <p class="hint" style="margin:8px 0">
           Breaks the bank→helper link off-chain. Flow: ChangeNOW (dirty ETH → Base) → Across bridge to each helper on Robinhood.
@@ -684,8 +717,56 @@
       </div>
     </section>
 
+    <section class="card hidden" id="stepLaunch">
+      <h2>3 · Launch token</h2>
+      <p class="desc">Create the coin, then snipers can buy.</p>
+      <div class="launchpad-bar" id="launchpadBarLaunch">
+        <strong style="font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--text-secondary)">Launchpad</strong>
+        <div class="seg" role="group" aria-label="Launchpad">
+          <button type="button" class="seg-btn active" data-pad="noxa" id="padLaunchNoxa">NOXA</button>
+          <button type="button" class="seg-btn" data-pad="koa" id="padLaunchKoa">KOA</button>
+          <button type="button" class="seg-btn" data-pad="apestore" id="padLaunchApe">ApeStore</button>
+        </div>
+        <span class="hint" id="launchpadHint">Creates on NOXA Fun (Robinhood)</span>
+      </div>
+      <div class="row">
+        <div class="field"><span>Coin name</span><input id="launchName" placeholder="e.g. Sunny Pengu" /></div>
+        <div class="field" style="max-width:140px"><span>Ticker</span><input id="launchSymbol" placeholder="e.g. SUNNY" /></div>
+        <div class="field" style="max-width:150px"><span>Creator buy (ETH)</span><input id="launchDevBuy" type="number" step="0.001" min="0.001" value="0.02" /></div>
+        <div class="field" style="max-width:200px">
+          <span>Helper buys after</span>
+          <select id="launchBuyMode">
+            <option value="burst" selected>Fast burst</option>
+            <option value="organic">Slow &amp; natural</option>
+            <option value="sequential">One-by-one</option>
+          </select>
+        </div>
+      </div>
+      <details class="advanced">
+        <summary>Optional links</summary>
+        <div class="row" style="margin-top:10px">
+          <div class="field"><span>Image / metadata</span><input id="launchUri" placeholder="ipfs://… or https://…" spellcheck="false" /></div>
+          <div class="field"><span>Twitter / X</span><input id="launchTwitter" placeholder="https://x.com/…" spellcheck="false" /></div>
+        </div>
+        <div class="row" style="margin-top:10px">
+          <div class="field"><span>Website</span><input id="launchWebsite" placeholder="https://…" spellcheck="false" /></div>
+          <div class="field"><span>Telegram</span><input id="launchTelegram" placeholder="https://t.me/…" spellcheck="false" /></div>
+        </div>
+      </details>
+      <div class="actions" style="margin-top:14px">
+        <button class="btn-green is-selected" id="btnLaunchBuy">Create coin + buy helpers</button>
+        <button class="btn-ghost" id="btnLaunchOnly">Create only</button>
+        <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-secondary);cursor:pointer">
+          <input type="checkbox" id="launchBuyAfter" checked style="width:auto" /> Helpers buy right after create
+        </label>
+      </div>
+      <div class="log" id="logLaunch" style="max-height:220px;margin-top:12px"></div>
+      <p class="desc" style="margin-top:8px" id="launchResult"></p>
+    </section>
+
     <section class="card hidden" id="step4">
-      <h2>Step 4 — Go live / helper buys</h2>
+      <h2>4 · Run buys</h2>
+      <p class="desc">Buy with funded snipers.</p>
       <p class="desc">Usually you already hit <strong>Create coin + buy</strong> above. Use this only to buy again, retry failed buys, or change buy style.</p>
       <div class="howto">
         <strong>Buy styles:</strong>
@@ -745,17 +826,20 @@
       <div class="log" id="logBuy"></div>
       <div class="actions">
         <button class="btn-ghost" id="goto3b">← Send cash</button>
-        <button class="btn" id="goto5">Next: Cash out →</button>
+        <button class="btn" id="goto5">Next: Trade →</button>
       </div>
     </section>
 
-    <section class="card hidden" id="step5">
-      <h2>Step 5 — Cash out</h2>
-      <p class="desc">Watch the chart, then sell helper bags carefully. Prefer small sells so you don’t crash the price.</p>
+    
+</div><!-- /launchStack -->
 
-      <details class="advanced" id="bettyPanel" open>
-        <summary>Betty — chart patterns, bump buys &amp; auto-sell guards</summary>
-        <p class="desc" style="margin-top:10px">Server-side jobs (survive refresh). Real trades need <code>EVM_ARM_LIVE=true</code> plus ARM LIVE on chart jobs. Volume/TX bots are not included.</p>
+    <section class="card hidden" id="step5">
+      <h2>Trade &amp; sell</h2>
+      <p class="desc">Chart, positions, sell carefully. Automations support the chart.</p>
+
+      <details class="advanced" id="bettyPanel">
+        <summary>Automations — chart patterns, bump &amp; price guards</summary>
+        <p class="desc" style="margin-top:10px">Server jobs (survive refresh). Real trades need <code>EVM_ARM_LIVE=true</code> + ARM LIVE. Volume/TX bots excluded.</p>
         <div class="row" style="align-items:end;margin-top:8px">
           <div class="field" style="max-width:200px">
             <span>Pattern</span>
@@ -870,10 +954,22 @@
 
       </main>
 
-  <div class="footer-bar">
-    <span>NOXA Launch Desk</span>
-    <span id="footerHint">Follow the path: Wallets → Budget → Send cash → Go live → Cash out</span>
+  <div class="status-bar" id="statusBar">
+    <span>NOXA · Robinhood</span>
+    <span id="footerHint">Overview — what needs you next</span>
   </div>
+
+  <details class="quick-help">
+    <summary>?</summary>
+    <div class="help-body">
+      <strong style="color:var(--text-primary)">Where do I start?</strong>
+      <p style="margin:6px 0 10px">Overview shows what’s missing. Usually: Wallets → Launch → Trade.</p>
+      <strong style="color:var(--text-primary)">Treasury / Deployer / Snipers?</strong>
+      <p style="margin:6px 0 10px">Bank pays. Creator launches. Helpers buy.</p>
+      <strong style="color:var(--text-primary)">Live automations?</strong>
+      <p style="margin:6px 0">Set EVM_ARM_LIVE=true on the server, then ARM LIVE on the pattern/guard.</p>
+    </div>
+  </details>
 
 <script>
 const $ = (id) => document.getElementById(id);
@@ -884,7 +980,7 @@ const state = {
   sellPreview: null, sellPlan: null, pairs: [], snipes: [],
   snipeConfig: null, sniper: null, sniperPortfolio: null, snipeRange: "24h",
   mode: "bundler", sniperHostEnabled: false,
-  step: 0, walletPage: 0, walletPageSize: 9999, maxBundleWallets: 500,
+  step: 0, tab: "overview", walletPage: 0, walletPageSize: 9999, maxBundleWallets: 500,
   projects: [], activeProjectId: null, lastToken: "", launchpad: "noxa",
 };
 function currentLaunchpad(){
@@ -898,7 +994,7 @@ function syncLaunchpadUI(pad){
   const v = (pad === "apestore" || pad === "ape") ? "apestore" : (pad === "koa" ? "koa" : "noxa");
   state.launchpad = v;
   if($("launchpad")) $("launchpad").value = v;
-  document.querySelectorAll(".seg-btn[data-pad]").forEach(b => {
+  document.querySelectorAll(".seg-btn[data-pad], #headerPadSwitch button[data-pad]").forEach(b => {
     b.classList.toggle("active", b.dataset.pad === v);
   });
   const hint = $("launchpadHint");
@@ -1009,39 +1105,113 @@ function setBusy(on, label){
   if($("btnFundCancel")) $("btnFundCancel").disabled = !funding;
   if($("hops")) $("hops").disabled = false;
 }
-function showStep(n){
-  if(n===6 || n===7){ n = state.step || 1; }
-  state.step = n;
-  [1,2,3,4,5].forEach(i => {
-    const el = $(`step${i}`);
-    if(!el) return;
-    el.classList.toggle("hidden", i!==n);
+function showTab(tab, focusStep){
+  const t = String(tab || "overview").toLowerCase();
+  state.tab = t;
+  if(focusStep) state.step = focusStep;
+  else if(t === "wallets") state.step = 1;
+  else if(t === "launch") state.step = focusStep || state.step || 2;
+  else if(t === "trade") state.step = 5;
+
+  const showOverview = t === "overview";
+  const showGuide = t === "guide";
+  const showWallets = t === "wallets";
+  const showLaunch = t === "launch";
+  const showTrade = t === "trade";
+
+  if($("overviewPanel")) $("overviewPanel").classList.toggle("show", showOverview);
+  if($("guidePanel")) $("guidePanel").classList.toggle("show", showGuide);
+  if($("step1")) $("step1").classList.toggle("hidden", !showWallets);
+  ["step2","step3","stepLaunch","step4"].forEach(id => {
+    const el = $(id);
+    if(el) el.classList.toggle("hidden", !showLaunch);
   });
-  // Launch card lives on Go live (step 4) — create coin then buy
-  if($("stepLaunch")) $("stepLaunch").classList.toggle("hidden", n!==4);
-  document.querySelectorAll("nav button[data-step], #flowPath .flow-step").forEach(b => {
-    b.classList.toggle("active", Number(b.dataset.step)===n);
+  if($("step5")) $("step5").classList.toggle("hidden", !showTrade);
+
+  document.querySelectorAll("#mainNav button[data-tab]").forEach(b => {
+    b.classList.toggle("active", b.dataset.tab === t);
   });
-  $("footerHint").textContent = ({
-    1: "Step 1 — bank, creator, and helper wallets",
-    2: "Step 2 — how much each helper will spend",
-    3: "Step 3 — send cash from bank → helpers",
-    4: "Step 4 — create the coin and buy",
-    5: "Step 5 — sell and take profit",
-  })[n] || "";
-  const bundlerTop = [1,2,3,4,5].includes(n);
-  if($("overviewStats")) $("overviewStats").classList.toggle("hidden", !bundlerTop);
-  if($("funderLine")) $("funderLine").classList.toggle("hidden", !bundlerTop);
-  if(n===1){ renderWallets(); renderDevBox(); }
-  if(n===2){ renderPlan(); renderDevBox(); api("/api/balances/refresh",{method:"POST",body:"{}"}).catch(()=>{}); }
-  if(n===3) renderFundJobs();
-  if(n===4){ renderBuyReady(); renderDevBox(); api("/api/balances/refresh",{method:"POST",body:"{}"}).catch(()=>{}); }
-  if(n===5){
-    const t = $("token")?.value?.trim() || state.plan?.token?.address || state.plan?.token || "";
-    if(t && !$("sellToken").value) $("sellToken").value = typeof t === "string" ? t : "";
+
+  if($("footerHint")){
+    $("footerHint").textContent = ({
+      overview: "Overview — what needs you next",
+      wallets: "Wallets — treasury, deployer, snipers",
+      launch: "Launch — plan → fund → create → buy",
+      trade: "Trade — chart, sell, automations",
+      guide: "Guide — how to run a launch",
+    })[t] || "";
+  }
+
+  if(showWallets){ renderWallets(); renderDevBox(); }
+  if(showLaunch){
+    renderPlan(); renderDevBox(); renderFundJobs(); renderBuyReady();
+    api("/api/balances/refresh",{method:"POST",body:"{}"}).catch(()=>{});
+    const map = {2:"step2",3:"step3",4:"stepLaunch",5:"step4"};
+    // focusStep 4 historically was go-live which includes create+buy; prefer create
+    const focusId = focusStep === 4 ? "stepLaunch" : (map[focusStep] || null);
+    if(focusId && $(focusId)) setTimeout(() => $(focusId).scrollIntoView({ behavior:"smooth", block:"start" }), 50);
+  }
+  if(showTrade){
+    const tok = $("token")?.value?.trim() || state.plan?.token?.address || state.plan?.token || state.lastToken || "";
+    if(tok && $("sellToken") && !$("sellToken").value) $("sellToken").value = typeof tok === "string" ? tok : "";
     loadSellChart(false, { embed: false });
     renderSell();
+    refreshBettyStatus();
   }
+  if(showOverview) renderNeedsYou();
+}
+function showStep(n){
+  // Back-compat for old next/back buttons
+  if(n===6 || n===7){ n = state.step || 1; }
+  if(n===1) return showTab("wallets", 1);
+  if(n===2 || n===3) return showTab("launch", n);
+  if(n===4) return showTab("launch", 4);
+  if(n===5) return showTab("trade", 5);
+  return showTab("overview");
+}
+function renderNeedsYou(){
+  const box = $("needsList");
+  if(!box) return;
+  const funder = state.wallets?.find(w => w.role === "funder");
+  const buyers = (state.wallets||[]).filter(w => w.role === "buyer");
+  const planned = buyers.filter(w => Number(w.buyAmountEth) > 0);
+  const items = [];
+  if(!funder?.address){
+    items.push({ tag:"hi", title:"Add treasury wallet", sub:"Import the bank that holds your ETH", tab:"wallets" });
+  }
+  if(!state.dev?.address){
+    items.push({ tag:"hi", title:"Create deployer wallet", sub:"Needed to launch the coin", tab:"wallets" });
+  }
+  if(buyers.length < 2){
+    items.push({ tag:"md", title:"Create sniper helpers", sub:"Add buyer wallets for the bundle", tab:"wallets" });
+  }
+  if(buyers.length && !planned.length){
+    items.push({ tag:"md", title:"Plan spend", sub:"Set budget and apply to snipers", tab:"launch", step:2 });
+  }
+  if(planned.length && !state.lastToken){
+    items.push({ tag:"go", title:"Ready to launch", sub:"Fund snipers, then create the coin", tab:"launch", step:3 });
+  }
+  if(state.lastToken){
+    items.push({ tag:"go", title:"Trade live token", sub: String(state.lastToken).slice(0,10)+"… — chart, sell, automations", tab:"trade", step:5 });
+  }
+  if(!items.length){
+    items.push({ tag:"go", title:"All set", sub:"Pick Launch to run a coin, or Trade if one is live", tab:"launch", step:2 });
+  }
+  box.innerHTML = items.map(it => `
+    <div class="needs-item" data-tab="${it.tab}" data-step="${it.step||""}">
+      <div>
+        <div style="font-weight:600;color:var(--text-primary)">${it.title}</div>
+        <div style="font-size:12px;color:var(--text-muted);margin-top:2px">${it.sub}</div>
+      </div>
+      <span class="tag ${it.tag}">${it.tag === "go" ? "go" : it.tag === "hi" ? "do now" : "next"}</span>
+    </div>`).join("");
+  box.querySelectorAll(".needs-item").forEach(el => {
+    el.onclick = () => {
+      const tab = el.dataset.tab;
+      const step = el.dataset.step ? Number(el.dataset.step) : null;
+      showTab(tab, step);
+    };
+  });
 }
 function renderDevBox(){
   const box = $("devWalletBox");
@@ -2126,14 +2296,16 @@ async function refresh(opts = {}){
   renderSniper();
   renderProjectTabs(s.job);
   renderDevBox();
-  // Only re-render heavy tables for the active step
+  // Only re-render heavy tables for the active tab
   renderOverview();
-  // Soft-render wallets so the table stays open (no scroll jump / collapse)
-  if(state.step === 1) renderWallets({ soft: true });
-  else if(state.step === 2) renderPlan();
-  else if(state.step === 3) renderFundJobs();
-  else if(state.step === 4) renderBuyReady();
-  else if(state.step === 5) renderSell(); // sellPlan / sellPreview are sticky — not cleared here
+  if(typeof renderNeedsYou === "function") renderNeedsYou();
+  if(state.tab === "wallets" || state.step === 1) renderWallets({ soft: true });
+  else if(state.tab === "launch"){
+    renderPlan();
+    renderFundJobs();
+    renderBuyReady();
+  }
+  else if(state.tab === "trade" || state.step === 5) renderSell();
 }
 
 function renderProjectTabs(job){
@@ -2224,15 +2396,23 @@ async function deleteProject(projectId){
     alert(e.message);
   }
 }
-document.querySelectorAll("nav button[data-step], #flowPath .flow-step").forEach(b => b.onclick = () => showStep(Number(b.dataset.step)));
-$("goto2").onclick = () => showStep(2);
-$("goto3").onclick = () => showStep(3);
-$("goto4").onclick = () => showStep(4);
-$("goto5").onclick = () => showStep(5);
-$("goto1b").onclick = () => showStep(1);
-$("goto2b").onclick = () => showStep(2);
-$("goto3b").onclick = () => showStep(3);
-if($("goto4b")) $("goto4b").onclick = () => showStep(4);
+document.querySelectorAll("#mainNav button[data-tab]").forEach(b => {
+  b.onclick = () => showTab(b.dataset.tab);
+});
+document.querySelectorAll("#headerPadSwitch button[data-pad]").forEach(b => {
+  b.onclick = () => {
+    syncLaunchpadUI(b.dataset.pad);
+    api("/api/launchpad", { method:"POST", body: JSON.stringify({ launchpad: b.dataset.pad }) }).catch(()=>{});
+  };
+});
+$("goto2").onclick = () => showTab("launch", 2);
+$("goto3").onclick = () => showTab("launch", 3);
+$("goto4").onclick = () => showTab("launch", 4);
+$("goto5").onclick = () => showTab("trade", 5);
+$("goto1b").onclick = () => showTab("wallets", 1);
+$("goto2b").onclick = () => showTab("launch", 2);
+$("goto3b").onclick = () => showTab("launch", 3);
+if($("goto4b")) $("goto4b").onclick = () => showTab("trade", 5);
 
 function bettyLog(msg, cls){
   const el = $("logBetty");
@@ -2440,7 +2620,7 @@ async function runLaunch({ buyAfter }){
           setBusy(true, buyAfter ? `Launch + ${buyMode} buy…` : "Launching…");
           await api("/api/launch", { method:"POST", body: JSON.stringify(body) });
           // fall through — user can watch logs; simple re-entry
-          showStep(1);
+          showTab("overview");
           alert("Launch started with tight reserve confirmation. Watch the Launch log.");
           setBusy(false);
           return;
@@ -3272,17 +3452,20 @@ es.onmessage = (ev) => {
     }
   } catch(_){}
 };
-showStep(1);
+showTab("overview");
 // Instant paint from disk/cache, then background balance sweep via SSE
 refresh({ forceBalances: false })
-  .then(() => api("/api/balances/refresh", { method:"POST", body:"{}" }))
+  .then(() => {
+    renderNeedsYou();
+    return api("/api/balances/refresh", { method:"POST", body:"{}" });
+  })
   .catch(console.error);
 // Soft balance polls only — never wipe sticky wallets / sell plan
 setInterval(() => {
   if(state._fundingBusy || state._buyingBusy || state.jobRunning) return;
   // Only kick RPC balances (SSE patches UI). Do NOT full-refresh state on a timer —
   // that was causing blank balances / flaky sell plan mid-bundle.
-  if(![1,2,4,5].includes(state.step)) return;
+  if(!["wallets","launch","trade"].includes(state.tab)) return;
   api("/api/balances/refresh", { method:"POST", body:"{}" }).catch(()=>{});
 }, 25000);
 $("btnRefresh").onclick = () => {
@@ -3316,7 +3499,7 @@ async function forceRestartBundle(){
     if(state.step===1) renderWallets();
     else if(state.step===5) renderSell();
     setBusy(false);
-    showStep(1);
+    showTab("overview");
     alert(`Reset done on ${tabName}. Removed ${j.removed} helper(s). Other tabs untouched. Bank kept.`);
   } catch(e){ setBusy(false); alert(e.message); }
 }
