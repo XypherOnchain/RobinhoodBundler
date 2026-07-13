@@ -121,6 +121,9 @@
     .seg-btn.active[data-pad="apestore"] {
       background: #16a34a; color: #fff;
     }
+    .seg-btn.active[data-pad="koa"] {
+      background: #ca8a04; color: #fff;
+    }
     .btn:active, .btn-ghost:active, .btn-green:active, .btn-red:active, .btn-orange:active {
       transform: translateY(1px); filter: brightness(.92);
     }
@@ -527,6 +530,7 @@
         <strong style="font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--text-secondary)">Launchpad</strong>
         <div class="seg" role="group" aria-label="Launchpad">
           <button type="button" class="seg-btn active" data-pad="noxa" id="padLaunchNoxa">NOXA</button>
+          <button type="button" class="seg-btn" data-pad="koa" id="padLaunchKoa">KOA</button>
           <button type="button" class="seg-btn" data-pad="apestore" id="padLaunchApe">ApeStore</button>
         </div>
         <span class="hint" id="launchpadHint">Creates on NOXA Fun (Robinhood)</span>
@@ -582,13 +586,14 @@
         <strong style="font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--text-secondary)">Launchpad</strong>
         <div class="seg" role="group" aria-label="Launchpad">
           <button type="button" class="seg-btn active" data-pad="noxa" id="padBudgetNoxa">NOXA</button>
+          <button type="button" class="seg-btn" data-pad="koa" id="padBudgetKoa">KOA</button>
           <button type="button" class="seg-btn" data-pad="apestore" id="padBudgetApe">ApeStore</button>
         </div>
         <span class="hint">Same choice used for create, buy, and sell</span>
       </div>
       <div class="row">
         <div class="field" style="flex:2"><span>Coin address (optional for new launches)</span><input id="token" placeholder="Leave blank for a new coin, or paste 0x…" spellcheck="false" /></div>
-        <select id="launchpad" style="display:none"><option value="noxa">NOXA</option><option value="apestore">ApeStore</option></select>
+        <select id="launchpad" style="display:none"><option value="noxa">NOXA</option><option value="koa">KOA</option><option value="apestore">ApeStore</option></select>
         <div class="field"><span>Total to spend (ETH)</span><input id="totalEth" type="number" step="0.001" min="0" value="0.2" /></div>
         <div class="field"><span># of helpers</span><input id="walletCount" type="number" min="1" max="500" value="4" /></div>
       </div>
@@ -816,10 +821,12 @@ const state = {
 function currentLaunchpad(){
   const el = $("launchpad");
   const v = (el?.value || state.launchpad || "noxa").toLowerCase();
-  return (v === "apestore" || v === "ape") ? "apestore" : "noxa";
+  if (v === "apestore" || v === "ape") return "apestore";
+  if (v === "koa") return "koa";
+  return "noxa";
 }
 function syncLaunchpadUI(pad){
-  const v = (pad === "apestore" || pad === "ape") ? "apestore" : "noxa";
+  const v = (pad === "apestore" || pad === "ape") ? "apestore" : (pad === "koa" ? "koa" : "noxa");
   state.launchpad = v;
   if($("launchpad")) $("launchpad").value = v;
   document.querySelectorAll(".seg-btn[data-pad]").forEach(b => {
@@ -829,7 +836,9 @@ function syncLaunchpadUI(pad){
   if(hint){
     hint.textContent = v === "apestore"
       ? "Creates on ApeStore (Robinhood) · 1% LP fee, 50% to creator"
-      : "Creates on NOXA Fun (Robinhood)";
+      : v === "koa"
+        ? "Creates on KOA factory (own LP) · buys/sells via Uni V3"
+        : "Creates on NOXA Fun (Robinhood)";
   }
 }
 async function setLaunchpad(pad){
@@ -2245,8 +2254,10 @@ async function runLaunch({ buyAfter }){
           const pad = currentLaunchpad();
           const url = pad === "apestore"
             ? `https://ape.store/robinhood/${token}`
-            : `https://fun.noxa.fi/robinhood/${token}`;
-          const label = pad === "apestore" ? "Open on ApeStore" : "Open on NOXA";
+            : pad === "koa"
+              ? `https://robinhoodchain.blockscout.com/token/${token}`
+              : `https://fun.noxa.fi/robinhood/${token}`;
+          const label = pad === "apestore" ? "Open on ApeStore" : pad === "koa" ? "Open on explorer" : "Open on NOXA";
           $("launchResult").innerHTML = `Token <code>${token}</code> · <a href="${url}" target="_blank" rel="noopener">${label}</a>`;
         }
       }
@@ -2364,7 +2375,7 @@ $("btnPlan").onclick = async () => {
     const meta = $("tokenMeta");
     meta.style.display = "grid";
     meta.innerHTML = `
-      <div class="stat"><div class="label">Token</div><div class="value c-blue">$${state.token.symbol}</div><div class="sub">${state.token.name||""}${pad==="apestore"?" · ApeStore":" · NOXA"}</div></div>
+      <div class="stat"><div class="label">Token</div><div class="value c-blue">$${state.token.symbol}</div><div class="sub">${state.token.name||""}${pad==="apestore"?" · ApeStore":pad==="koa"?" · KOA":" · NOXA"}</div></div>
       <div class="stat"><div class="label">MC now</div><div class="value c-green">${state.token.mcapUsdLabel||fmt(state.token.mcapEth,3)}</div><div class="sub">${state.token.mcapUsdLabel?"USD":"ETH"}${state.token.ethUsd?` · ETH $${Math.round(state.token.ethUsd)}`:""}</div></div>
       <div class="stat"><div class="label">Supply</div><div class="value">${Number(state.token.supply).toLocaleString()}</div><div class="sub">max wallet 2%</div></div>
       <div class="stat"><div class="label">Start MC</div><div class="value c-orange">${state.token.startingMcUsdLabel||"~$"+Math.round(1.36*(state.token.ethUsd||3500)).toLocaleString()}</div><div class="sub">typical launch</div></div>`;

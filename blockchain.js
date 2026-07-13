@@ -28,6 +28,15 @@ const LAUNCH_CREATED_TOPIC =
     "0x1461370115e1c2be79cb529f8cfcbd11316e789d9c6099fc83417b0b4c48c62a";
 const DEFAULT_POOL_FEE = 10000; // 1% — NOXA default on Robinhood
 const DEFAULT_SLIPPAGE_BPS = Number(process.env.SLIPPAGE_BPS || 100); // 1%
+
+/** Liquidity-driven auto-slippage (ported from stealth-bundler). */
+function autoSlippageBps(liquidityUsd) {
+    const n = Number(liquidityUsd) || 0;
+    if (n >= 100_000) return 300;
+    if (n >= 50_000) return 500;
+    if (n >= 10_000) return 700;
+    return 1000;
+}
 const ROUTER_CONTRACT_ADDRESS = ROUTER;
 // Extra ETH left on each buyer so buy txs can pay gas (value + gas)
 const BUYER_GAS_BUFFER_ETH = Number(process.env.BUYER_GAS_BUFFER_ETH || 0.002);
@@ -6040,6 +6049,7 @@ module.exports = {
     buildBuyPlan,
     suggestRampFromBudget,
     formatTokenAmount,
+    autoSlippageBps,
     NOXA_DEFAULT_SUPPLY,
     NOXA_STARTING_MC_ETH,
     NOXA_MAX_WALLET_BPS,

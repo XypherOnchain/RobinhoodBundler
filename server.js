@@ -5,6 +5,7 @@ const path = require("path");
 const { ethers } = require("ethers");
 const chain = require("./blockchain");
 const apestore = require("./launchpads/apestore");
+const koa = require("./launchpads/koa");
 const moneyDesk = require("./money-desk");
 const { createJobQueue } = require("./job-queue");
 const { createCampaignEngine } = require("./campaign-engine");
@@ -46,7 +47,14 @@ function resolveLaunchpad(raw) {
         .toLowerCase()
         .trim();
     if (v === "apestore" || v === "ape" || v === "ape.store") return "apestore";
+    if (v === "koa" || v === "koa.fi" || v === "koafactory") return "koa";
     return "noxa";
+}
+
+function launchpadLabel(pad) {
+    if (pad === "apestore") return "ApeStore";
+    if (pad === "koa") return "KOA";
+    return "NOXA";
 }
 
 const MAX_BUNDLE_WALLETS = chain.MAX_BUNDLE_WALLETS || 250;
@@ -2015,7 +2023,7 @@ app.post("/api/launch", async (req, res) => {
     store.launchpad = launchpad;
     saveStore(store);
     pushLog(
-        `🚀 Launching $${symbol} on ${launchpad === "apestore" ? "ApeStore" : "NOXA"} · creator buy ${devBuyEth} ETH${
+        `🚀 Launching $${symbol} on ${launchpadLabel(launchpad)} · creator buy ${devBuyEth} ETH${
             buyAfter
                 ? ` · then ${buyMode} buy ${list.length} wallets`
                 : ""
@@ -2043,7 +2051,9 @@ app.post("/api/launch", async (req, res) => {
         const launched =
             launchpad === "apestore"
                 ? await apestore.launchToken(launchWallet, launchOpts)
-                : await chain.launchToken(launchWallet, launchOpts);
+                : launchpad === "koa"
+                  ? await koa.launchToken(launchWallet, launchOpts)
+                  : await chain.launchToken(launchWallet, launchOpts);
         if (launched?.error) {
             pushLog(`❌ launch failed: ${launched.error}`, "err");
             job.result = { error: launched.error, hash: launched.hash || null };
@@ -2086,7 +2096,7 @@ app.post("/api/launch", async (req, res) => {
             `✅ launched ${token} · ${EXPLORER}/tx/${launched.hash}`,
             "ok"
         );
-        pushLog(`🔗 ${launched.apeUrl || launched.noxaUrl || token}`, "info");
+        pushLog(`🔗 ${launched.apeUrl || launched.koaUrl || launched.noxaUrl || token}`, "info");
 
         // Brief wait so pool is queryable; creator swap already happened in create tx
         await chain.sleep(800);
@@ -2934,19 +2944,28 @@ app.post("/api/fund", async (req, res) => {
 app.get("/api/launchpad", async (_req, res) => {
     const pad = resolveLaunchpad(store.launchpad);
     let ape = null;
+    let koaPing = null;
     try {
         ape = await apestore.ping();
     } catch (e) {
         ape = { ok: false, error: e.message };
     }
+    try {
+        koaPing = await koa.ping();
+    } catch (e) {
+        koaPing = { ok: false, error: e.message };
+    }
+    const notes = {
+        apestore: "Buys/sells use ApeStore Robinhood router + signature API",
+        koa: "Launch via KOA factory; buys/sells use Uniswap V3 (same as NOXA)",
+        noxa: "Buys/sells use NOXA Fun factory / Uni V3",
+    };
     res.json({
         launchpad: pad,
-        options: ["noxa", "apestore"],
+        options: ["noxa", "apestore", "koa"],
         apestore: ape,
-        note:
-            pad === "apestore"
-                ? "Buys/sells use ApeStore Robinhood router + signature API"
-                : "Buys/sells use NOXA Fun factory / Uni V3",
+        koa: koaPing,
+        note: notes[pad] || notes.noxa,
     });
 });
 
@@ -3101,7 +3120,7 @@ app.post("/api/buy", async (req, res) => {
         progress: { done: 0, total: list.length, label: "buying" },
         abort: false,
     });
-    pushLog(`Launchpad: ${launchpad === "apestore" ? "ApeStore (Robinhood)" : "NOXA"}`, "info");
+    pushLog(`Launchpad: ${launchpadLabel(launchpad)}`, "info");
     pushLog(
         mode === "burst"
             ? `BURST buy ${list.length} wallets · pipeline ${concurrency} in-flight · tip · slip · auto-retry ×${retries} (gas→shrink buy)` +
@@ -4408,7 +4427,7 @@ app.post("/api/sell", async (req, res) => {
     for (const msg of planLogs) {
         pushLog(msg, msg.includes("failed") ? "err" : "info");
     }
-    pushLog(`Launchpad: ${launchpad === "apestore" ? "ApeStore (Robinhood)" : "NOXA"}`, "info");
+    pushLog(`Launchpad: ${launchpadLabel(launchpad)}`, "info");
     pushLog(
         `Sell ${sellPercent}% from ${list.length} wallet(s) · ${sellMode}${sellMode === "parallel" ? " (near-simultaneous)" : ""}${order ? " · plan order" : ""}`,
         "info"
@@ -4568,7 +4587,7 @@ app.post("/api/sell/one", async (req, res) => {
     store.launchpad = launchpad;
     store.lastToken = token;
     saveStore(store);
-    pushLog(`Launchpad: ${launchpad === "apestore" ? "ApeStore (Robinhood)" : "NOXA"}`, "info");
+    pushLog(`Launchpad: ${launchpadLabel(launchpad)}`, "info");
 
     try {
         const onePayload = [
