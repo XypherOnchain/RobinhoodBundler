@@ -47,5 +47,19 @@ module.exports = {
       restart_delay: 2000,
       exp_backoff_restart_delay: 1000,
     },
+    {
+      name: "noxa-betty",
+      script: "betty-lite.js",
+      cwd: __dirname,
+      env: {
+        BETTY_STATUS_PORT: "3850",
+        BUNDLER_URL: "http://127.0.0.1:3847",
+        BETTY_INTERVAL_MS: "30000",
+        NODE_ENV: "production",
+      },
+      max_memory_restart: "128M",
+      restart_delay: 3000,
+      exp_backoff_restart_delay: 1000,
+    },
   ],
 };

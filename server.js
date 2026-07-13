@@ -7,6 +7,8 @@ const chain = require("./blockchain");
 const apestore = require("./launchpads/apestore");
 const koa = require("./launchpads/koa");
 const privacy = require("./funding/privacy");
+const walletCrypto = require("./lib/wallet-crypto");
+const auth = require("./lib/auth");
 const moneyDesk = require("./money-desk");
 const { createJobQueue } = require("./job-queue");
 const { createCampaignEngine } = require("./campaign-engine");
@@ -129,6 +131,13 @@ if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
 function loadStore() {
     try {
         const raw = JSON.parse(fs.readFileSync(STORE_FILE, "utf8"));
+        let decrypted = raw;
+        try {
+            decrypted = walletCrypto.walkDecrypt(raw);
+        } catch (e) {
+            console.error("[wallet-crypto] decrypt failed:", e.message);
+            throw e;
+        }
         return {
             wallets: [],
             lastToken: "",
@@ -196,7 +205,7 @@ function loadStore() {
                     { x: 5.0, pct: 0 }, // 0 = hold remainder; trail/SL still apply
                 ],
             },
-            ...raw,
+            ...decrypted,
             snipeConfig: {
                 enabled: false,
                 amountEth: 0.005,
@@ -449,7 +458,10 @@ function backupStoreFile(reason = "pre-migrate") {
 
 function saveStore(s) {
     if (IS_BUNDLER_HOST) syncActiveProjectFromFlat(s);
-    fs.writeFileSync(STORE_FILE, JSON.stringify(s, null, 2));
+    const toDisk = walletCrypto.enabled()
+        ? walletCrypto.walkEncrypt(JSON.parse(JSON.stringify(s)))
+        : s;
+    fs.writeFileSync(STORE_FILE, JSON.stringify(toDisk, null, 2));
 }
 
 function persistHopKeys(hops, meta = {}) {
@@ -902,6 +914,72 @@ function sellHistorySummary(tokenFilter) {
 const app = express();
 app.use(express.json({ limit: "1mb" }));
 const PUBLIC_DIR = path.join(__dirname, "public");
+
+app.post("/api/auth/login", (req, res) => {
+    try {
+        if (!auth.requireAuthEnabled()) {
+            return res.json({ ok: true, authDisabled: true });
+        }
+        const username = String(req.body?.username || "").trim();
+        const password = String(req.body?.password || "");
+        const result = auth.login(username, password);
+        if (!result) {
+            return res.status(401).json({ error: "Invalid username or password" });
+        }
+        res.setHeader("Set-Cookie", auth.makeSessionCookie(result.token));
+        res.json({ ok: true, user: result.payload });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.post("/api/auth/logout", (_req, res) => {
+    res.setHeader("Set-Cookie", auth.clearSessionCookie());
+    res.json({ ok: true });
+});
+
+app.get("/api/auth/me", (req, res) => {
+    const session = auth.getSession(req);
+    res.json({
+        authRequired: auth.requireAuthEnabled(),
+        encryption: walletCrypto.enabled(),
+        user: session || null,
+    });
+});
+
+app.get("/api/betty/status", async (_req, res) => {
+    try {
+        const r = await new Promise((resolve, reject) => {
+            const req = require("http").get(
+                "http://127.0.0.1:3850/api/betty/status",
+                (resp) => {
+                    let body = "";
+                    resp.on("data", (c) => (body += c));
+                    resp.on("end", () => {
+                        try {
+                            resolve(JSON.parse(body || "{}"));
+                        } catch (e) {
+                            reject(e);
+                        }
+                    });
+                }
+            );
+            req.on("error", () =>
+                resolve({ ok: false, error: "betty-lite not running" })
+            );
+            req.setTimeout(2000, () => {
+                req.destroy();
+                resolve({ ok: false, error: "betty-lite timeout" });
+            });
+        });
+        res.json(r);
+    } catch (e) {
+        res.json({ ok: false, error: e.message });
+    }
+});
+
+app.use(auth.authMiddleware);
+
 // Each host gets its own dashboard; bundler keeps index.html
 if (IS_SNIPER_HOST) {
     app.get("/", (_req, res) => {
