@@ -6,6 +6,7 @@ const { ethers } = require("ethers");
 const chain = require("./blockchain");
 const apestore = require("./launchpads/apestore");
 const koa = require("./launchpads/koa");
+const privacy = require("./funding/privacy");
 const moneyDesk = require("./money-desk");
 const { createJobQueue } = require("./job-queue");
 const { createCampaignEngine } = require("./campaign-engine");
@@ -2974,6 +2975,142 @@ app.post("/api/launchpad", (req, res) => {
     store.launchpad = pad;
     saveStore(store);
     res.json({ ok: true, launchpad: pad });
+});
+
+/** Privacy funding: ChangeNOW → Across (Base → Robinhood) */
+app.get("/api/privacy/status", async (_req, res) => {
+    try {
+        res.json(await privacy.status());
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.post("/api/privacy/preview", async (req, res) => {
+    try {
+        const list =
+            Array.isArray(req.body?.destinations) && req.body.destinations.length
+                ? req.body.destinations
+                : buyersOnly()
+                      .filter((w) => Number(w.buyAmountEth) > 0)
+                      .map((w) => ({
+                          address: w.address,
+                          amountEth:
+                              Number(w.buyAmountEth) +
+                              Number(process.env.BUYER_GAS_BUFFER_ETH || 0.002),
+                      }));
+        res.json(await privacy.previewPrivacyFund(list));
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.post("/api/privacy/changenow", async (req, res) => {
+    try {
+        const amountEth = Number(req.body?.amountEth || 0);
+        if (!(amountEth > 0)) {
+            return res.status(400).json({ error: "amountEth required" });
+        }
+        const wallet = privacy.bridgeWallet();
+        const toAddress =
+            req.body?.toAddress ||
+            wallet?.address ||
+            null;
+        if (!toAddress) {
+            return res.status(400).json({
+                error:
+                    "Set PRIVACY_BRIDGE_PK (Base wallet) or pass toAddress for ChangeNOW payout",
+            });
+        }
+        const order = await privacy.changeNowCreate({
+            amountEth,
+            toAddress,
+            from: req.body?.from || "eth",
+            to: req.body?.to || "ethbase",
+            refundAddress: req.body?.refundAddress || null,
+        });
+        res.json({ ok: true, order });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.get("/api/privacy/changenow/:id", async (req, res) => {
+    try {
+        res.json(await privacy.changeNowStatus(req.params.id));
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.post("/api/privacy/across", async (req, res) => {
+    if (job.running) return res.status(409).json({ error: "Job already running" });
+    const dryRun = req.body?.dryRun !== false && req.body?.arm !== true;
+    const list =
+        Array.isArray(req.body?.destinations) && req.body.destinations.length
+            ? req.body.destinations
+            : buyersOnly()
+                  .filter((w) => Number(w.buyAmountEth) > 0)
+                  .map((w) => ({
+                      address: w.address,
+                      amountEth:
+                          Number(w.buyAmountEth) +
+                          Number(process.env.BUYER_GAS_BUFFER_ETH || 0.002),
+                  }));
+    if (!list.length) {
+        return res.status(400).json({ error: "No destinations — apply a plan first" });
+    }
+
+    setJob({
+        running: true,
+        type: "privacy_across",
+        logs: [],
+        result: null,
+        progress: { done: 0, total: list.length, label: dryRun ? "quoting" : "bridging" },
+        abort: false,
+    });
+    pushLog(
+        dryRun
+            ? `🔐 Privacy Across preview · ${list.length} wallets (dry-run)`
+            : `🔐 Privacy Across LIVE · ${list.length} wallets Base→Robinhood`,
+        dryRun ? "info" : "ok"
+    );
+    res.json({ ok: true, job: publicJob(), dryRun });
+
+    try {
+        let done = 0;
+        const out = await privacy.executeAcrossLegs(list, {
+            dryRun,
+            delayMs: Number(req.body?.delayMs || 2500),
+            onProgress: async (ev) => {
+                done++;
+                setProgress(done, list.length, ev.type || "progress");
+                if (ev.type === "bridged") {
+                    pushLog(
+                        `✅ bridged → ${ev.address?.slice(0, 10)}… · ${ev.hash}`,
+                        "ok"
+                    );
+                } else if (ev.type === "quoted") {
+                    pushLog(`quote ok · ${ev.address?.slice(0, 10)}… ${ev.amountEth} ETH`, "info");
+                } else if (ev.type === "error") {
+                    pushLog(`❌ ${ev.address?.slice(0, 10)}… ${ev.error}`, "err");
+                }
+            },
+        });
+        job.result = out;
+        pushLog(
+            dryRun
+                ? `Done quoting ${out.results?.length || 0} legs`
+                : `Across finished · ${out.results?.filter((r) => r.ok).length || 0} ok`,
+            "ok"
+        );
+    } catch (e) {
+        pushLog(`Privacy Across failed: ${e.message}`, "err");
+        job.result = { error: e.message };
+    } finally {
+        job.running = false;
+        broadcast({ type: "job_done", job: publicJob() });
+    }
 });
 
 app.post("/api/buy/cancel", (req, res) => {

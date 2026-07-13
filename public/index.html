@@ -641,6 +641,29 @@
           </select>
         </div>
       </div>
+      <details class="advanced" open style="margin-top:12px">
+        <summary>Stronger privacy: ChangeNOW → Across (Base → Robinhood)</summary>
+        <p class="hint" style="margin:8px 0">
+          Breaks the bank→helper link off-chain. Flow: ChangeNOW (dirty ETH → Base) → Across bridge to each helper on Robinhood.
+          Needs <code>CHANGENOW_API_KEY</code> + a Base-funded <code>PRIVACY_BRIDGE_PK</code>. Live Across only with <code>PRIVACY_FUND_ARM=1</code>.
+        </p>
+        <div id="privacyStatus" style="font-size:12px;color:var(--text-muted);margin-bottom:8px">Checking privacy bridge…</div>
+        <div class="row">
+          <div class="field" style="max-width:160px">
+            <span>ChangeNOW top-up (ETH)</span>
+            <input id="privacyCnAmount" type="number" step="0.01" min="0" placeholder="0.2" />
+          </div>
+        </div>
+        <div class="actions">
+          <button class="btn-ghost" id="btnPrivacyStatus">Refresh status</button>
+          <button class="btn-ghost" id="btnPrivacyPreview">Preview Across quotes</button>
+          <button class="btn" id="btnPrivacyCn">Create ChangeNOW order</button>
+          <button class="btn-orange" id="btnPrivacyAcrossDry">Across dry-run</button>
+          <button class="btn-green" id="btnPrivacyAcrossLive">Across LIVE</button>
+        </div>
+        <div id="privacyBox" style="margin-top:10px;font-size:12px"></div>
+        <div class="log" id="logPrivacy" style="max-height:160px"></div>
+      </details>
       <div class="actions">
         <button class="btn-ghost" id="btnPreview">Preview</button>
         <button class="btn" id="btnFund">Send cash</button>
@@ -2395,6 +2418,74 @@ $("btnApply").onclick = async () => {
   try { await api("/api/plan/apply", { method:"POST", body:"{}" }); await refresh(); alert("Plan saved to buyer wallets."); }
   catch(e){ alert(e.message); }
 };
+async function refreshPrivacyStatus(){
+  try {
+    const s = await api("/api/privacy/status");
+    const el = $("privacyStatus");
+    if(!el) return;
+    el.innerHTML = `Across ${s.acrossOk?"✅":"❌"} · ChangeNOW key ${s.changeNowKey?"✅":"❌"} · Bridge ${s.bridgeWallet?short(s.bridgeWallet):"not set"} · bal ${s.bridgeBalanceEth ?? "—"} ETH · armed ${s.armed?"YES":"no"}`;
+  } catch(e){
+    if($("privacyStatus")) $("privacyStatus").textContent = "Privacy status: "+e.message;
+  }
+}
+function privacyLog(msg){
+  const box = $("logPrivacy");
+  if(!box) return;
+  const t = new Date().toLocaleTimeString();
+  box.innerHTML = `<div class="info">[${t}] ${msg}</div>` + box.innerHTML;
+}
+if($("btnPrivacyStatus")) $("btnPrivacyStatus").onclick = () => refreshPrivacyStatus();
+if($("btnPrivacyPreview")) $("btnPrivacyPreview").onclick = async () => {
+  try {
+    const p = await api("/api/privacy/preview", { method:"POST", body:"{}" });
+    const box = $("privacyBox");
+    if(box){
+      box.innerHTML = `<div>Total in <strong>${(p.totalInEth||0).toFixed(4)}</strong> ETH · expected out ~<strong>${(p.totalExpectedOutEth||0).toFixed(4)}</strong></div>` +
+        (p.rows||[]).slice(0,12).map(r => r.ok
+          ? `<div>${short(r.address)} · ${r.amountEth} → ~${r.expectedOutEth?.toFixed?.(5) ?? r.expectedOutEth}</div>`
+          : `<div style="color:var(--accent-red)">${short(r.address)} · ${r.error}</div>`
+        ).join("");
+    }
+    privacyLog("Preview loaded");
+  } catch(e){ alert(e.message); }
+};
+if($("btnPrivacyCn")) $("btnPrivacyCn").onclick = async () => {
+  try {
+    const amountEth = Number($("privacyCnAmount")?.value || 0);
+    if(!(amountEth>0)){ alert("Enter ChangeNOW top-up amount"); return; }
+    const r = await api("/api/privacy/changenow", { method:"POST", body: JSON.stringify({ amountEth }) });
+    const o = r.order || {};
+    if($("privacyBox")){
+      $("privacyBox").innerHTML = `<div><strong>Send ${o.amountFrom || amountEth} ETH to:</strong><br><code>${o.payinAddress}</code></div>
+        <div>Order <code>${o.id}</code> · <a href="${o.trackUrl||"#"}" target="_blank" rel="noopener">track</a></div>
+        <div class="hint">Payout lands on Base bridge wallet, then use Across.</div>`;
+    }
+    privacyLog("ChangeNOW order "+o.id);
+  } catch(e){ alert(e.message); }
+};
+async function runPrivacyAcross(live){
+  try {
+    if(live && !confirm("LIVE Across bridges from Base → Robinhood helpers?\n\nRequires PRIVACY_FUND_ARM=1 and funded PRIVACY_BRIDGE_PK.")) return;
+    setBusy(true, live ? "Across LIVE…" : "Across dry-run…");
+    await api("/api/privacy/across", {
+      method:"POST",
+      body: JSON.stringify({ dryRun: !live, arm: !!live }),
+    });
+    // poll job via existing events / refresh
+    const tick = async () => {
+      const st = await api("/api/state");
+      if(st.job?.running){ setTimeout(tick, 1200); return; }
+      setBusy(false);
+      privacyLog(live ? "Across live finished" : "Across dry-run finished");
+      await refreshPrivacyStatus();
+    };
+    setTimeout(tick, 800);
+  } catch(e){ setBusy(false); alert(e.message); }
+}
+if($("btnPrivacyAcrossDry")) $("btnPrivacyAcrossDry").onclick = () => runPrivacyAcross(false);
+if($("btnPrivacyAcrossLive")) $("btnPrivacyAcrossLive").onclick = () => runPrivacyAcross(true);
+refreshPrivacyStatus().catch(()=>{});
+
 $("btnPreview").onclick = async () => {
   try {
     state.fundingPreview = await api("/api/fund/preview", { method:"POST", body: JSON.stringify({ hops: Number($("hops").value), useDistributors:false, skipFunded:true }) });
