@@ -49,15 +49,17 @@ module.exports = {
     },
     {
       name: "noxa-betty",
-      script: "betty-lite.js",
+      script: "betty/index.js",
       cwd: __dirname,
       env: {
         BETTY_STATUS_PORT: "3850",
         BUNDLER_URL: "http://127.0.0.1:3847",
         BETTY_INTERVAL_MS: "30000",
+        BETTY_AUTO_MS: "10000",
+        // Real chart/guard trades require EVM_ARM_LIVE=true in .env
         NODE_ENV: "production",
       },
-      max_memory_restart: "128M",
+      max_memory_restart: "256M",
       restart_delay: 3000,
       exp_backoff_restart_delay: 1000,
     },

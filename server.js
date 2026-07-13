@@ -965,11 +965,11 @@ app.get("/api/betty/status", async (_req, res) => {
                 }
             );
             req.on("error", () =>
-                resolve({ ok: false, error: "betty-lite not running" })
+                resolve({ ok: false, error: "betty not running" })
             );
             req.setTimeout(2000, () => {
                 req.destroy();
-                resolve({ ok: false, error: "betty-lite timeout" });
+                resolve({ ok: false, error: "betty timeout" });
             });
         });
         res.json(r);
@@ -977,6 +977,13 @@ app.get("/api/betty/status", async (_req, res) => {
         res.json({ ok: false, error: e.message });
     }
 });
+
+// Chart patterns, bump bot, price guards (stealth Betty → Express)
+try {
+    require("./betty/routes").mountBettyRoutes(app, { chain });
+} catch (e) {
+    console.warn("[betty/routes] mount failed:", e.message);
+}
 
 app.use(auth.authMiddleware);
 

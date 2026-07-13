@@ -752,6 +752,52 @@
     <section class="card hidden" id="step5">
       <h2>Step 5 — Cash out</h2>
       <p class="desc">Watch the chart, then sell helper bags carefully. Prefer small sells so you don’t crash the price.</p>
+
+      <details class="advanced" id="bettyPanel" open>
+        <summary>Betty — chart patterns, bump buys &amp; auto-sell guards</summary>
+        <p class="desc" style="margin-top:10px">Server-side jobs (survive refresh). Real trades need <code>EVM_ARM_LIVE=true</code> plus ARM LIVE on chart jobs. Volume/TX bots are not included.</p>
+        <div class="row" style="align-items:end;margin-top:8px">
+          <div class="field" style="max-width:200px">
+            <span>Pattern</span>
+            <select id="bettyPattern">
+              <option value="organic-pump">Organic Pump</option>
+              <option value="staircase">Staircase</option>
+              <option value="v-recovery">V Recovery</option>
+              <option value="slow-bleed">Slow Bleed</option>
+              <option value="sawtooth">Sawtooth</option>
+              <option value="accumulation">Accumulation</option>
+              <option value="breakout">Breakout</option>
+              <option value="double-bottom">Double Bottom</option>
+            </select>
+          </div>
+          <div class="field" style="max-width:110px"><span>Duration (min)</span><input id="bettyDuration" type="number" min="1" max="240" value="30" /></div>
+          <div class="field" style="max-width:120px"><span>ETH / trade</span><input id="bettyEthTrade" type="number" min="0.0001" step="0.001" value="0.005" /></div>
+          <div class="field" style="max-width:140px">
+            <span>Rotation</span>
+            <select id="bettyRotation">
+              <option value="sequential">Sequential</option>
+              <option value="random">Random</option>
+            </select>
+          </div>
+          <label style="display:flex;align-items:center;gap:6px;font-size:12px;margin-bottom:8px">
+            <input type="checkbox" id="bettyArmed" /> ARM LIVE
+          </label>
+          <button class="btn-green" id="btnBettyStartPattern" type="button">Start pattern</button>
+          <button class="btn" id="btnBettyBump" type="button">Start bump bot</button>
+          <button class="btn-red" id="btnBettyStopJobs" type="button">Stop jobs</button>
+        </div>
+        <div class="row" style="align-items:end;margin-top:12px">
+          <div class="field" style="max-width:140px"><span>Stop-loss $</span><input id="bettySl" type="number" step="any" placeholder="price USD" /></div>
+          <div class="field" style="max-width:140px"><span>Take-profit $</span><input id="bettyTp" type="number" step="any" placeholder="price USD" /></div>
+          <div class="field" style="max-width:140px"><span>MCAP trigger $</span><input id="bettyMcap" type="number" step="1000" placeholder="e.g. 500000" /></div>
+          <div class="field" style="max-width:100px"><span>Sell %</span><input id="bettyGuardPct" type="number" min="1" max="100" value="100" /></div>
+          <button class="btn-orange" id="btnBettyGuard" type="button">Arm price guard</button>
+          <button class="btn-ghost" id="btnBettyRefresh" type="button">Refresh status</button>
+        </div>
+        <div id="bettyStatusBox" style="margin-top:12px;font-size:12px;color:var(--text-muted)"></div>
+        <div class="log" id="logBetty" style="max-height:180px;margin-top:8px"></div>
+      </details>
+
       <div class="howto">
         <strong>Do this:</strong>
         <ol>
@@ -2187,6 +2233,103 @@ $("goto1b").onclick = () => showStep(1);
 $("goto2b").onclick = () => showStep(2);
 $("goto3b").onclick = () => showStep(3);
 if($("goto4b")) $("goto4b").onclick = () => showStep(4);
+
+function bettyLog(msg, cls){
+  const el = $("logBetty");
+  if(!el) return;
+  const line = document.createElement("div");
+  line.className = cls || "";
+  line.textContent = msg;
+  el.prepend(line);
+}
+async function refreshBettyStatus(){
+  const box = $("bettyStatusBox");
+  if(!box) return;
+  try {
+    const st = await api("/api/betty/status");
+    const auto = await api("/api/automation");
+    const agents = st.agents || {};
+    const agentLines = Object.keys(agents).map(k => `${k}: ${agents[k].lastMsg || "?"}`).join(" · ");
+    const jobs = (auto.jobs || st.jobs || []).filter(j => j.status === "running");
+    const guards = (st.guards || []).filter(g => g.enabled);
+    box.innerHTML = `<div><strong>EVM_ARM_LIVE:</strong> ${st.evmArmLive ? "ON" : "OFF"} · <strong>jobs:</strong> ${jobs.length} · <strong>guards:</strong> ${guards.length}</div>
+      <div style="margin-top:4px">${agentLines || "agents warming up…"}</div>`;
+  } catch(e){
+    box.textContent = "Betty offline: " + e.message;
+  }
+}
+if($("btnBettyRefresh")) $("btnBettyRefresh").onclick = () => refreshBettyStatus();
+if($("btnBettyStartPattern")) $("btnBettyStartPattern").onclick = async () => {
+  const token = ($("sellToken")?.value || state.lastToken || state.token || "").trim();
+  if(!token){ alert("Set a token first"); return; }
+  try {
+    const r = await api("/api/automation", {
+      method:"POST",
+      body: JSON.stringify({
+        jobType: "chart_pattern",
+        mint: token,
+        patternId: $("bettyPattern")?.value || "organic-pump",
+        durationMin: Number($("bettyDuration")?.value || 30),
+        ethPerTrade: Number($("bettyEthTrade")?.value || 0.005),
+        armedLive: !!$("bettyArmed")?.checked,
+        config: { rotation: $("bettyRotation")?.value || "sequential", loop: false },
+      }),
+    });
+    bettyLog(`Pattern started ${r.id} · ${r.hint || ""}`, "ok");
+    refreshBettyStatus();
+  } catch(e){ bettyLog(e.message, "err"); alert(e.message); }
+};
+if($("btnBettyBump")) $("btnBettyBump").onclick = async () => {
+  const token = ($("sellToken")?.value || state.lastToken || state.token || "").trim();
+  if(!token){ alert("Set a token first"); return; }
+  try {
+    const r = await api("/api/automation", {
+      method:"POST",
+      body: JSON.stringify({
+        jobType: "bump_bot",
+        mint: token,
+        armedLive: !!$("bettyArmed")?.checked,
+        config: {
+          ethPerBump: Number($("bettyEthTrade")?.value || 0.002),
+          solPerBump: Number($("bettyEthTrade")?.value || 0.002),
+          intervalSec: { min: 30, max: 90 },
+          rotation: $("bettyRotation")?.value || "sequential",
+          maxTicks: 40,
+        },
+      }),
+    });
+    bettyLog(`Bump bot ${r.id} · ${r.hint || ""}`, "ok");
+    refreshBettyStatus();
+  } catch(e){ bettyLog(e.message, "err"); alert(e.message); }
+};
+if($("btnBettyStopJobs")) $("btnBettyStopJobs").onclick = async () => {
+  try {
+    const auto = await api("/api/automation");
+    for(const j of (auto.jobs||[]).filter(x => x.status==="running")){
+      await api("/api/automation/"+j.id, { method:"DELETE" });
+    }
+    bettyLog("Stopped running jobs", "ok");
+    refreshBettyStatus();
+  } catch(e){ bettyLog(e.message, "err"); }
+};
+if($("btnBettyGuard")) $("btnBettyGuard").onclick = async () => {
+  const token = ($("sellToken")?.value || state.lastToken || state.token || "").trim();
+  if(!token){ alert("Set a token first"); return; }
+  const body = {
+    token,
+    sellPct: Number($("bettyGuardPct")?.value || 100),
+    stopLossUsd: $("bettySl")?.value ? Number($("bettySl").value) : null,
+    takeProfitUsd: $("bettyTp")?.value ? Number($("bettyTp").value) : null,
+    mcapTriggerUsd: $("bettyMcap")?.value ? Number($("bettyMcap").value) : null,
+  };
+  try {
+    const r = await api("/api/price-guards", { method:"POST", body: JSON.stringify(body) });
+    bettyLog(`Guard armed · ${r.hint || ""}`, "ok");
+    refreshBettyStatus();
+  } catch(e){ bettyLog(e.message, "err"); alert(e.message); }
+};
+setInterval(() => { if($("step5") && !$("step5").classList.contains("hidden")) refreshBettyStatus(); }, 15000);
+
 $("btnImportFunder").onclick = async () => {
   const pk = prompt("Paste your BANK wallet private key\n\n(This is the wallet that holds your ETH)");
   if(!pk) return;
