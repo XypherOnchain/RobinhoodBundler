@@ -413,10 +413,13 @@ async function feeOverrides(options = {}) {
             ? (tipBase * BigInt(Math.round(mult * 100))) / 100n
             : tipBase;
     const maxFee = mult > 1 ? (maxBase * BigInt(Math.round(mult * 100))) / 100n : maxBase;
+    // L1: never default create/buy to 450k — that OOGed image+dev-buy creates.
+    // Callers should pass estimated gasLimit; fallback is intentionally high.
+    const fallbackGas = options.createTx ? 6_000_000 : 800_000;
     return {
         maxFeePerGas: maxFee > tip ? maxFee : tip + ethers.parseUnits("0.01", "gwei"),
         maxPriorityFeePerGas: tip,
-        gasLimit: BigInt(options.gasLimit || 450000),
+        gasLimit: BigInt(options.gasLimit || fallbackGas),
     };
 }
 
@@ -625,6 +628,19 @@ async function multiBuy(wallets, tokenAddress, options = {}) {
     await refreshConfig();
     await ensureSessionKey().catch(() => {});
 
+    const forceUni = options.forceUni === true;
+    const uniFallback = options.uniFallback !== false; // L3: default ON
+    let chainBuy = null;
+    const getChainBuy = () => {
+        if (chainBuy) return chainBuy;
+        try {
+            chainBuy = require("../blockchain").buy;
+        } catch (_) {
+            chainBuy = null;
+        }
+        return chainBuy;
+    };
+
     const runOne = async (w) => {
         if (options.shouldAbort?.()) {
             results.push({
@@ -636,6 +652,7 @@ async function multiBuy(wallets, tokenAddress, options = {}) {
             return null;
         }
         const label = w.name || w.address;
+        const walletData = { private_key: w.private_key || w.privateKey, address: w.address };
         try {
             onProgress({
                 type: "buying",
@@ -643,23 +660,63 @@ async function multiBuy(wallets, tokenAddress, options = {}) {
                 name: label,
                 amount: w.buyAmountEth,
             });
-            const r = await buy(
-                { private_key: w.private_key || w.privateKey },
-                w.buyAmountEth,
-                tokenAddress,
-                {
+            let r;
+            if (forceUni) {
+                const buyFn = getChainBuy();
+                if (!buyFn) throw new Error("Uni fallback unavailable (blockchain.buy missing)");
+                onProgress({ type: "info", wallet: w.address, name: label, msg: "forceUni" });
+                r = await buyFn(walletData, w.buyAmountEth, tokenAddress, {
                     waitForReceipt: options.waitForReceipt !== false,
+                    fee: 10000,
                     slippageBps: options.slippageBps,
-                    priorityMultiplier: options.priorityMultiplier,
+                });
+                r = { ...r, via: "uniswap", ok: true, name: label };
+            } else {
+                try {
+                    r = await buy(walletData, w.buyAmountEth, tokenAddress, {
+                        waitForReceipt: options.waitForReceipt !== false,
+                        slippageBps: options.slippageBps,
+                        priorityMultiplier: options.priorityMultiplier,
+                    });
+                    r = { ...r, via: "apestore", ok: true, name: label };
+                } catch (apeErr) {
+                    const apeMsg = apeErr.shortMessage || apeErr.message || String(apeErr);
+                    const shouldFallback =
+                        uniFallback &&
+                        /500|429|signature|timeout|rate|session|fetch|network|ECONN|aborted/i.test(
+                            apeMsg
+                        );
+                    if (!shouldFallback) throw apeErr;
+                    const buyFn = getChainBuy();
+                    if (!buyFn) throw apeErr;
+                    onProgress({
+                        type: "info",
+                        wallet: w.address,
+                        name: label,
+                        msg: `ApeStore sig failed → Uni fallback (${apeMsg.slice(0, 80)})`,
+                    });
+                    r = await buyFn(walletData, w.buyAmountEth, tokenAddress, {
+                        waitForReceipt: options.waitForReceipt !== false,
+                        fee: 10000,
+                        slippageBps: options.slippageBps,
+                    });
+                    r = {
+                        ...r,
+                        via: "uniswap_fallback",
+                        apeError: apeMsg,
+                        ok: true,
+                        name: label,
+                    };
                 }
-            );
+            }
             onProgress({
                 type: "bought",
                 wallet: w.address,
                 name: label,
                 hash: r.hash,
+                via: r.via,
             });
-            results.push({ ...r, ok: true, name: label });
+            results.push(r);
             return r;
         } catch (e) {
             const err = e.shortMessage || e.message || String(e);
@@ -892,7 +949,6 @@ async function launchToken(walletData, options = {}) {
     }
 
     const c = new ethers.Contract(router, CREATE_ABI, wallet);
-    const fees = await feeOverrides(options);
     const valueWei = ethers.parseEther(String(valueEth));
     const deployArgs = [
         tokenId,
@@ -905,21 +961,36 @@ async function launchToken(walletData, options = {}) {
         signature,
     ];
 
+    // L1: always estimateGas × safety multiplier for live create (image + dev buy)
+    const gasMult = Math.max(1.5, Number(options.gasSafetyMult || 2.0));
+    let estimatedGas = null;
+    let estimateErr = null;
+    try {
+        estimatedGas = await withTimeout(
+            c.deployToken.estimateGas(...deployArgs, { value: valueWei }),
+            Number(options.estimateTimeoutMs || 20000),
+            "deployToken estimateGas"
+        );
+    } catch (e) {
+        estimateErr = e.shortMessage || e.message || String(e);
+    }
+    const safeGasLimit = estimatedGas
+        ? (estimatedGas * BigInt(Math.round(gasMult * 100))) / 100n
+        : BigInt(options.gasLimit || 6_000_000);
+    // Floor: never below 2M for create-with-buy; cap absurd estimates
+    const floored =
+        safeGasLimit < 2_000_000n
+            ? 2_000_000n
+            : safeGasLimit > 12_000_000n
+              ? 12_000_000n
+              : safeGasLimit;
+    const fees = await feeOverrides({
+        ...options,
+        createTx: true,
+        gasLimit: floored,
+    });
+
     if (options.dryRun) {
-        let estimateGas = null;
-        let staticError = null;
-        const gasTimeoutMs = Number(options.estimateTimeoutMs || 12000);
-        try {
-            estimateGas = await withTimeout(
-                c.deployToken.estimateGas(...deployArgs, {
-                    value: valueWei,
-                }),
-                gasTimeoutMs,
-                "deployToken estimateGas"
-            );
-        } catch (e) {
-            staticError = e.shortMessage || e.message || String(e);
-        }
         return {
             dryRun: true,
             apeId: tokenId,
@@ -930,12 +1001,23 @@ async function launchToken(walletData, options = {}) {
             symbol: symbol.slice(0, 12),
             valueEth,
             buyEth,
-            estimateGas: estimateGas != null ? estimateGas.toString() : null,
-            staticError,
+            estimateGas: estimatedGas != null ? estimatedGas.toString() : null,
+            gasLimitUsed: floored.toString(),
+            staticError: estimateErr,
             launchpad: "apestore",
             chainId: CHAIN_ID,
             note: "Signed with ape.store — on-chain deploy NOT sent",
         };
+    }
+
+    if (!estimatedGas && !options.forceWithoutEstimate) {
+        // Still allow with high fallback, but surface the estimate failure
+        console.warn(
+            "[apestore] deployToken estimateGas failed, using fallback",
+            estimateErr,
+            "gasLimit",
+            floored.toString()
+        );
     }
 
     let tx;
@@ -949,6 +1031,8 @@ async function launchToken(walletData, options = {}) {
             error: e.shortMessage || e.message || String(e),
             hash: null,
             token: null,
+            gasLimitTried: floored.toString(),
+            estimateError: estimateErr,
         };
     }
 

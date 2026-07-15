@@ -3,36 +3,39 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>NOXA Bundler</title>
+  <title>NOXA — Launch a coin</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
   <style>
     :root {
-      /* Stealth-style tokens — near-black ground, electric blue */
-      --bg-primary: #08090c;
-      --bg-secondary: #0d0f13;
-      --bg-card: #14161c;
-      --bg-hover: #1b1e26;
-      --accent-green: #16c784;
-      --accent-blue: #4d7cff;
-      --accent-purple: #a855f7;
-      --accent-orange: #f7a13a;
-      --accent-red: #f6465d;
-      --accent-yellow: #eab308;
-      --text-primary: #eef1f5;
-      --text-secondary: #9aa1ad;
-      --text-muted: #5b616d;
-      --border-primary: #1b1e26;
-      --border-hover: #2a2e38;
-      --maxw: 1600px;
+      --bg-primary: #0b1220;
+      --bg-secondary: #121a2b;
+      --bg-card: #152033;
+      --bg-hover: #1c2a42;
+      --accent-green: #3ecf8e;
+      --accent-blue: #4da3ff;
+      --accent-purple: #8b7cf7;
+      --accent-orange: #f0a24a;
+      --accent-red: #ff7a6e;
+      --accent-yellow: #e8c35a;
+      --text-primary: #eef3fb;
+      --text-secondary: #9aabc0;
+      --text-muted: #6b7c93;
+      --border-primary: #243149;
+      --border-hover: #354764;
+      --soft-blue: rgba(77,163,255,.12);
     }
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
-      background: var(--bg-primary);
+      background:
+        radial-gradient(900px 420px at 12% -8%, rgba(77,163,255,.14), transparent 55%),
+        radial-gradient(700px 380px at 92% 8%, rgba(62,207,142,.08), transparent 50%),
+        var(--bg-primary);
       color: var(--text-primary);
-      font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-family: "DM Sans", Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       min-height: 100vh;
-      padding-bottom: 48px;
+      padding-bottom: 56px;
+      letter-spacing: -0.01em;
     }
     ::-webkit-scrollbar { width: 6px; }
     ::-webkit-scrollbar-track { background: #111827; }
@@ -45,7 +48,7 @@
       position: sticky; top: 0; z-index: 50;
     }
     .header-inner {
-      max-width: var(--maxw); margin: 0 auto; padding: 0 24px;
+      max-width: 1100px; margin: 0 auto; padding: 0 24px;
       height: 56px; display: flex; align-items: center; justify-content: space-between; gap: 16px;
     }
     .logo { display: flex; align-items: center; gap: 10px; }
@@ -75,7 +78,7 @@
     .status-pill.busy .dot { background: var(--accent-yellow); }
 
     .project-bar {
-      max-width: var(--maxw); margin: 0 auto; padding: 10px 24px 0;
+      max-width: 1100px; margin: 0 auto; padding: 10px 24px 0;
       display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
     }
     .project-tabs { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
@@ -97,145 +100,7 @@
       font-size: 12px; color: var(--text-muted); margin-left: auto;
     }
     .project-banner {
-      max-width: var(--maxw); margin: 8px auto 0; padding: 0 24px;
-    }
-    .pad-switch {
-      display: flex; align-items: center; gap: 2px; padding: 2px;
-      border-radius: 8px; background: var(--bg-card); border: 1px solid var(--border-primary);
-    }
-    .pad-switch button {
-      border: none; background: transparent; color: var(--text-secondary);
-      padding: 5px 10px; border-radius: 6px; font-size: 11px; font-weight: 600;
-      cursor: pointer; font-family: inherit;
-    }
-    .pad-switch button.active { background: rgba(77,124,255,.15); color: var(--accent-blue); }
-    .overview-panel { display: none; }
-    .overview-panel.show { display: block; animation: fadeIn 0.35s ease-out; }
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
-    .needs-list { display: flex; flex-direction: column; gap: 8px; margin-top: 16px; }
-    .needs-item {
-      display: flex; align-items: center; justify-content: space-between; gap: 12px;
-      padding: 14px 16px; border-radius: 12px; border: 1px solid var(--border-primary);
-      background: var(--bg-card); cursor: pointer;
-    }
-    .needs-item:hover { border-color: var(--border-hover); background: var(--bg-hover); }
-    .needs-item .tag {
-      font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em;
-      padding: 3px 8px; border-radius: 999px;
-    }
-    .needs-item .tag.hi { background: rgba(246,70,93,.15); color: var(--accent-red); }
-    .needs-item .tag.go { background: rgba(22,199,132,.15); color: var(--accent-green); }
-    .needs-item .tag.md { background: rgba(247,161,58,.15); color: var(--accent-orange); }
-    .launch-stack .card { margin-bottom: 14px; }
-    .launch-stack .card h2 { font-size: 15px; }
-    .trade-grid {
-      display: grid; grid-template-columns: 3fr 1fr; gap: 14px; margin-bottom: 0;
-    }
-    @media (max-width: 1100px) { .trade-grid { grid-template-columns: 1fr; } }
-    .panel {
-      background: var(--bg-card); border: 1px solid var(--border-primary);
-      border-radius: 12px; padding: 16px 18px;
-    }
-    .trade-bar.panel { margin-bottom: 0; }
-    .supply-bar {
-      display: flex; height: 10px; border-radius: 999px; overflow: hidden;
-      background: var(--bg-primary); margin: 8px 0 12px;
-    }
-    .supply-bar .us { background: var(--accent-blue); }
-    .supply-bar .them { background: var(--accent-red); }
-    .supply-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-    .sup-label { font-size: 11px; font-weight: 700; text-transform: uppercase; }
-    .sup-val { font-size: 22px; font-weight: 700; margin-top: 4px; }
-    .sup-sub { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
-    .c-red { color: var(--accent-red); }
-    .pattern-grid {
-      display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;
-    }
-    @media (max-width: 900px) { .pattern-grid { grid-template-columns: repeat(2, 1fr); } }
-    .pattern-card {
-      border: 1px solid var(--border-primary); background: rgba(8,9,12,.5);
-      border-radius: 10px; padding: 8px; cursor: pointer; text-align: left;
-      position: relative; font-family: inherit; color: inherit;
-    }
-    .pattern-card:hover { border-color: var(--border-hover); }
-    .pattern-card.on {
-      border-color: rgba(168,85,247,.5); background: rgba(168,85,247,.08);
-      box-shadow: 0 0 0 1px rgba(168,85,247,.25);
-    }
-    .pattern-card .name { font-size: 10px; font-weight: 700; margin-top: 6px; }
-    .pattern-card .desc { font-size: 8px; color: var(--text-muted); line-height: 1.3; }
-    .pattern-card .dot {
-      position: absolute; top: 6px; right: 6px; width: 8px; height: 8px;
-      border-radius: 50%; background: var(--accent-purple);
-    }
-    .pattern-preview {
-      margin-top: 12px; background: var(--bg-primary); border: 1px solid var(--border-primary);
-      border-radius: 10px; padding: 12px;
-    }
-    .chip-row { display: flex; flex-wrap: wrap; gap: 6px; }
-    .chip-row button {
-      border: 1px solid var(--border-primary); background: var(--bg-primary);
-      color: var(--text-secondary); border-radius: 8px; padding: 6px 10px;
-      font-size: 11px; font-weight: 600; cursor: pointer; font-family: inherit;
-    }
-    .chip-row button.on { background: rgba(77,124,255,.15); color: var(--accent-blue); border-color: rgba(77,124,255,.4); }
-    .chip-row button.on.danger { background: rgba(246,70,93,.15); color: var(--accent-red); border-color: rgba(246,70,93,.4); }
-    .chip-row button.on.good { background: rgba(22,199,132,.15); color: var(--accent-green); border-color: rgba(22,199,132,.4); }
-    .bots-grid, .trade-tools {
-      display: grid; grid-template-columns: 1fr 1fr; gap: 14px;
-    }
-    @media (max-width: 900px) { .bots-grid, .trade-tools { grid-template-columns: 1fr; } }
-    .arm-sim, .arm-live {
-      font-size: 10px; font-weight: 700; padding: 5px 10px; border-radius: 6px;
-      border: 1px solid var(--border-primary); cursor: pointer; font-family: inherit;
-      background: var(--bg-primary); color: var(--text-muted);
-    }
-    .arm-live {
-      background: rgba(246,70,93,.15); color: var(--accent-red);
-      border-color: rgba(246,70,93,.35);
-    }
-    .switch { position: relative; display: inline-block; width: 36px; height: 20px; }
-    .switch input { opacity: 0; width: 0; height: 0; }
-    .switch span {
-      position: absolute; inset: 0; background: var(--bg-hover); border-radius: 999px;
-      cursor: pointer; transition: .2s;
-    }
-    .switch span:before {
-      content: ""; position: absolute; width: 14px; height: 14px; left: 3px; top: 3px;
-      background: #fff; border-radius: 50%; transition: .2s;
-    }
-    .switch input:checked + span { background: var(--accent-green); }
-    .switch input:checked + span:before { transform: translateX(16px); }
-    .panel-head {
-      font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em;
-      color: var(--text-muted); margin-bottom: 10px;
-    }
-
-    #guidePanel { display: none; }
-    #guidePanel.show { display: block; }
-    .status-bar {
-      position: fixed; bottom: 0; left: 0; right: 0; z-index: 40;
-      background: rgba(13,15,19,.92); backdrop-filter: blur(8px);
-      border-top: 1px solid var(--border-primary);
-      padding: 8px 24px; font-size: 12px; color: var(--text-secondary);
-      display: flex; justify-content: space-between; gap: 12px;
-    }
-    .howto { display: none; } /* demote essay blocks — use Overview triage instead */
-    .launchpad-bar { display: none !important; }
-    .quick-help {
-      position: fixed; right: 20px; bottom: 52px; z-index: 45;
-    }
-    .quick-help summary {
-      list-style: none; width: 40px; height: 40px; border-radius: 999px;
-      background: var(--bg-card); border: 1px solid var(--border-hover);
-      display: flex; align-items: center; justify-content: center;
-      cursor: pointer; font-weight: 700; color: var(--text-secondary);
-      box-shadow: 0 8px 24px rgba(0,0,0,.35);
-    }
-    .quick-help[open] .help-body {
-      position: absolute; right: 0; bottom: 48px; width: min(320px, calc(100vw - 40px));
-      background: var(--bg-card); border: 1px solid var(--border-hover); border-radius: 12px;
-      padding: 14px; font-size: 12px; color: var(--text-secondary); line-height: 1.5;
+      max-width: 1100px; margin: 8px auto 0; padding: 0 24px;
     }
     .project-banner-inner {
       background: rgba(234,179,8,.1); border: 1px solid rgba(234,179,8,.35);
@@ -293,22 +158,52 @@
     main { max-width: 1100px; margin: 0 auto; padding: 24px; }
 
     .card {
-      background: var(--bg-card); border: 1px solid var(--border-primary);
-      border-radius: 12px; padding: 20px; margin-bottom: 16px;
+      background: linear-gradient(180deg, rgba(255,255,255,.02), transparent 40%), var(--bg-card);
+      border: 1px solid var(--border-primary);
+      border-radius: 16px; padding: 22px 22px 20px; margin-bottom: 16px;
+      box-shadow: 0 10px 30px rgba(0,0,0,.18);
       animation: fadeIn .35s ease-out;
     }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
-    .card h2 { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
-    .card p.desc { font-size: 13px; color: var(--text-secondary); margin-bottom: 16px; line-height: 1.5; }
+    .card h2 { font-size: 22px; font-weight: 700; margin-bottom: 6px; letter-spacing: -0.03em; }
+    .card p.desc { font-size: 14px; color: var(--text-secondary); margin-bottom: 16px; line-height: 1.55; }
+    .step-kicker {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+      color: var(--accent-blue); margin-bottom: 8px;
+    }
+    .step-kicker .pill {
+      background: var(--soft-blue); border: 1px solid rgba(77,163,255,.25);
+      border-radius: 999px; padding: 3px 8px;
+    }
 
     .howto {
-      background: rgba(59,130,246,.08); border: 1px solid rgba(59,130,246,.2);
-      border-radius: 10px; padding: 12px 14px; margin-bottom: 16px;
-      font-size: 13px; color: var(--text-secondary); line-height: 1.55;
+      background: var(--soft-blue); border: 1px solid rgba(77,163,255,.22);
+      border-radius: 14px; padding: 14px 16px; margin-bottom: 18px;
+      font-size: 14px; color: var(--text-secondary); line-height: 1.55;
     }
     .howto strong { color: var(--text-primary); }
-    .howto ol { margin: 8px 0 0 18px; }
-    .howto li { margin: 4px 0; }
+    .howto ol { margin: 10px 0 0 18px; }
+    .howto li { margin: 6px 0; }
+    .howto .tip {
+      margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(77,163,255,.18);
+      font-size: 13px; color: var(--text-muted);
+    }
+
+    .easy-guide {
+      max-width: 1100px; margin: 14px auto 0; padding: 0 24px;
+    }
+    .easy-guide-inner {
+      border: 1px solid rgba(62,207,142,.25); background: rgba(62,207,142,.08);
+      border-radius: 14px; padding: 14px 16px;
+      display: flex; gap: 14px; align-items: flex-start; flex-wrap: wrap;
+    }
+    .easy-guide-inner strong { color: var(--accent-green); font-size: 13px; display: block; margin-bottom: 4px; }
+    .easy-guide-inner p { margin: 0; font-size: 13px; color: var(--text-secondary); line-height: 1.45; flex: 1; min-width: 220px; }
+    .easy-guide-inner .path {
+      font-family: "JetBrains Mono", monospace; font-size: 11px; color: var(--text-muted);
+      width: 100%;
+    }
 
     .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: end; }
     .field { display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 140px; }
@@ -321,20 +216,27 @@
     input:focus, select:focus { border-color: var(--accent-blue); }
 
     .btn {
-      border: none; border-radius: 8px; padding: 10px 14px; font-size: 13px;
-      font-weight: 600; cursor: pointer; font-family: inherit;
-      background: var(--accent-blue); color: white;
+      border: none; border-radius: 10px; padding: 11px 16px; font-size: 14px;
+      font-weight: 650; cursor: pointer; font-family: inherit;
+      background: var(--accent-blue); color: #061018;
+      box-shadow: 0 1px 0 rgba(255,255,255,.12) inset;
     }
-    .btn:hover { filter: brightness(1.08); }
+    .btn:hover { filter: brightness(1.06); }
     .btn:disabled { opacity: .45; cursor: not-allowed; }
+    .btn-lg { padding: 13px 18px; font-size: 15px; border-radius: 12px; }
     .btn-ghost {
       background: transparent; color: var(--text-secondary);
       border: 1px solid var(--border-primary);
+      box-shadow: none;
     }
     .btn-ghost:hover { background: var(--bg-hover); color: var(--text-primary); }
-    .btn-green { background: rgba(34,197,94,.15); color: var(--accent-green); border: 1px solid rgba(34,197,94,.25); }
-    .btn-red { background: rgba(239,68,68,.12); color: var(--accent-red); border: 1px solid rgba(239,68,68,.25); }
-    .btn-orange { background: rgba(249,115,22,.15); color: var(--accent-orange); border: 1px solid rgba(249,115,22,.3); }
+    .btn-green { background: rgba(62,207,142,.16); color: var(--accent-green); border: 1px solid rgba(62,207,142,.3); box-shadow: none; }
+    .btn-red { background: rgba(255,122,110,.12); color: var(--accent-red); border: 1px solid rgba(255,122,110,.28); box-shadow: none; }
+    .btn-orange { background: rgba(240,162,74,.15); color: var(--accent-orange); border: 1px solid rgba(240,162,74,.3); box-shadow: none; }
+    .cta-row {
+      display: flex; gap: 10px; flex-wrap: wrap; align-items: center;
+      margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--border-primary);
+    }
     .sell-pcts { display: flex; flex-wrap: wrap; gap: 4px; }
     .sell-pcts button {
       padding: 6px 10px; font-size: 11px; font-weight: 700; border-radius: 6px;
@@ -410,11 +312,15 @@
       text-align: center; color: var(--text-muted); padding: 28px;
       border: 1px dashed var(--border-primary); border-radius: 10px; font-size: 13px;
     }
+    .log-label {
+      font-size: 12px; font-weight: 600; color: var(--text-muted);
+      margin: 14px 0 6px; text-transform: uppercase; letter-spacing: .04em;
+    }
     .log {
-      height: 220px; overflow: auto; background: var(--bg-primary);
-      border: 1px solid var(--border-primary); border-radius: 10px;
+      height: 200px; overflow: auto; background: rgba(0,0,0,.28);
+      border: 1px solid var(--border-primary); border-radius: 12px;
       padding: 12px; font-family: "JetBrains Mono", ui-monospace, monospace;
-      font-size: 11px; line-height: 1.55; margin-top: 12px;
+      font-size: 11px; line-height: 1.55; margin-top: 0;
     }
     .log .ok { color: var(--accent-green); }
     .log .err { color: var(--accent-red); }
@@ -502,31 +408,40 @@
     .flow-step.active .num { background: var(--accent-blue); color: #fff; }
     .flow-arrow { color: var(--text-muted); font-size: 12px; opacity: .5; }
     .action-group {
-      margin-top: 16px; padding: 14px; border: 1px solid var(--border-primary);
-      border-radius: 12px; background: rgba(17,24,39,.55);
+      margin-top: 14px; padding: 16px; border: 1px solid var(--border-primary);
+      border-radius: 14px; background: rgba(11,18,32,.45);
     }
     .action-group h3 {
-      font-size: 13px; font-weight: 600; margin-bottom: 4px; color: var(--text-primary);
+      font-size: 15px; font-weight: 700; margin-bottom: 4px; color: var(--text-primary);
+      letter-spacing: -0.02em;
     }
     .action-group .hint {
-      font-size: 12px; color: var(--text-muted); margin-bottom: 10px; line-height: 1.4;
+      font-size: 13px; color: var(--text-muted); margin-bottom: 12px; line-height: 1.45;
     }
-    .action-group .actions { margin-top: 0; }
-    details.advanced {
-      margin-top: 16px; border: 1px solid var(--border-primary);
-      border-radius: 10px; padding: 10px 14px; background: var(--bg-primary);
+    .action-group .actions { margin-top: 0; gap: 10px; }
+    details.advanced, details.money-fold {
+      margin-top: 14px; border: 1px solid var(--border-primary);
+      border-radius: 12px; padding: 12px 14px; background: rgba(0,0,0,.18);
     }
-    details.advanced > summary {
+    details.advanced > summary, details.money-fold > summary {
       cursor: pointer; font-size: 13px; font-weight: 600; color: var(--text-secondary);
       list-style: none;
     }
-    details.advanced > summary::-webkit-details-marker { display: none; }
-    details.advanced > summary::before { content: "▸ "; color: var(--text-muted); }
-    details.advanced[open] > summary::before { content: "▾ "; }
-    nav.main-nav button { padding: 6px 10px; font-size: 12px; }
+    details.advanced > summary::-webkit-details-marker,
+    details.money-fold > summary::-webkit-details-marker { display: none; }
+    details.advanced > summary::before,
+    details.money-fold > summary::before { content: "▸ "; color: var(--text-muted); }
+    details.advanced[open] > summary::before,
+    details.money-fold[open] > summary::before { content: "▾ "; }
+    details.money-fold { max-width: 1100px; margin: 12px auto 0; }
+    details.money-fold .money-body { margin-top: 12px; }
+    nav.main-nav button { padding: 7px 11px; font-size: 12px; border-radius: 8px; }
+    .field span { text-transform: none; letter-spacing: 0; font-size: 12px; font-weight: 600; }
+    input, select { border-radius: 10px; padding: 11px 12px; }
     @media (max-width: 900px) {
       .flow-arrow { display: none; }
       nav.main-nav { display: none; }
+      .card h2 { font-size: 20px; }
     }
   </style>
 </head>
@@ -537,20 +452,17 @@
         <div class="logo-badge">NX</div>
         <span class="logo-text">NOXA</span>
       </div>
-      <nav class="main-nav" id="mainNav">
-        <button type="button" class="active" data-tab="overview">Overview</button>
-        <button type="button" data-tab="wallets">Wallets</button>
-        <button type="button" data-tab="launch">Launch</button>
-        <button type="button" data-tab="trade">Trade</button>
-        <button type="button" data-tab="airdrop">Airdrop</button>
-        <button type="button" data-tab="guide">Guide</button>
+      <nav class="main-nav">
+        <button class="active" data-step="1">1 · Wallets</button>
+        <button data-step="2">2 · Budget</button>
+        <button data-step="3">3 · Fund</button>
+        <button data-step="4">4 · Launch</button>
+        <button data-step="5">5 · Sell</button>
+        <button data-step="6">6 · Airdrop</button>
       </nav>
-      <div style="display:flex;align-items:center;gap:12px">
-        <div class="pad-switch" id="headerPadSwitch" title="Launchpad">
-          <button type="button" class="active" data-pad="noxa">NOXA</button>
-          <button type="button" data-pad="koa">KOA</button>
-          <button type="button" data-pad="apestore">Ape</button>
-        </div>
+      <div style="display:flex;align-items:center;gap:14px">
+        <div id="userBar" style="font-size:12px;color:var(--text-muted)"></div>
+        <button class="btn-ghost" type="button" id="btnLogout" style="padding:6px 10px;font-size:12px">Log out</button>
         <div class="status-pill" id="statusPill"><span class="dot"></span><span id="statusText">Ready</span></div>
       </div>
     </div>
@@ -558,257 +470,222 @@
 
   <div class="project-bar">
     <div class="project-tabs" id="projectTabs"></div>
-    <button class="project-tab" id="btnNewProject" title="Start a fresh coin project">+ New coin</button>
-    <div class="project-note">One tab = one coin. Bank/treasury is shared.</div>
+    <button class="project-tab" id="btnNewProject" title="Start a fresh coin">+ New coin</button>
+    <div class="project-note">One tab = one coin. Your bank wallet is shared across tabs.</div>
   </div>
+  <div class="easy-guide">
+    <div class="easy-guide-inner">
+      <div style="flex:1;min-width:240px">
+        <strong>Simple path</strong>
+        <p id="easyGuideText">Start at step 1. Make wallets → set how much to spend → send cash → create the coin → sell when ready → optional airdrop.</p>
+      </div>
+      <div class="path">1 Wallets → 2 Budget → 3 Fund → 4 Launch → 5 Sell → 6 Airdrop</div>
+    </div>
+  </div>
+  <div class="flow-path" id="flowPath">
+    <button type="button" class="flow-step active" data-step="1"><span class="num">1</span> Wallets</button>
+    <span class="flow-arrow">→</span>
+    <button type="button" class="flow-step" data-step="2"><span class="num">2</span> Budget</button>
+    <span class="flow-arrow">→</span>
+    <button type="button" class="flow-step" data-step="3"><span class="num">3</span> Fund</button>
+    <span class="flow-arrow">→</span>
+    <button type="button" class="flow-step" data-step="4"><span class="num">4</span> Launch</button>
+    <span class="flow-arrow">→</span>
+    <button type="button" class="flow-step" data-step="5"><span class="num">5</span> Sell</button>
+    <span class="flow-arrow">→</span>
+    <button type="button" class="flow-step" data-step="6"><span class="num">6</span> Airdrop</button>
+  </div>
+
+  <details class="money-fold" id="moneyDeskCard">
+    <summary>Money overview (tap to open) — profit, readiness, warnings</summary>
+    <div class="money-body">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:8px">
+        <p class="desc" style="margin:0">Quick money check. Ignore this until after you launch if you’re just getting started.</p>
+        <button class="btn-ghost" type="button" id="btnMoneyRefresh">Refresh</button>
+      </div>
+      <div id="moneyKillBanner" class="hidden" style="padding:10px 12px;margin-bottom:10px;border-radius:10px;background:rgba(255,122,110,.12);border:1px solid rgba(255,122,110,.35);color:var(--accent-red);font-size:13px"></div>
+      <div id="moneyTopGrid" class="money-grid"></div>
+      <div id="moneyCustody" class="desc" style="margin-top:12px"></div>
+      <div id="moneyGate" class="desc" style="margin-top:8px"></div>
+      <div class="row" style="margin-top:12px;gap:12px;flex-wrap:wrap">
+        <div id="moneyReadiness" style="flex:1;min-width:240px"></div>
+        <div id="moneyNet" style="flex:1;min-width:240px"></div>
+        <div id="moneyBE" style="flex:1;min-width:240px"></div>
+      </div>
+      <div class="row" style="margin-top:12px;gap:12px;flex-wrap:wrap">
+        <div id="moneyLadder" style="flex:1;min-width:240px"></div>
+        <div id="moneyExit" style="flex:1;min-width:240px"></div>
+      </div>
+    </div>
+  </details>
+
   <div class="project-banner" id="projectBanner" style="display:none">
     <div class="project-banner-inner" id="projectBannerText"></div>
   </div>
 
-  <main style="max-width:var(--maxw);margin:0 auto;padding:20px 24px 72px">
+  <main style="max-width:1100px;margin:0 auto;padding:20px 24px">
 
-    <div class="overview-panel" id="overviewPanel">
-      <div class="stats" id="overviewStats">
-        <div class="stat"><div class="label">Treasury</div><div class="value c-orange" id="statFunder">—</div><div class="sub">bank balance</div></div>
-        <div class="stat"><div class="label">Snipers</div><div class="value c-blue" id="statBuyers">0</div><div class="sub">helper wallets</div></div>
-        <div class="stat"><div class="label">Budget</div><div class="value c-green" id="statBudget">0 ETH</div><div class="sub">planned spend</div></div>
-        <div class="stat"><div class="label">Token</div><div class="value c-purple" id="statToken">—</div><div class="sub">this project</div></div>
-      </div>
-      <p class="desc" id="funderLine" style="margin-top:8px;margin-bottom:8px">Treasury: <a id="funderLink" href="#" target="_blank" rel="noopener" style="color:var(--accent-blue);font-family:JetBrains Mono,monospace;font-size:12px"><span id="funderFull">—</span></a></p>
-      <div class="panel-head" style="margin-top:18px">Needs you</div>
-      <div class="needs-list" id="needsList"></div>
-
-      <div class="panel-head" style="margin-top:22px">Mission Control</div>
-      <div id="missionControl" class="panel" style="margin-top:8px;padding:14px">
-        <div class="empty" style="padding:8px">Create or select a live token to open Mission Control.</div>
-      </div>
-
-      <div class="panel-head" style="margin-top:22px">Playbooks</div>
-      <div id="playbooksBox" class="panel" style="margin-top:8px;padding:14px">
-        <div class="empty" style="padding:8px">Loading playbooks…</div>
-      </div>
+    <div class="stats hidden" id="overviewStats">
+      <div class="stat"><div class="label">Bank</div><div class="value c-orange" id="statFunder">—</div><div class="sub">holds your cash</div></div>
+      <div class="stat"><div class="label">Buyers</div><div class="value c-blue" id="statBuyers">0</div><div class="sub">buy the coin</div></div>
+      <div class="stat"><div class="label">Budget</div><div class="value c-green" id="statBudget">0 ETH</div><div class="sub">ready to spend</div></div>
+      <div class="stat"><div class="label">Coin</div><div class="value c-purple" id="statToken">—</div><div class="sub">this project</div></div>
     </div>
+    <p class="desc hidden" id="funderLine" style="margin-top:-8px;margin-bottom:16px">Bank address: <a id="funderLink" href="#" target="_blank" rel="noopener" style="color:var(--accent-blue);font-family:JetBrains Mono,monospace;font-size:12px"><span id="funderFull">—</span></a></p>
 
-    <div id="guidePanel">
-      <section class="card">
-        <h2>Quick guide</h2>
-        <p class="desc">Same flow as Stealth Bundler — four tabs, one job each.</p>
-        <ol style="margin:12px 0 0 18px;color:var(--text-secondary);font-size:13px;line-height:1.7">
-          <li><strong style="color:var(--text-primary)">Wallets</strong> — import treasury, create deployer + sniper helpers</li>
-          <li><strong style="color:var(--text-primary)">Launch</strong> — plan budget → fund helpers → create coin → buy</li>
-          <li><strong style="color:var(--text-primary)">Trade</strong> — chart, sell, automations (patterns / bump / guards)</li>
-          <li><strong style="color:var(--text-primary)">Airdrop</strong> — send tokens to your tape or competitor buyers</li>
-          <li><strong style="color:var(--text-primary)">Overview</strong> — Mission Control + what to do next</li>
-        </ol>
-        <p class="desc" style="margin-top:14px">Live automations need <code>EVM_ARM_LIVE=true</code> on the server plus ARM LIVE on the job.</p>
-      </section>
-    </div>
-
-    <section class="card hidden" id="step1">
-      <h2>Wallets</h2>
-      <p class="desc">Treasury pays. Deployer creates the coin. Snipers buy.</p>
+    <section class="card" id="step1">
+      <div class="step-kicker"><span class="pill">Step 1 of 6</span> Set up wallets</div>
+      <h2>Make your wallets</h2>
+      <p class="desc">You need three kinds of wallets — like roles on a team. Do A → B → C, then go next.</p>
       <div class="howto">
-        <strong>Do this in order:</strong>
+        <strong>What to do</strong>
         <ol>
-          <li><strong>Bank</strong> — import the wallet that holds your ETH</li>
-          <li><strong>Creator</strong> — create (or import) the wallet that will make the coin</li>
-          <li><strong>Helpers</strong> — create a few wallets that will buy the coin</li>
-          <li>(Optional) Season helpers + use privacy hops when funding so they look less linked</li>
-          <li>Go to <strong>Budget</strong></li>
+          <li><strong>Bank</strong> — the wallet that holds your ETH (import it)</li>
+          <li><strong>Creator</strong> — makes the coin (create a new one)</li>
+          <li><strong>Buyers</strong> — buy the coin after launch (create a few)</li>
         </ol>
       </div>
 
       <div class="action-group">
-        <h3>A. Treasury (bank)</h3>
-        <p class="hint">Shared across all coin tabs. Pays for funding + gas.</p>
+        <h3>A. Bank wallet</h3>
+        <p class="hint">Your main money wallet. Pays for everything. Shared across all coin tabs.</p>
         <div class="actions">
-          <button class="btn" id="btnImportFunder">Import bank wallet</button>
+          <button class="btn btn-lg" id="btnImportFunder">Import bank wallet</button>
           <button class="btn-ghost" id="btnRefresh">Refresh balances</button>
         </div>
       </div>
 
       <div class="action-group">
-        <h3>B. Deployer (creator)</h3>
-        <p class="hint">Creates the token and does the first small buy. Keep it separate from the bank and helpers.</p>
+        <h3>B. Creator wallet</h3>
+        <p class="hint">This wallet creates the coin. Keep it separate from the bank.</p>
         <div class="actions">
-          <button class="btn" id="btnCreateDev">Create creator wallet</button>
-          <button class="btn-ghost" id="btnImportDev">Import creator</button>
-          <button class="btn-orange" id="btnFundDev">Send cash to creator</button>
+          <button class="btn btn-lg" id="btnCreateDev">Make creator wallet</button>
+          <button class="btn-ghost" id="btnImportDev">Import instead</button>
+          <button class="btn-orange" id="btnFundDev">Send ETH to creator</button>
         </div>
         <div id="devWalletBox" style="margin-top:10px;font-size:13px;color:var(--text-secondary)"></div>
       </div>
 
       <div class="action-group">
-        <h3>C. Snipers (buyers)</h3>
-        <p class="hint">These wallets buy after launch.</p>
+        <h3>C. Buyer wallets</h3>
+        <p class="hint">These buy after you launch. More buyers = more buy transactions on the chart.</p>
         <div class="actions">
-          <button class="btn" id="btnCreate4">Create 4 helpers</button>
-          <button class="btn-ghost" id="btnCreateN">Create many…</button>
-          <button class="btn-ghost" id="btnCreate1">+ 1 helper</button>
-          <button class="btn-red" id="btnClearBuyers">Remove helpers</button>
+          <button class="btn btn-lg" id="btnCreate4">Make 4 buyers</button>
+          <button class="btn-ghost" id="btnCreateN">Make many…</button>
+          <button class="btn-ghost" id="btnCreate1">+ 1 more</button>
+          <button class="btn-red" id="btnClearBuyers">Remove buyers</button>
         </div>
       </div>
 
       <details class="advanced">
-        <summary>Optional: season helpers, export keys, sweep leftover cash</summary>
+        <summary>Optional: pre-age wallets (advanced)</summary>
         <div style="margin-top:12px">
+          <p class="hint">Park many wallets ahead of time so they don’t all look brand-new together. Most people can skip this.</p>
           <div class="row" style="align-items:end">
-            <div class="field" style="max-width:160px">
-              <span>Season intensity</span>
-              <select id="seasonIntensity">
-                <option value="light">Light (~4 txs)</option>
-                <option value="medium" selected>Medium (~8 txs)</option>
-                <option value="heavy">Heavy (~12 txs)</option>
+            <div class="field" style="max-width:120px">
+              <span>How many</span>
+              <input id="poolCount" type="number" min="1" max="500" value="200" />
+            </div>
+            <div class="field" style="max-width:180px">
+              <span>Aging mode</span>
+              <select id="poolFundingMode">
+                <option value="offline" selected>Park only (safest start)</option>
+                <option value="changenow">ChangeNOW unique</option>
+                <option value="funder">Bank season (time only)</option>
               </select>
             </div>
             <div class="field" style="max-width:140px">
-              <span>Budget / wallet</span>
+              <span>Gap min (min)</span>
+              <input id="poolGapMin" type="number" min="5" value="45" />
+            </div>
+            <div class="field" style="max-width:140px">
+              <span>Gap max (min)</span>
+              <input id="poolGapMax" type="number" min="10" value="150" />
+            </div>
+          </div>
+          <div class="actions" style="margin-top:8px">
+            <button class="btn" id="btnPoolGenerate">Park wallets</button>
+            <button class="btn-green" id="btnPoolDripStart">Start aging</button>
+            <button class="btn-ghost" id="btnPoolDripStop">Stop aging</button>
+            <button class="btn-orange" id="btnPoolClaim">Use ready wallets</button>
+            <button class="btn-ghost" id="btnPoolRefresh">Refresh</button>
+          </div>
+          <div id="poolStatus" class="desc" style="margin-top:10px">Pool: —</div>
+          <div class="log-label">Pool log</div>
+          <div class="log" id="logPool" style="max-height:140px"></div>
+        </div>
+      </details>
+
+      <div class="action-group hidden" id="adminSupportCard" style="margin-top:16px">
+        <h3>Admin: help a teammate</h3>
+        <p class="hint">View another member’s dashboard if they need help.</p>
+        <div class="row" style="align-items:end">
+          <div class="field" style="flex:1">
+            <span>Member</span>
+            <select id="adminUserSelect"></select>
+          </div>
+          <button class="btn-orange" type="button" id="btnAdminVault">Load member wallets</button>
+          <button class="btn-ghost" type="button" id="btnAdminImpersonate">View as them</button>
+          <button class="btn-ghost" type="button" id="btnAdminClearImpersonate">Back to me</button>
+        </div>
+        <div id="adminVaultBox" class="desc" style="margin-top:10px;max-height:220px;overflow:auto;font-family:JetBrains Mono,monospace;font-size:11px"></div>
+      </div>
+
+      <details class="advanced">
+        <summary>Optional: warm up wallets, backup, sweep leftover ETH</summary>
+        <div style="margin-top:12px">
+          <div class="row" style="align-items:end">
+            <div class="field" style="max-width:160px">
+              <span>Warm-up size</span>
+              <select id="seasonIntensity">
+                <option value="light">Light</option>
+                <option value="medium" selected>Medium</option>
+                <option value="heavy">Heavy</option>
+              </select>
+            </div>
+            <div class="field" style="max-width:140px">
+              <span>ETH per wallet</span>
               <input id="seasonBudget" type="number" step="0.001" min="0.002" value="0.008" />
             </div>
-            <button class="btn-green" id="btnSeason">Season helpers</button>
-            <button class="btn-ghost" id="btnExportKeys">Export keys CSV</button>
+            <button class="btn-green" id="btnSeason">Warm up buyers</button>
+            <button class="btn-ghost" id="btnExportKeys">Download wallet backup</button>
             <button class="btn-orange" id="btnRecall">Sweep leftover ETH → bank</button>
-            <button class="btn-ghost" id="btnRecoverHops">Recover stuck hops</button>
+            <button class="btn-ghost" id="btnRecoverHops">Recover stuck funds</button>
             <button class="btn-red" id="btnForceRestart">Reset this coin tab</button>
           </div>
-          <p class="desc" style="margin-top:8px">Seasoning briefly uses each helper so it doesn’t look brand-new. Leftover cash returns to the bank.</p>
+          <p class="desc" style="margin-top:8px">Warm-up makes new wallets look less brand-new. Leftover ETH goes back to your bank.</p>
           <div id="seasonProgress" class="hidden" style="margin-top:10px">
             <div class="progress"><div id="seasonBar" style="width:0%"></div></div>
             <div style="font-size:12px;color:var(--text-muted)" id="seasonLabel">0/0</div>
           </div>
-          <div class="log" id="logSeason" style="max-height:160px;margin-top:10px"></div>
-          <div class="log" id="logRecall" style="max-height:140px;margin-top:10px"></div>
+          <div class="log-label">Warm-up log</div>
+          <div class="log" id="logSeason" style="max-height:160px"></div>
+          <div class="log-label">Sweep log</div>
+          <div class="log" id="logRecall" style="max-height:140px"></div>
         </div>
       </details>
 
       <div id="walletTable" style="margin-top:16px;max-height:420px;overflow:auto"></div>
-      <div class="actions">
-        <button class="btn" id="goto2">Next: Launch →</button>
-      </div>
-    </section>
-
-    <div class="launch-stack" id="launchStack">
-<section class="card hidden" id="step2">
-      <h2>1 · Plan spend</h2>
-      <p class="desc">How much each sniper will buy.</p>
-      <p class="desc">Decide how much ETH helpers will spend in total. We’ll split it across them (small buys first, larger later).</p>
-      <div class="howto">
-        <strong>Do this:</strong>
-        <ol>
-          <li>Leave token blank if you’ll create a new coin in Go live</li>
-          <li>Or paste an existing coin address if you’re buying one already live</li>
-          <li>Set total ETH and how many helpers</li>
-          <li>Build plan → Save to wallets → Next</li>
-        </ol>
-      </div>
-      <div class="launchpad-bar" id="launchpadBarBudget">
-        <strong style="font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--text-secondary)">Launchpad</strong>
-        <div class="seg" role="group" aria-label="Launchpad">
-          <button type="button" class="seg-btn active" data-pad="noxa" id="padBudgetNoxa">NOXA</button>
-          <button type="button" class="seg-btn" data-pad="koa" id="padBudgetKoa">KOA</button>
-          <button type="button" class="seg-btn" data-pad="apestore" id="padBudgetApe">ApeStore</button>
-        </div>
-        <span class="hint">Same choice used for create, buy, and sell</span>
-      </div>
-      <div class="row">
-        <div class="field" style="flex:2"><span>Coin address (optional for new launches)</span><input id="token" placeholder="Leave blank for a new coin, or paste 0x…" spellcheck="false" /></div>
-        <select id="launchpad" style="display:none"><option value="noxa">NOXA</option><option value="koa">KOA</option><option value="apestore">ApeStore</option></select>
-        <div class="field"><span>Total to spend (ETH)</span><input id="totalEth" type="number" step="0.001" min="0" value="0.2" /></div>
-        <div class="field"><span># of helpers</span><input id="walletCount" type="number" min="1" max="500" value="4" /></div>
-      </div>
-      <details class="advanced">
-        <summary>Advanced: buy shape &amp; delays</summary>
-        <div class="row" style="margin-top:10px">
-          <div class="field"><span>Start size shape</span><input id="startPct" type="number" step="0.05" min="0.05" max="10" value="0.4" /></div>
-          <div class="field"><span>End size shape</span><input id="endPct" type="number" step="0.05" min="0.05" max="10" value="1.2" /></div>
-          <div class="field"><span>Seconds between buys</span><input id="delayStep" type="number" min="0" value="0" /></div>
-        </div>
-      </details>
-      <div class="actions">
-        <button class="btn" id="btnPlan">Build plan</button>
-        <button class="btn-green" id="btnApply">Save plan to wallets</button>
-      </div>
-      <div id="tokenMeta" class="stats" style="margin-top:16px;display:none"></div>
-      <div id="planWarn" style="display:none;margin-top:10px;padding:10px 12px;border:1px solid rgba(234,179,8,.35);border-radius:10px;color:var(--accent-yellow);font-size:12px"></div>
-      <div id="planBox" style="margin-top:14px"></div>
-      <div class="actions">
-        <button class="btn-ghost" id="goto1b">← Wallets</button>
-        <button class="btn" id="goto3">Next: Send cash →</button>
-      </div>
-    </section>
-
-    <section class="card hidden" id="step3">
-      <h2>2 · Fund snipers</h2>
-      <p class="desc">Send ETH from treasury → snipers.</p>
-      <p class="desc">Move ETH from your bank to each helper so they can buy. We send a little extra for network fees.</p>
-      <div class="howto">
-        <strong>Do this:</strong>
-        <ol>
-          <li>Make sure the budget was saved</li>
-          <li>Preview → check the list looks right</li>
-          <li>Send cash → wait until it finishes</li>
-          <li>If some fail, hit Continue (skips wallets that already have cash)</li>
-          <li>Go to <strong>Go live</strong></li>
-        </ol>
-      </div>
-      <div class="row">
-        <div class="field" style="max-width:180px">
-          <span>Privacy hops</span>
-          <select id="hops">
-            <option value="2" selected>2 (recommended)</option>
-            <option value="3">3 (slower)</option>
-            <option value="1">1 (weaker)</option>
-          </select>
-        </div>
-      </div>
-      <details class="advanced" style="margin-top:12px">
-        <summary>Stronger privacy: ChangeNOW → Across (Base → Robinhood)</summary>
-        <p class="hint" style="margin:8px 0">
-          Breaks the bank→helper link off-chain. Flow: ChangeNOW (dirty ETH → Base) → Across bridge to each helper on Robinhood.
-          Needs <code>CHANGENOW_API_KEY</code> + a Base-funded <code>PRIVACY_BRIDGE_PK</code>. Live Across only with <code>PRIVACY_FUND_ARM=1</code>.
-        </p>
-        <div id="privacyStatus" style="font-size:12px;color:var(--text-muted);margin-bottom:8px">Checking privacy bridge…</div>
-        <div class="row">
-          <div class="field" style="max-width:160px">
-            <span>ChangeNOW top-up (ETH)</span>
-            <input id="privacyCnAmount" type="number" step="0.01" min="0" placeholder="0.2" />
-          </div>
-        </div>
-        <div class="actions">
-          <button class="btn-ghost" id="btnPrivacyStatus">Refresh status</button>
-          <button class="btn-ghost" id="btnPrivacyPreview">Preview Across quotes</button>
-          <button class="btn" id="btnPrivacyCn">Create ChangeNOW order</button>
-          <button class="btn-orange" id="btnPrivacyAcrossDry">Across dry-run</button>
-          <button class="btn-green" id="btnPrivacyAcrossLive">Across LIVE</button>
-        </div>
-        <div id="privacyBox" style="margin-top:10px;font-size:12px"></div>
-        <div class="log" id="logPrivacy" style="max-height:160px"></div>
-      </details>
-      <div class="actions">
-        <button class="btn-ghost" id="btnPreview">Preview</button>
-        <button class="btn" id="btnFund">Send cash</button>
-        <button class="btn-orange" id="btnFundContinue">Continue</button>
-        <button class="btn-ghost" id="btnFundPause">Pause</button>
-        <button class="btn" id="btnFundResume">Resume</button>
-        <button class="btn-red" id="btnFundCancel">Stop</button>
-      </div>
-      <div id="fundProgress" class="hidden">
-        <div class="progress"><div id="fundBar" style="width:0%"></div></div>
-        <div style="font-size:12px;color:var(--text-muted)" id="fundLabel">0/0</div>
-      </div>
-      <div id="fundJobs" style="margin-top:12px"></div>
-      <div class="log" id="logFund"></div>
-      <div class="actions">
-        <button class="btn-ghost" id="goto2b">← Budget</button>
-        <button class="btn" id="goto4">Next: Go live →</button>
+      <div class="cta-row">
+        <button class="btn btn-lg" id="goto2">Next: set budget →</button>
       </div>
     </section>
 
     <section class="card hidden" id="stepLaunch">
-      <h2>3 · Launch token</h2>
-      <p class="desc">Create the coin, then snipers can buy.</p>
+      <div class="step-kicker"><span class="pill">On Launch step</span> Create the coin</div>
+      <h2>Create your coin</h2>
+      <p class="desc">Name it, pick a launchpad, then press the big green button. Buyers can buy right after.</p>
+      <div class="howto">
+        <strong>What to do</strong>
+        <ol>
+          <li>Pick where to launch (NOXA is the usual choice)</li>
+          <li>Type a name + ticker</li>
+          <li>Press <strong>Create coin + buy</strong></li>
+        </ol>
+        <div class="tip">Need helpers funded first (Step 3) so buys can go through.</div>
+      </div>
       <div class="launchpad-bar" id="launchpadBarLaunch">
-        <strong style="font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--text-secondary)">Launchpad</strong>
+        <strong style="font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--text-secondary)">Where to launch</strong>
         <div class="seg" role="group" aria-label="Launchpad">
           <button type="button" class="seg-btn active" data-pad="noxa" id="padLaunchNoxa">NOXA</button>
           <button type="button" class="seg-btn" data-pad="koa" id="padLaunchKoa">KOA</button>
@@ -819,18 +696,33 @@
       <div class="row">
         <div class="field"><span>Coin name</span><input id="launchName" placeholder="e.g. Sunny Pengu" /></div>
         <div class="field" style="max-width:140px"><span>Ticker</span><input id="launchSymbol" placeholder="e.g. SUNNY" /></div>
-        <div class="field" style="max-width:150px"><span>Creator buy (ETH)</span><input id="launchDevBuy" type="number" step="0.001" min="0.001" value="0.02" /></div>
-        <div class="field" style="max-width:200px">
-          <span>Helper buys after</span>
+        <div class="field" style="max-width:150px"><span>Creator first buy (ETH)</span><input id="launchDevBuy" type="number" step="0.001" min="0.001" value="0.02" /></div>
+        <div class="field" style="max-width:220px">
+          <span>Buyer style after create</span>
           <select id="launchBuyMode">
-            <option value="burst" selected>Fast burst</option>
+            <option value="hybrid" selected>Hybrid (recommended)</option>
+            <option value="burst">Fast burst</option>
             <option value="organic">Slow &amp; natural</option>
             <option value="sequential">One-by-one</option>
           </select>
         </div>
       </div>
+      <div class="warn-banner" id="bubbleWarnLaunch" style="margin:12px 0;padding:12px 14px;border:1px solid rgba(240,195,90,.35);background:rgba(240,195,90,.08);border-radius:10px;font-size:13px;line-height:1.45;color:var(--text-secondary)">
+        <strong style="color:var(--accent-yellow)">Tip:</strong> Always fund buyers with the default clean path (Step 3). Don’t reuse one shared wallet to fund everyone — that gets flagged.
+      </div>
       <details class="advanced">
-        <summary>Optional links</summary>
+        <summary>Optional: extras &amp; recovery tools</summary>
+        <div class="row" style="align-items:center;gap:12px;flex-wrap:wrap;margin:10px 0">
+          <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-secondary);cursor:pointer">
+            <input type="checkbox" id="launchUniFallback" checked style="width:auto" /> Backup buy path if ApeStore fails
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-secondary);cursor:pointer">
+            <input type="checkbox" id="launchSplitJobs" style="width:auto" /> Open tranche only (resume later)
+          </label>
+          <button class="btn-ghost" type="button" id="btnResumeBuyup" style="font-size:12px">Resume unfinished buys</button>
+          <button class="btn-ghost" type="button" id="btnLaunchCheckpoint" style="font-size:12px">Show progress checkpoint</button>
+        </div>
+        <div id="launchCheckpointBox" class="desc" style="margin-bottom:8px"></div>
         <div class="row" style="margin-top:10px">
           <div class="field"><span>Image / metadata</span><input id="launchUri" placeholder="ipfs://… or https://…" spellcheck="false" /></div>
           <div class="field"><span>Twitter / X</span><input id="launchTwitter" placeholder="https://x.com/…" spellcheck="false" /></div>
@@ -841,35 +733,132 @@
         </div>
       </details>
       <div class="actions" style="margin-top:14px">
-        <button class="btn-green is-selected" id="btnLaunchBuy">Create coin + buy helpers</button>
-        <button class="btn-ghost" id="btnLaunchOnly">Create only</button>
-        <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-secondary);cursor:pointer">
-          <input type="checkbox" id="launchBuyAfter" checked style="width:auto" /> Helpers buy right after create
+        <button class="btn-green btn-lg is-selected" id="btnLaunchBuy">Create coin + buy</button>
+        <button class="btn-ghost" id="btnLaunchOnly">Create only (no buys)</button>
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-secondary);cursor:pointer">
+          <input type="checkbox" id="launchBuyAfter" checked style="width:auto" /> Buyers buy right after create
         </label>
       </div>
-      <div class="log" id="logLaunch" style="max-height:220px;margin-top:12px"></div>
+      <div class="log-label">Launch log</div>
+      <div class="log" id="logLaunch" style="max-height:220px"></div>
       <p class="desc" style="margin-top:8px" id="launchResult"></p>
     </section>
 
-    <section class="card hidden" id="step4">
-      <h2>4 · Run buys</h2>
-      <p class="desc">Buy with funded snipers.</p>
-      <p class="desc">Usually you already hit <strong>Create coin + buy</strong> above. Use this only to buy again, retry failed buys, or change buy style.</p>
+    <section class="card hidden" id="step2">
+      <div class="step-kicker"><span class="pill">Step 2 of 6</span> Set budget</div>
+      <h2>How much will buyers spend?</h2>
+      <p class="desc">Set a total ETH budget. We’ll split it across your buyer wallets.</p>
       <div class="howto">
-        <strong>Buy styles:</strong>
-        <ul>
-          <li><strong>Fast burst</strong> — everyone buys quickly</li>
-          <li><strong>Slow &amp; natural</strong> — buys slowly; if an outsider buys, we pause and trim a little, then continue</li>
-        </ul>
+        <strong>What to do</strong>
+        <ol>
+          <li>Leave coin address blank if you’re making a <em>new</em> coin</li>
+          <li>Enter total ETH to spend + number of buyers</li>
+          <li>Press <strong>Build plan</strong>, then <strong>Save plan</strong></li>
+        </ol>
+      </div>
+      <div class="launchpad-bar" id="launchpadBarBudget">
+        <strong style="font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--text-secondary)">Launchpad</strong>
+        <div class="seg" role="group" aria-label="Launchpad">
+          <button type="button" class="seg-btn active" data-pad="noxa" id="padBudgetNoxa">NOXA</button>
+          <button type="button" class="seg-btn" data-pad="koa" id="padBudgetKoa">KOA</button>
+          <button type="button" class="seg-btn" data-pad="apestore" id="padBudgetApe">ApeStore</button>
+        </div>
+        <span class="hint">Same choice for create, buy, and sell</span>
+      </div>
+      <div class="row">
+        <div class="field" style="flex:2"><span>Coin address (optional for new coins)</span><input id="token" placeholder="Leave blank for a new coin, or paste 0x…" spellcheck="false" /></div>
+        <select id="launchpad" style="display:none"><option value="noxa">NOXA</option><option value="koa">KOA</option><option value="apestore">ApeStore</option></select>
+        <div class="field"><span>Total to spend (ETH)</span><input id="totalEth" type="number" step="0.001" min="0" value="0.2" /></div>
+        <div class="field"><span># of buyers</span><input id="walletCount" type="number" min="1" max="500" value="4" /></div>
+      </div>
+      <details class="advanced">
+        <summary>Advanced: buy size shape &amp; delays</summary>
+        <div class="row" style="margin-top:10px">
+          <div class="field"><span>Start size shape</span><input id="startPct" type="number" step="0.05" min="0.05" max="10" value="0.4" /></div>
+          <div class="field"><span>End size shape</span><input id="endPct" type="number" step="0.05" min="0.05" max="10" value="1.2" /></div>
+          <div class="field"><span>Seconds between buys</span><input id="delayStep" type="number" min="0" value="0" /></div>
+        </div>
+      </details>
+      <div class="actions">
+        <button class="btn btn-lg" id="btnPlan">Build plan</button>
+        <button class="btn-green btn-lg" id="btnApply">Save plan</button>
+      </div>
+      <div id="tokenMeta" class="stats" style="margin-top:16px;display:none"></div>
+      <div id="planWarn" style="display:none;margin-top:10px;padding:10px 12px;border:1px solid rgba(234,179,8,.35);border-radius:10px;color:var(--accent-yellow);font-size:12px"></div>
+      <div id="planBox" style="margin-top:14px"></div>
+      <div class="cta-row">
+        <button class="btn-ghost" id="goto1b">← Wallets</button>
+        <button class="btn btn-lg" id="goto3">Next: send cash →</button>
+      </div>
+    </section>
+
+    <section class="card hidden" id="step3">
+      <div class="step-kicker"><span class="pill">Step 3 of 6</span> Fund buyers</div>
+      <h2>Send cash to buyer wallets</h2>
+      <p class="desc">This sends ETH from your bank to each buyer the clean way (unique path per wallet).</p>
+      <div class="howto">
+        <strong>What to do</strong>
+        <ol>
+          <li>Make sure your bank has ETH on <em>Ethereum mainnet</em></li>
+          <li>Press <strong>Preview</strong>, then <strong>Send cash</strong></li>
+          <li>Wait until buyers show funded, then go to Launch</li>
+        </ol>
+        <div class="tip">If something stops halfway, press Continue — it skips wallets already funded.</div>
+      </div>
+      <div class="row">
+        <div class="field" style="max-width:240px">
+          <span>Funding method</span>
+          <select id="fundMode" disabled title="Clean funding only">
+            <option value="changenow" selected>Clean path (recommended)</option>
+            <option value="hops">Old hop method (blocked)</option>
+          </select>
+        </div>
+        <input type="hidden" id="hops" value="0" />
+        <button class="btn-ghost" type="button" id="btnLinkageCheck">Safety check</button>
+        <button class="btn-ghost" type="button" id="btnPrepareCleanLegs">Prepare wallets only</button>
+      </div>
+      <div id="linkageBox" class="desc" style="margin:8px 0"></div>
+      <div class="actions">
+        <button class="btn-ghost" id="btnPreview">Preview</button>
+        <button class="btn btn-lg" id="btnFund">Send cash</button>
+        <button class="btn-orange" id="btnFundContinue">Continue</button>
+        <button class="btn-ghost" id="btnFundPause">Pause</button>
+        <button class="btn" id="btnFundResume">Resume</button>
+        <button class="btn-red" id="btnFundCancel">Stop</button>
+      </div>
+      <div id="fundProgress" class="hidden">
+        <div class="progress"><div id="fundBar" style="width:0%"></div></div>
+        <div style="font-size:12px;color:var(--text-muted)" id="fundLabel">0/0</div>
+      </div>
+      <div id="fundJobs" style="margin-top:12px"></div>
+      <div class="log-label">Funding log</div>
+      <div class="log" id="logFund"></div>
+      <div class="cta-row">
+        <button class="btn-ghost" id="goto2b">← Budget</button>
+        <button class="btn btn-lg" id="goto4">Next: launch →</button>
+      </div>
+    </section>
+
+    <section class="card hidden" id="step4">
+      <div class="step-kicker"><span class="pill">Step 4 of 6</span> Launch / buys</div>
+      <h2>Launch &amp; buy</h2>
+      <p class="desc">Create the coin in the panel above, or use these buttons to buy again / retry.</p>
+      <div class="howto">
+        <strong>Most people</strong>
+        <ol>
+          <li>Use <strong>Create coin + buy</strong> in the green panel above</li>
+          <li>Only use “Start buying” here if you need to buy again or retry fails</li>
+        </ol>
       </div>
       <div id="buyReadyBox" style="margin-bottom:14px"></div>
       <div class="row" style="align-items:end">
         <div class="field" style="max-width:220px">
           <span>Buy style</span>
           <select id="buyMode">
-            <option value="burst" selected>Fast burst</option>
+            <option value="hybrid" selected>Hybrid (recommended)</option>
+            <option value="burst">Fast burst</option>
             <option value="organic">Slow &amp; natural</option>
-            <option value="sequential">One-by-one (use delays)</option>
+            <option value="sequential">One-by-one</option>
           </select>
         </div>
         <div class="field" style="max-width:140px">
@@ -877,7 +866,7 @@
           <input id="buySlippage" type="number" min="1" max="50" step="0.5" value="8" />
         </div>
         <div class="field" style="max-width:140px">
-          <span>In-flight txs</span>
+          <span>Parallel buys</span>
           <input id="buyConcurrency" type="number" min="6" max="16" value="12" />
         </div>
       </div>
@@ -885,12 +874,12 @@
         <summary>Advanced buy settings</summary>
         <div class="row" style="align-items:end;margin-top:10px">
           <div class="field" style="max-width:220px">
-            <span>If outsider buys in (burst)</span>
+            <span>If someone else buys in</span>
             <select id="foreignBuyPolicy">
-              <option value="bump" selected>Raise priority &amp; continue</option>
-              <option value="log">Log only</option>
+              <option value="bump" selected>Speed up &amp; continue</option>
+              <option value="log">Just log it</option>
               <option value="pause">Pause remaining</option>
-              <option value="react">Dump filled, then continue</option>
+              <option value="react">Trim filled, then continue</option>
             </select>
           </div>
           <div class="field" style="max-width:140px">
@@ -906,365 +895,160 @@
         </div>
       </details>
       <div class="actions" style="margin-top:12px">
-        <button class="btn" id="btnBuy">Start buying</button>
+        <button class="btn btn-lg" id="btnBuy">Start buying</button>
         <button class="btn-orange" id="btnBuyRetry">Retry failed</button>
         <button class="btn-red" id="btnBuyCancel">Cancel</button>
       </div>
+      <div class="log-label">Buy log</div>
       <div class="log" id="logBuy"></div>
-      <div class="actions">
-        <button class="btn-ghost" id="goto3b">← Send cash</button>
-        <button class="btn" id="goto5">Next: Trade →</button>
+      <div class="cta-row">
+        <button class="btn-ghost" id="goto3b">← Fund</button>
+        <button class="btn btn-lg" id="goto5">Next: sell →</button>
       </div>
     </section>
 
-    
-</div><!-- /launchStack -->
-
-    <section class="card hidden" id="step5" style="background:transparent;border:none;padding:0;box-shadow:none">
-      <!-- Trading bar -->
-      <div class="trade-bar panel">
-        <div class="panel-head" style="margin:0">Trading</div>
-        <div class="row" style="align-items:end;margin-top:8px">
-          <div class="field" style="flex:2"><span>Token</span><input id="sellToken" placeholder="Token address 0x…" spellcheck="false" /></div>
-          <div class="field" style="max-width:160px"><span>Project</span><input id="tradeGroup" readonly placeholder="active tab" /></div>
-          <button class="btn" id="btnSellPreview" type="button">Refresh</button>
-          <button class="btn-ghost" id="btnSellChartLoad" type="button">Load chart</button>
-          <a id="sellDexLink" href="#" target="_blank" rel="noopener" class="btn-ghost" style="text-decoration:none;display:none;align-items:center;padding:8px 12px;font-size:12px">Dex ↗</a>
+    <section class="card hidden" id="step5">
+      <div class="step-kicker"><span class="pill">Step 5 of 6</span> Sell</div>
+      <h2>Cash out</h2>
+      <p class="desc">Check the chart, see what you hold, then sell in pieces so you don’t crash the price.</p>
+      <div class="howto">
+        <strong>What to do</strong>
+        <ol>
+          <li>Open the chart</li>
+          <li>Press <strong>Refresh holdings</strong></li>
+          <li>Press <strong>Suggest sells</strong>, then sell a % from each wallet</li>
+        </ol>
+        <div class="tip">Each wallet row has 5% / 10% / 25% / 50% / 100% buttons.</div>
+      </div>
+      <div id="sellChartPanel" style="margin-bottom:16px">
+        <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:10px">
+          <strong id="sellChartTitle">Chart</strong>
+          <button class="btn-ghost" id="btnSellChartLoad" style="padding:6px 10px;font-size:11px">Load chart</button>
+          <button class="btn-ghost" id="btnSellChartRefresh" style="padding:6px 10px;font-size:11px">Reload</button>
+          <a id="sellDexLink" href="#" target="_blank" rel="noopener" class="btn" style="text-decoration:none;display:none;align-items:center;padding:6px 12px;font-size:11px">Open DexScreener ↗</a>
+        </div>
+        <div id="sellChartShell" style="position:relative;width:100%;height:min(420px,55vh);border:1px solid var(--border-primary);border-radius:10px;overflow:hidden;background:#0b0d12">
+          <div id="sellChartPlaceholder" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:20px;text-align:center;color:var(--text-muted);font-size:13px;z-index:1">
+            <div>Chart loads when you ask — DexScreener embeds can be slow.</div>
+            <div style="font-size:12px">Fastest: <strong>Open DexScreener ↗</strong></div>
+          </div>
+          <iframe id="sellChartFrame" title="DexScreener chart" style="width:100%;height:100%;border:0;background:#0b0d12;display:none" allow="clipboard-write; encrypted-media; fullscreen; picture-in-picture" allowfullscreen></iframe>
         </div>
       </div>
-
-      <!-- Chart + Supply -->
-      <div class="trade-grid" style="margin-top:14px">
-        <div class="panel" id="sellChartPanel">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-            <strong id="sellChartTitle" style="font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em">Chart</strong>
-            <button class="btn-ghost" id="btnSellChartRefresh" style="padding:4px 8px;font-size:11px" type="button">Reload</button>
-          </div>
-          <div id="sellChartShell" style="position:relative;width:100%;height:320px;border:1px solid var(--border-primary);border-radius:10px;overflow:hidden;background:#08090c">
-            <div id="sellChartPlaceholder" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:13px;z-index:1;padding:20px;text-align:center">Enter a token address to load the chart.</div>
-            <iframe id="sellChartFrame" title="chart" style="width:100%;height:100%;border:0;background:#08090c;display:none" allow="clipboard-write; encrypted-media; fullscreen" allowfullscreen></iframe>
-          </div>
-        </div>
-        <div class="panel" id="supplyPanel">
-          <div class="panel-head">Supply Breakdown</div>
-          <div class="supply-bar"><div class="us" id="supplyUsBar" style="width:50%"></div><div class="them" id="supplyThemBar" style="width:50%"></div></div>
-          <div class="supply-cols">
-            <div>
-              <div class="sup-label c-blue">Us</div>
-              <div class="sup-val" id="supplyUsPct">—</div>
-              <div class="sup-sub">Dev <span id="supplyDev">—</span> · Snipers <span id="supplySnipers">—</span></div>
-            </div>
-            <div>
-              <div class="sup-label c-red">Them (top)</div>
-              <div class="sup-val" id="supplyThemPct">—</div>
-              <div class="sup-sub">Holders <span id="supplyHolders">—</span></div>
-            </div>
-          </div>
-          <div class="stats" style="margin-top:12px;grid-template-columns:1fr 1fr">
-            <div class="stat"><div class="label">Total ETH In</div><div class="value" id="supplyEthIn" style="font-size:16px">—</div></div>
-            <div class="stat"><div class="label">Holders</div><div class="value" id="supplyHolderCount" style="font-size:16px">—</div></div>
-          </div>
-          <div class="actions" style="margin-top:10px">
-            <button class="btn-ghost" id="btnRefreshHolders" type="button">Refresh holders</button>
-            <label style="font-size:11px;color:var(--text-muted);display:flex;align-items:center;gap:6px"><input type="checkbox" id="holdersAuto" /> Auto 30s</label>
-          </div>
-          <div id="sellSummary" class="stats" style="margin-top:12px;display:none;grid-template-columns:1fr"></div>
-        </div>
-      </div>
-
-      <!-- Wallet Positions -->
-      <div class="panel" style="margin-top:14px">
-        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
-          <div class="panel-head" style="margin:0">Wallet Positions</div>
-          <div style="display:flex;gap:8px;align-items:center">
-            <label style="font-size:12px;color:var(--text-muted);display:flex;gap:6px;align-items:center"><input type="checkbox" id="tradeDryRun" /> Dry-run</label>
-            <button class="btn" id="btnRecallSell" type="button" style="background:rgba(168,85,247,.2);color:#e9d5ff;border-color:rgba(168,85,247,.4)">Sweep ETH</button>
-            <button class="btn-ghost" id="btnSellPlan" type="button">Build plan</button>
-            <button class="btn-ghost" id="btnRefreshRecs" type="button">Refresh recs</button>
-          </div>
-        </div>
-        <div id="sellTable" style="margin-top:12px"></div>
-        <div id="sellPlanBox" style="margin-top:12px;display:none"></div>
-        <div id="sellHistoryBox" style="margin-top:12px;display:none"></div>
-      </div>
-
-      <!-- VS opposition -->
-      <div class="panel" style="margin-top:14px">
-        <div class="panel-head">VS — Opposition</div>
-        <div id="vsTable"><div class="empty" style="padding:16px">Refresh holders after a token is live to see top external bags.</div></div>
-      </div>
-
-      <!-- Exit Liquidity Radar -->
-      <div class="panel" style="margin-top:14px" id="exitRadarPanel">
-        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
-          <div class="panel-head" style="margin:0">Exit Liquidity Radar</div>
-          <button class="btn-ghost" id="btnExitRadarRefresh" type="button" style="padding:4px 10px;font-size:11px">Scan</button>
-        </div>
-        <p class="desc" style="margin:8px 0">Sells into organic foreign buys — not into empty tape.</p>
-        <div id="exitRadarStatus" class="empty" style="padding:12px">Scan a live token to detect exit liquidity.</div>
-        <div class="row" style="margin-top:10px;align-items:end">
-          <div class="field" style="max-width:120px"><span>Min ETH</span><input id="exitMinEth" type="number" step="0.01" value="0.02" /></div>
-          <div class="field" style="max-width:120px"><span>Window (s)</span><input id="exitWindowSec" type="number" value="180" /></div>
-          <div class="field" style="max-width:120px"><span>Peel %</span><input id="exitPeelPct" type="number" value="25" min="1" max="100" /></div>
-          <button class="btn-orange" id="btnExitPeel" type="button">Stagger peel</button>
-        </div>
-      </div>
-
-      <!-- Chart Patterns -->
-      <div class="panel" id="bettyPanel" style="margin-top:14px">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-          <div class="panel-head" style="margin:0;color:var(--accent-purple)">Chart Patterns</div>
-          <button type="button" id="bettyArmedBtn" class="arm-sim">ARM: SIMULATION</button>
-        </div>
-        <input type="hidden" id="bettyArmed" value="0" />
-        <input type="hidden" id="bettyPattern" value="organic-pump" />
-        <div class="pattern-grid" id="patternGrid"></div>
-        <div class="pattern-preview" id="patternPreview"></div>
-        <div class="row" style="align-items:end;margin-top:12px;flex-wrap:wrap">
-          <div class="field" style="max-width:200px">
-            <span>Duration</span>
-            <div class="chip-row" id="bettyDurationChips">
-              <button type="button" data-dur="10">10m</button>
-              <button type="button" data-dur="30" class="on">30m</button>
-              <button type="button" data-dur="60">60m</button>
-            </div>
-            <input type="hidden" id="bettyDuration" value="30" />
-          </div>
-          <div class="field" style="max-width:120px"><span>ETH / trade</span><input id="bettyEthTrade" type="number" min="0.0001" step="0.001" value="0.005" /></div>
-          <div class="field" style="max-width:160px">
-            <span>Rotation</span>
-            <select id="bettyRotation">
-              <option value="auto">Auto (snipers)</option>
-              <option value="sequential">Sequential</option>
-              <option value="random">Random</option>
-            </select>
-          </div>
-          <div class="field" style="max-width:120px">
-            <span>External buy</span>
-            <button type="button" class="btn-orange" id="btnExternalPause" style="width:100%">Pause</button>
-          </div>
-          <button class="btn" id="btnBettyStartPattern" type="button" style="background:var(--accent-purple);border-color:var(--accent-purple);min-width:120px">START</button>
-          <button class="btn-red" id="btnBettyStopJobs" type="button">Stop</button>
-          <button class="btn-ghost" id="btnBettyRefresh" type="button">Status</button>
-        </div>
-        <div id="bettyStatusBox" style="margin-top:10px;font-size:12px;color:var(--text-muted)"></div>
-        <div class="log" id="logBetty" style="max-height:140px;margin-top:8px"></div>
-      </div>
-
-      <!-- Post-launch bots -->
-      <div class="bots-grid" style="margin-top:14px">
-        <div class="panel">
-          <div class="panel-head">Volume Bot</div>
-          <p class="desc" style="margin-bottom:10px;font-size:12px">Buy/sell cycles for tape activity (uses sawtooth-style automation on bundler).</p>
-          <div class="row">
-            <div class="field"><span>ETH min</span><input id="volEthMin" type="number" step="0.001" value="0.002" /></div>
-            <div class="field"><span>ETH max</span><input id="volEthMax" type="number" step="0.001" value="0.006" /></div>
-          </div>
-          <div class="row">
-            <div class="field"><span>Delay min (s)</span><input id="volDelayMin" type="number" value="15" /></div>
-            <div class="field"><span>Delay max (s)</span><input id="volDelayMax" type="number" value="45" /></div>
-            <div class="field"><span>Sell %</span><input id="volSellPct" type="number" value="20" /></div>
-          </div>
-          <button class="btn" id="btnVolStart" type="button" style="width:100%;margin-top:8px">START VOLUME</button>
-        </div>
-        <div class="panel">
-          <div class="panel-head">Bump Bot</div>
-          <p class="desc" style="margin-bottom:10px;font-size:12px">Periodic small buys to support the chart.</p>
-          <div class="field"><span>ETH per bump</span><input id="bumpEth" type="number" step="0.001" value="0.002" /></div>
-          <div class="field" style="margin-top:8px">
-            <span>Interval</span>
-            <div class="chip-row" id="bumpIntervalChips">
-              <button type="button" data-sec="30">30s</button>
-              <button type="button" data-sec="60" class="on">1m</button>
-              <button type="button" data-sec="120">2m</button>
-              <button type="button" data-sec="300">5m</button>
-            </div>
-            <input type="hidden" id="bumpInterval" value="60" />
-          </div>
-          <button class="btn" id="btnBettyBump" type="button" style="width:100%;margin-top:12px">START BUMP</button>
-        </div>
-      </div>
-
-      <!-- Batch sell / Buy back / Guard / Orchestrator -->
-      <div class="trade-tools" style="margin-top:14px">
-        <div class="panel">
-          <div class="panel-head">Batch Sell</div>
-          <div class="chip-row" id="batchSellChips">
-            <button type="button" data-pct="25">25%</button>
-            <button type="button" data-pct="50">50%</button>
-            <button type="button" data-pct="75">75%</button>
-            <button type="button" data-pct="100" class="on danger">100%</button>
-          </div>
-          <input type="hidden" id="sellPct" value="100" />
-          <div class="row" style="margin-top:10px">
-            <div class="field"><span>Delay (ms)</span><input id="batchDelayMs" type="number" value="1000" /></div>
-            <label style="font-size:12px;display:flex;align-items:center;gap:6px;margin-top:18px"><input type="checkbox" id="batchDevFirst" /> Dev first</label>
-          </div>
-          <select id="sellMode" style="display:none"><option value="sequential" selected>sequential</option><option value="parallel">parallel</option></select>
-          <select id="sellPlanStrategy" style="display:none"><option value="auto" selected>auto</option><option value="largest_first">largest_first</option><option value="least_impact">least_impact</option></select>
-          <input type="hidden" id="targetMcapUsd" value="1000000" />
-          <button class="btn-red" id="btnSellAll" type="button" style="width:100%;margin-top:10px">Sell All 100%</button>
-          <button class="btn-ghost" id="btnSellByPlan" type="button" style="width:100%;margin-top:6px">Snipers Only (by plan)</button>
-        </div>
-        <div class="panel">
-          <div class="panel-head">Buy Back</div>
-          <div class="chip-row" id="buyBackChips">
-            <button type="button" data-eth="0.01">0.01</button>
-            <button type="button" data-eth="0.05" class="on good">0.05</button>
-            <button type="button" data-eth="0.1">0.1</button>
-            <button type="button" data-eth="0.5">0.5</button>
-          </div>
-          <input type="hidden" id="buyBackEth" value="0.05" />
-          <div class="field" style="margin-top:10px"><span>Slippage %</span><input id="buyBackSlip" type="number" value="25" /></div>
-          <button class="btn-green" id="btnBuyBack" type="button" style="width:100%;margin-top:10px">Buy Back 0.05 ETH/wallet</button>
-        </div>
-        <div class="panel">
-          <div class="panel-head" style="display:flex;justify-content:space-between;align-items:center">
-            <span>Price Guard</span>
-            <label class="switch"><input type="checkbox" id="guardEnabled" /><span></span></label>
-          </div>
-          <div class="row">
-            <div class="field"><span>Stop-Loss ($)</span><input id="bettySl" type="number" step="any" value="0.000001" /></div>
-            <div class="field"><span>Take-Profit ($)</span><input id="bettyTp" type="number" step="any" value="0.001" /></div>
-          </div>
-          <div class="row">
-            <div class="field"><span>Sell at mcap ($)</span><input id="bettyMcap" type="number" step="1000" placeholder="e.g. 500000" /></div>
-            <div class="field"><span>Sell % on trigger</span>
-              <div class="chip-row" id="guardPctChips">
-                <button type="button" data-pct="25">25%</button>
-                <button type="button" data-pct="50">50%</button>
-                <button type="button" data-pct="75">75%</button>
-                <button type="button" data-pct="100" class="on">100%</button>
-              </div>
-              <input type="hidden" id="bettyGuardPct" value="100" />
-            </div>
-          </div>
-          <button class="btn-orange" id="btnBettyGuard" type="button" style="width:100%;margin-top:8px">Arm price guard</button>
-        </div>
-        <div class="panel">
-          <div class="panel-head">Sell Orchestrator</div>
-          <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:8px;font-size:12px;color:var(--text-muted)">
-            <label><input type="checkbox" id="orchConfirm" checked /> Confirm sells</label>
-            <label><input type="checkbox" id="orchAlerts" checked /> Alerts</label>
-            <label><input type="checkbox" id="orchSound" /> Sound</label>
-          </div>
-          <div class="chip-row" id="orchStratChips">
-            <button type="button" data-strat="dump">DUMP ALL</button>
-            <button type="button" data-strat="stagger" class="on">Stagger Exit</button>
-            <button type="button" data-strat="bleed">Slow Bleed</button>
-            <button type="button" data-strat="devlast">Dev Last</button>
-            <button type="button" data-strat="tiered">Tiered Exit</button>
-          </div>
-          <div class="row" style="margin-top:10px">
-            <div class="field"><span>Sell %</span>
-              <div class="chip-row" id="orchPctChips">
-                <button type="button" data-pct="25">25%</button>
-                <button type="button" data-pct="50">50%</button>
-                <button type="button" data-pct="100" class="on danger">100%</button>
-              </div>
-              <input type="hidden" id="orchPct" value="100" />
-            </div>
-            <div class="field"><span>Delay (s)</span><input id="orchDelay" type="number" value="5" min="1" max="60" /></div>
-          </div>
-          <label style="font-size:12px;display:flex;gap:6px;align-items:center;margin:8px 0"><input type="checkbox" id="orchSkipDev" /> Skip Dev</label>
-          <button class="btn-red" id="btnOrchExecute" type="button" style="width:100%">EXECUTE SELL</button>
-          <button class="btn-green" id="btnOrchRebuy" type="button" style="width:100%;margin-top:6px">Re-Buy — same as Buy Back</button>
-        </div>
-      </div>
-
-      <div class="log" id="logSell" style="margin-top:14px"></div>
-      <div class="actions" style="margin-top:8px">
-        <button class="btn-ghost" id="goto4b" type="button">← Launch</button>
-        <button class="btn-red" id="btnForceRestartSell" type="button">Reset this coin tab</button>
-      </div>
-    </section>
-
-    <!-- Airdrop desk -->
-    <section class="card hidden" id="airdropPanel">
-      <h2>Airdrop</h2>
-      <p class="desc">Send your token to high-activity wallets on your tape — or siphon buyers from a competitor.</p>
-
-      <div class="row" style="align-items:end;flex-wrap:wrap">
-        <div class="field" style="max-width:180px">
-          <span>Source</span>
-          <select id="airdropSourceMode">
-            <option value="our">Our token tape</option>
-            <option value="competitor">Competitor siphon</option>
+      <div class="row">
+        <div class="field" style="flex:2"><span>Your coin address</span><input id="sellToken" placeholder="0x…" spellcheck="false" /></div>
+        <div class="field" style="max-width:120px"><span>Bulk % to sell</span><input id="sellPct" type="number" min="1" max="100" value="100" title="Used by bulk sells" /></div>
+        <div class="field" style="max-width:160px">
+          <span>Sell speed</span>
+          <select id="sellMode">
+            <option value="parallel" selected>All at once (fast)</option>
+            <option value="sequential">One-by-one</option>
           </select>
         </div>
-        <div class="field" style="flex:1;min-width:220px">
-          <span>Source token</span>
-          <input id="airdropSourceToken" placeholder="0x… activity to score" />
+        <div class="field" style="max-width:220px">
+          <span>Suggest order</span>
+          <select id="sellPlanStrategy">
+            <option value="auto" selected>Auto — least impact</option>
+            <option value="least_impact">Small first</option>
+            <option value="largest_first">Largest first</option>
+            <option value="best_pnl_first">Best P&amp;L first</option>
+            <option value="worst_pnl_first">Worst P&amp;L first</option>
+          </select>
         </div>
-        <div class="field" style="flex:1;min-width:220px">
-          <span>Send token (yours)</span>
-          <input id="airdropSendToken" placeholder="0x… ERC-20 to transfer" />
-        </div>
-      </div>
-
-      <div class="row" style="align-items:end;flex-wrap:wrap;margin-top:10px">
         <div class="field" style="max-width:140px">
-          <span>Amount mode</span>
+          <span>Target MC $</span>
+          <input id="targetMcapUsd" type="number" min="1000" step="1000" value="1000000" title="Path-to-target projection" />
+        </div>
+      </div>
+      <div class="actions">
+        <button class="btn btn-lg" id="btnSellPreview">Refresh holdings</button>
+        <button class="btn-green btn-lg" id="btnSellPlan">Suggest sells</button>
+        <button class="btn-ghost" id="btnRefreshRecs" title="Rebuild suggestions">Refresh suggestions</button>
+        <button class="btn-orange" id="btnRecallSell">Sweep leftover ETH → bank</button>
+        <button class="btn-red" id="btnForceRestartSell" title="Clear this coin tab">Reset this coin</button>
+      </div>
+      <div id="sellSummary" class="stats" style="margin-top:16px;display:none"></div>
+      <div id="sellTable" style="margin-top:14px"></div>
+      <div id="sellPlanBox" style="margin-top:16px;display:none"></div>
+      <div id="sellHistoryBox" style="margin-top:16px;display:none"></div>
+      <div class="log-label">Sell log</div>
+      <div class="log" id="logSell"></div>
+      <div class="cta-row">
+        <button class="btn-ghost" id="goto4b">← Launch</button>
+        <button class="btn btn-lg" id="goto6">Next: airdrop →</button>
+      </div>
+    </section>
+
+    <section class="card hidden" id="step6">
+      <div class="step-kicker"><span class="pill">Step 6 of 6</span> Airdrop</div>
+      <h2>Airdrop to other coin’s wallets</h2>
+      <p class="desc">Paste another coin’s address. We find its top holders + active traders, then send <strong>your</strong> token to them.</p>
+      <div class="howto">
+        <strong>What to do</strong>
+        <ol>
+          <li>Paste competitor coin address + your coin address</li>
+          <li>Press <strong>Find wallets</strong> — full list appears below</li>
+          <li>Choose amounts, check the list, then send (dry-run first unless you tick “Send for real”)</li>
+        </ol>
+      </div>
+      <div class="row" style="align-items:end;flex-wrap:wrap">
+        <div class="field" style="flex:1;min-width:240px">
+          <span>Competitor coin (find wallets here)</span>
+          <input id="airdropSourceToken" placeholder="0x… paste CA" spellcheck="false" />
+        </div>
+        <div class="field" style="flex:1;min-width:240px">
+          <span>Your coin (what you send)</span>
+          <input id="airdropSendToken" placeholder="0x… your token" spellcheck="false" />
+        </div>
+      </div>
+      <div class="row" style="align-items:end;flex-wrap:wrap;margin-top:8px">
+        <div class="field" style="max-width:150px">
+          <span>Amount style</span>
           <select id="airdropMode">
-            <option value="fixed">Fixed each</option>
-            <option value="split">Split total</option>
-            <option value="tiered">Tiered</option>
+            <option value="fixed" selected>Same amount each</option>
+            <option value="split">Split total evenly</option>
+            <option value="tiered">Top wallets get more</option>
           </select>
         </div>
-        <div class="field" style="max-width:140px"><span>Each (fixed)</span><input id="airdropAmountEach" value="50" /></div>
-        <div class="field" style="max-width:140px"><span>Total bag</span><input id="airdropTotalAmount" value="5000" /></div>
-        <div class="field" style="max-width:100px"><span>Limit</span>
-          <div class="chip-row" id="airdropLimitChips">
-            <button type="button" data-n="10">10</button>
-            <button type="button" data-n="50" class="on">50</button>
-            <button type="button" data-n="100">100</button>
-            <button type="button" data-n="250">250</button>
-          </div>
-          <input type="hidden" id="airdropLimit" value="50" />
-        </div>
-        <div class="field" style="max-width:100px"><span>Min buys</span><input id="airdropMinBuys" type="number" value="1" min="0" /></div>
-        <div class="field" style="max-width:120px"><span>Min vol ETH</span><input id="airdropMinVol" type="number" step="0.01" value="0" /></div>
+        <div class="field" style="max-width:140px"><span>Each (if same)</span><input id="airdropAmountEach" value="100" /></div>
+        <div class="field" style="max-width:140px"><span>Total bag</span><input id="airdropTotalAmount" value="10000" /></div>
+        <div class="field" style="max-width:120px"><span>Max wallets</span><input id="airdropLimit" type="number" min="1" max="500" value="200" /></div>
+        <div class="field" style="max-width:100px"><span>Min buys</span><input id="airdropMinBuys" type="number" value="0" min="0" /></div>
       </div>
-
+      <div class="row" style="align-items:center;flex-wrap:wrap;margin-top:10px;gap:12px">
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer">
+          <input type="checkbox" id="airdropIncludeTop" checked /> Top holders
+        </label>
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer">
+          <input type="checkbox" id="airdropIncludeActive" checked /> Most active traders
+        </label>
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;color:var(--accent-orange)">
+          <input type="checkbox" id="airdropLive" /> Send for real (off = practice run)
+        </label>
+      </div>
       <div class="actions" style="margin-top:12px">
-        <button type="button" id="airdropArmedBtn" class="arm-sim">ARM: SIMULATION</button>
-        <button class="btn" id="btnAirdropPreview" type="button">Preview list</button>
-        <button class="btn-orange" id="btnAirdropStart" type="button" disabled>Start airdrop</button>
+        <button class="btn btn-lg" id="btnAirdropPreview" type="button">Find wallets</button>
+        <button class="btn-green btn-lg" id="btnAirdropStart" type="button" disabled>Send airdrop</button>
         <button class="btn-ghost" id="btnAirdropStop" type="button">Stop</button>
-        <button class="btn-ghost" id="btnAirdropRefreshJobs" type="button">Jobs</button>
+        <button class="btn-ghost" id="btnAirdropJobs" type="button">Check status</button>
       </div>
-      <input type="hidden" id="airdropArmed" value="0" />
-
-      <div id="airdropPreviewBox" class="panel" style="margin-top:14px;padding:12px">
-        <div class="empty" style="padding:8px">Preview scores recipients from source tape, then transfers your send token.</div>
+      <div id="airdropPreviewBox" style="margin-top:14px">
+        <div class="desc">The full wallet list will show here (scrollable).</div>
       </div>
-      <div class="log" id="logAirdrop" style="margin-top:12px"></div>
-
-      <div class="panel-head" style="margin-top:18px">Smart-money CRM</div>
-      <div id="crmBox" class="panel" style="margin-top:8px;padding:12px">
-        <div class="empty" style="padding:8px">Tag wallets after airdrops / whale alerts. Diamond &amp; whale get boost next run.</div>
+      <div class="log-label">Airdrop log</div>
+      <div class="log" id="logAirdrop" style="max-height:180px"></div>
+      <div class="cta-row">
+        <button class="btn-ghost" id="goto5b">← Sell</button>
       </div>
     </section>
 
 
       </main>
 
-  <div class="status-bar" id="statusBar">
-    <span>NOXA · Robinhood</span>
-    <span id="footerHint">Overview — what needs you next</span>
+  <div class="footer-bar">
+    <span>NOXA</span>
+    <span id="footerHint">Follow the path: Wallets → Budget → Fund → Launch → Sell → Airdrop</span>
   </div>
-
-  <details class="quick-help">
-    <summary>?</summary>
-    <div class="help-body">
-      <strong style="color:var(--text-primary)">Where do I start?</strong>
-      <p style="margin:6px 0 10px">Overview shows what’s missing. Usually: Wallets → Launch → Trade.</p>
-      <strong style="color:var(--text-primary)">Treasury / Deployer / Snipers?</strong>
-      <p style="margin:6px 0 10px">Bank pays. Creator launches. Helpers buy.</p>
-      <strong style="color:var(--text-primary)">Live automations?</strong>
-      <p style="margin:6px 0">Set EVM_ARM_LIVE=true on the server, then ARM LIVE on the pattern/guard.</p>
-    </div>
-  </details>
 
 <script>
 const $ = (id) => document.getElementById(id);
@@ -1275,7 +1059,8 @@ const state = {
   sellPreview: null, sellPlan: null, pairs: [], snipes: [],
   snipeConfig: null, sniper: null, sniperPortfolio: null, snipeRange: "24h",
   mode: "bundler", sniperHostEnabled: false,
-  step: 0, tab: "overview", walletPage: 0, walletPageSize: 9999, maxBundleWallets: 500,
+  auth: null, impersonateUserId: null,
+  step: 0, walletPage: 0, walletPageSize: 9999, maxBundleWallets: 500,
   projects: [], activeProjectId: null, lastToken: "", launchpad: "noxa",
 };
 function currentLaunchpad(){
@@ -1289,7 +1074,7 @@ function syncLaunchpadUI(pad){
   const v = (pad === "apestore" || pad === "ape") ? "apestore" : (pad === "koa" ? "koa" : "noxa");
   state.launchpad = v;
   if($("launchpad")) $("launchpad").value = v;
-  document.querySelectorAll(".seg-btn[data-pad], #headerPadSwitch button[data-pad]").forEach(b => {
+  document.querySelectorAll(".seg-btn[data-pad]").forEach(b => {
     b.classList.toggle("active", b.dataset.pad === v);
   });
   const hint = $("launchpadHint");
@@ -1367,9 +1152,16 @@ function toUsd(eth){
   if(!px || eth==null) return null;
   return Number(eth) * px;
 }
-async function api(path, opts){
-  const r = await fetch(path, { headers: { "Content-Type":"application/json" }, ...opts });
+async function api(path, opts = {}){
+  const { headers: extraHeaders, ...rest } = opts;
+  const headers = { "Content-Type":"application/json", ...(extraHeaders || {}) };
+  if(state.impersonateUserId) headers["x-impersonate-user"] = state.impersonateUserId;
+  const r = await fetch(path, { credentials:"same-origin", ...rest, headers });
   const j = await r.json().catch(()=>({}));
+  if(r.status === 401 || j.code === "auth_required"){
+    location.href = "/login.html";
+    throw new Error("Login required");
+  }
   if(!r.ok){
     const err = new Error(j.error || r.statusText);
     err.code = j.code;
@@ -1380,6 +1172,20 @@ async function api(path, opts){
   }
   return j;
 }
+function renderUserBar(authInfo){
+  const el = $("userBar");
+  if(!el) return;
+  const u = authInfo?.user;
+  if(!u){ el.textContent = ""; return; }
+  const imp = authInfo?.impersonating;
+  el.innerHTML = `Signed in as <strong style="color:var(--text-primary)">${u.username}</strong>` +
+    (u.role==="admin"?` · <span style="color:var(--accent-yellow)">admin</span>`:"") +
+    (imp?` · viewing <strong>${imp.username}</strong>`:"");
+}
+if($("btnLogout")) $("btnLogout").onclick = async () => {
+  try { await api("/api/auth/logout", { method:"POST", body:"{}" }); } catch(_){}
+  location.href = "/login.html";
+};
 function setBusy(on, label){
   const pill = $("statusPill");
   pill.classList.toggle("busy", !!on);
@@ -1400,130 +1206,55 @@ function setBusy(on, label){
   if($("btnFundCancel")) $("btnFundCancel").disabled = !funding;
   if($("hops")) $("hops").disabled = false;
 }
-function showTab(tab, focusStep){
-  const t = String(tab || "overview").toLowerCase();
-  state.tab = t;
-  if(focusStep) state.step = focusStep;
-  else if(t === "wallets") state.step = 1;
-  else if(t === "launch") state.step = focusStep || state.step || 2;
-  else if(t === "trade") state.step = 5;
-  else if(t === "airdrop") state.step = 6;
-
-  const showOverview = t === "overview";
-  const showGuide = t === "guide";
-  const showWallets = t === "wallets";
-  const showLaunch = t === "launch";
-  const showTrade = t === "trade";
-  const showAirdrop = t === "airdrop";
-
-  if($("overviewPanel")) $("overviewPanel").classList.toggle("show", showOverview);
-  if($("guidePanel")) $("guidePanel").classList.toggle("show", showGuide);
-  if($("step1")) $("step1").classList.toggle("hidden", !showWallets);
-  ["step2","step3","stepLaunch","step4"].forEach(id => {
-    const el = $(id);
-    if(el) el.classList.toggle("hidden", !showLaunch);
+function showStep(n){
+  if(n===7){ n = state.step || 1; }
+  state.step = n;
+  [1,2,3,4,5,6].forEach(i => {
+    const el = $(`step${i}`);
+    if(!el) return;
+    el.classList.toggle("hidden", i!==n);
   });
-  if($("step5")) $("step5").classList.toggle("hidden", !showTrade);
-  if($("airdropPanel")) $("airdropPanel").classList.toggle("hidden", !showAirdrop);
-
-  document.querySelectorAll("#mainNav button[data-tab]").forEach(b => {
-    b.classList.toggle("active", b.dataset.tab === t);
+  // Launch card lives on Go live (step 4) — create coin then buy
+  if($("stepLaunch")) $("stepLaunch").classList.toggle("hidden", n!==4);
+  document.querySelectorAll("nav button[data-step], #flowPath .flow-step").forEach(b => {
+    b.classList.toggle("active", Number(b.dataset.step)===n);
   });
-
-  if($("footerHint")){
-    $("footerHint").textContent = ({
-      overview: "Overview — Mission Control + next actions",
-      wallets: "Wallets — treasury, deployer, snipers",
-      launch: "Launch — plan → fund → create → buy",
-      trade: "Trade — chart, sell, automations",
-      airdrop: "Airdrop — tape + competitor siphon",
-      guide: "Guide — how to run a launch",
-    })[t] || "";
+  $("footerHint").textContent = ({
+    1: "Step 1 — make bank, creator, and buyer wallets",
+    2: "Step 2 — set how much ETH buyers will spend",
+    3: "Step 3 — send ETH to buyer wallets",
+    4: "Step 4 — create the coin and buy",
+    5: "Step 5 — sell when you’re ready",
+    6: "Step 6 — airdrop to another coin’s wallets",
+  })[n] || "";
+  const guide = $("easyGuideText");
+  if(guide){
+    guide.textContent = ({
+      1: "First: import your bank, make a creator wallet, then make a few buyer wallets.",
+      2: "Set total ETH to spend and how many buyers, then save the plan.",
+      3: "Send cash to buyers (clean path). Wait until they’re funded.",
+      4: "Name the coin and press Create coin + buy.",
+      5: "Refresh holdings, suggest sells, then sell in pieces.",
+      6: "Paste a competitor CA, find wallets, then airdrop your token.",
+    })[n] || guide.textContent;
   }
-
-  if(showWallets){ renderWallets(); renderDevBox(); }
-  if(showLaunch){
-    renderPlan(); renderDevBox(); renderFundJobs(); renderBuyReady();
-    api("/api/balances/refresh",{method:"POST",body:"{}"}).catch(()=>{});
-    const map = {2:"step2",3:"step3",4:"stepLaunch",5:"step4"};
-    // focusStep 4 historically was go-live which includes create+buy; prefer create
-    const focusId = focusStep === 4 ? "stepLaunch" : (map[focusStep] || null);
-    if(focusId && $(focusId)) setTimeout(() => $(focusId).scrollIntoView({ behavior:"smooth", block:"start" }), 50);
-  }
-  if(showTrade){
-    const tok = $("token")?.value?.trim() || state.plan?.token?.address || state.plan?.token || state.lastToken || "";
-    if(tok && $("sellToken") && !$("sellToken").value) $("sellToken").value = typeof tok === "string" ? tok : "";
+  const bundlerTop = [1,2,3,4,5,6].includes(n);
+  if($("overviewStats")) $("overviewStats").classList.toggle("hidden", !bundlerTop);
+  if($("funderLine")) $("funderLine").classList.toggle("hidden", !bundlerTop);
+  if(n===1){ renderWallets(); renderDevBox(); }
+  if(n===2){ renderPlan(); renderDevBox(); api("/api/balances/refresh",{method:"POST",body:"{}"}).catch(()=>{}); }
+  if(n===3) renderFundJobs();
+  if(n===4){ renderBuyReady(); renderDevBox(); api("/api/balances/refresh",{method:"POST",body:"{}"}).catch(()=>{}); }
+  if(n===5){
+    const t = $("token")?.value?.trim() || state.plan?.token?.address || state.plan?.token || "";
+    if(t && !$("sellToken").value) $("sellToken").value = typeof t === "string" ? t : "";
     loadSellChart(false, { embed: false });
     renderSell();
-    refreshBettyStatus();
-    refreshSupplyPanel();
-    refreshExitRadar();
   }
-  if(showAirdrop){
-    const tok = state.lastToken || $("sellToken")?.value || $("token")?.value || "";
-    if(tok && $("airdropSendToken") && !$("airdropSendToken").value) $("airdropSendToken").value = tok;
-    if(tok && $("airdropSourceToken") && !$("airdropSourceToken").value && ($("airdropSourceMode")?.value||"our")==="our") $("airdropSourceToken").value = tok;
-    refreshCrmBox();
-    refreshAirdropJobs();
+  if(n===6){
+    const t = $("token")?.value?.trim() || $("sellToken")?.value?.trim() || state.lastToken || state.plan?.token?.address || "";
+    if(t && $("airdropSendToken") && !$("airdropSendToken").value) $("airdropSendToken").value = typeof t === "string" ? t : "";
   }
-  if(showOverview){
-    renderNeedsYou();
-    refreshMissionControl();
-    refreshPlaybooksBox();
-  }
-}
-function showStep(n){
-  // Back-compat for old next/back buttons
-  if(n===6 || n===7){ n = state.step || 1; }
-  if(n===1) return showTab("wallets", 1);
-  if(n===2 || n===3) return showTab("launch", n);
-  if(n===4) return showTab("launch", 4);
-  if(n===5) return showTab("trade", 5);
-  return showTab("overview");
-}
-function renderNeedsYou(){
-  const box = $("needsList");
-  if(!box) return;
-  const funder = state.wallets?.find(w => w.role === "funder");
-  const buyers = (state.wallets||[]).filter(w => w.role === "buyer");
-  const planned = buyers.filter(w => Number(w.buyAmountEth) > 0);
-  const items = [];
-  if(!funder?.address){
-    items.push({ tag:"hi", title:"Add treasury wallet", sub:"Import the bank that holds your ETH", tab:"wallets" });
-  }
-  if(!state.dev?.address){
-    items.push({ tag:"hi", title:"Create deployer wallet", sub:"Needed to launch the coin", tab:"wallets" });
-  }
-  if(buyers.length < 2){
-    items.push({ tag:"md", title:"Create sniper helpers", sub:"Add buyer wallets for the bundle", tab:"wallets" });
-  }
-  if(buyers.length && !planned.length){
-    items.push({ tag:"md", title:"Plan spend", sub:"Set budget and apply to snipers", tab:"launch", step:2 });
-  }
-  if(planned.length && !state.lastToken){
-    items.push({ tag:"go", title:"Ready to launch", sub:"Fund snipers, then create the coin", tab:"launch", step:3 });
-  }
-  if(state.lastToken){
-    items.push({ tag:"go", title:"Trade live token", sub: String(state.lastToken).slice(0,10)+"… — chart, sell, automations", tab:"trade", step:5 });
-  }
-  if(!items.length){
-    items.push({ tag:"go", title:"All set", sub:"Pick Launch to run a coin, or Trade if one is live", tab:"launch", step:2 });
-  }
-  box.innerHTML = items.map(it => `
-    <div class="needs-item" data-tab="${it.tab}" data-step="${it.step||""}">
-      <div>
-        <div style="font-weight:600;color:var(--text-primary)">${it.title}</div>
-        <div style="font-size:12px;color:var(--text-muted);margin-top:2px">${it.sub}</div>
-      </div>
-      <span class="tag ${it.tag}">${it.tag === "go" ? "go" : it.tag === "hi" ? "do now" : "next"}</span>
-    </div>`).join("");
-  box.querySelectorAll(".needs-item").forEach(el => {
-    el.onclick = () => {
-      const tab = el.dataset.tab;
-      const step = el.dataset.step ? Number(el.dataset.step) : null;
-      showTab(tab, step);
-    };
-  });
 }
 function renderDevBox(){
   const box = $("devWalletBox");
@@ -2236,7 +1967,7 @@ function renderSell(){
   box.innerHTML = `<div style="max-height:560px;overflow:auto">
     <table>
     <thead style="position:sticky;top:0;background:var(--bg-card);z-index:1"><tr>
-      <th>#</th><th>Tier</th><th>Wallet</th><th>Cost</th><th>Optimistic</th><th>PNL</th><th>Sell</th><th>Buy</th>
+      <th>#</th><th>Wallet</th><th>Cost</th><th>Optimistic</th><th>Profit</th><th>In full exit</th><th>Sell</th>
     </tr></thead>
     <tbody>${(p.rows||[]).map((r,i) => {
       const wi = state.wallets.findIndex(w => w.address?.toLowerCase()===r.address?.toLowerCase());
@@ -2246,28 +1977,22 @@ function renderSell(){
       const dumpU = r.worthIfDumpUsd ?? toUsd(r.ethOutIfDump);
       const mult = costU > 0 && r.hasTokens ? worthU / costU : null;
       const pctBtns = r.hasTokens && wi >= 0
-        ? `<div class="sell-pcts">${[10,25,50,100].map(pct =>
-            `<button type="button" data-sell-one="${wi}" data-pct="${pct}" title="Sell ${pct}%">${pct}%</button>`
+        ? `<div class="sell-pcts">${sellPcts.map(pct =>
+            `<button type="button" data-sell-one="${wi}" data-pct="${pct}" title="Sell ${pct}% of this wallet only">${pct}%</button>`
           ).join("")}</div>`
-        : `<span style="color:var(--text-muted);font-size:11px">${r.hasTokens?"?":"empty"}</span>`;
-      const buyBtns = wi >= 0
-        ? `<div class="sell-pcts">${[0.1,0.25,0.5,1].map(eth =>
-            `<button type="button" data-buy-one="${wi}" data-eth="${eth}" style="color:var(--accent-green)" title="Buy ${eth} ETH">${eth===1?"1":String(eth).replace("0","")}</button>`
-          ).join("")}</div>`
-        : "";
+        : `<span style="color:var(--text-muted);font-size:11px">${r.hasTokens?"no wallet idx":"empty"}</span>`;
       return `<tr style="${r.hasTokens?"":"opacity:.55"}">
         <td style="color:var(--text-muted)">${i+1}</td>
-        <td><span style="font-size:10px;font-weight:700;color:var(--accent-purple)">SNP</span></td>
         <td title="${r.address}">${r.name||short(r.address)}</td>
         <td><strong style="color:var(--accent-orange)">${r.costUsdLabel||money(costU,2)}</strong></td>
         <td>${r.hasTokens?`<strong style="color:var(--accent-green)">${r.worthUsdLabel||money(worthU,2)}</strong>${mult!=null?` <span style="color:var(--text-muted);font-size:11px">(${mult.toFixed(1)}x)</span>`:""}`:"—"}</td>
-        <td style="color:${pnlColor(profitU)}">${r.hasTokens?(r.profitUsdLabel||moneySigned(profitU,2)):"price pending…"}</td>
+        <td style="color:${pnlColor(profitU)}">${r.hasTokens?(r.profitUsdLabel||moneySigned(profitU,2))+(r.profitPct!=null?` <span style="font-size:11px">(${r.profitPct>=0?"+":""}${fmt(r.profitPct,0)}%)</span>`:""):"—"}</td>
+        <td style="color:var(--text-muted)">${r.hasTokens?(r.worthIfDumpUsdLabel||money(dumpU,2)):"—"}</td>
         <td>${pctBtns}</td>
-        <td>${buyBtns}</td>
       </tr>`;
     }).join("")}</tbody></table>
   </div>
-    <p style="margin-top:10px;font-size:12px;color:var(--text-muted)">Per-wallet sell % and buy ETH chips — same layout as Stealth Trade.</p>`;
+    <p style="margin-top:10px;font-size:12px;color:var(--text-muted)">Row buttons sell <strong>that wallet only</strong> at 5% / 10% / 25% / 50% / 100%.</p>`;
   box.querySelectorAll("[data-sell-one]").forEach(btn => {
     btn.onclick = async () => {
       const pct = Number(btn.dataset.pct) || 100;
@@ -2279,39 +2004,17 @@ function renderSell(){
       const label = row?.name || short(state.wallets[wi]?.address);
       const costU = row?.costUsd ?? toUsd(row?.costEth);
       const worthU = row?.worthUsd ?? toUsd(row?.ethOut);
-      if(!$("tradeDryRun")?.checked && !confirm(`Sell ${pct}% from ${label}?\n\nCost ${money(costU,2)} · worth ~${money(worthU,2)}`)) return;
-      if($("tradeDryRun")?.checked){ alert(`Dry-run: would sell ${pct}% from ${label}`); return; }
+      if(!confirm(`Sell ${pct}% from ${label}?\n\nCost ${money(costU,2)} · worth ~${money(worthU,2)}`)) return;
       try {
         setBusy(true, `Selling ${pct}%…`);
         if($("logSell")) $("logSell").innerHTML = "";
         await api("/api/sell/one", { method:"POST", body: JSON.stringify({
-          launchpad: currentLaunchpad(),
+        launchpad: currentLaunchpad(),
           token: $("sellToken").value.trim() || $("token").value.trim(),
+          launchpad: currentLaunchpad(),
           index: wi,
           percent: pct,
         })});
-      } catch(e){ setBusy(false); alert(e.message); }
-    };
-  });
-  box.querySelectorAll("[data-buy-one]").forEach(btn => {
-    btn.onclick = async () => {
-      const eth = Number(btn.dataset.eth) || 0.1;
-      const wi = Number(btn.dataset.buyOne);
-      const w = state.wallets[wi];
-      if(!w) return;
-      if($("tradeDryRun")?.checked){ alert(`Dry-run: would buy ${eth} ETH on ${short(w.address)}`); return; }
-      if(!confirm(`Buy ${eth} ETH on ${w.name||short(w.address)}?`)) return;
-      try {
-        setBusy(true, `Buying ${eth} ETH…`);
-        await api("/api/buy", {
-          method:"POST",
-          body: JSON.stringify({
-            token: $("sellToken").value.trim() || state.lastToken,
-            addresses: [w.address],
-            mode: "burst",
-            launchpad: currentLaunchpad(),
-          }),
-        });
       } catch(e){ setBusy(false); alert(e.message); }
     };
   });
@@ -2416,7 +2119,7 @@ function renderWallets(opts = {}){
           }
           if(btn.dataset.act==="pk"){
             const j = await api(`/api/wallets/${i}/pk`);
-            prompt("Copy private key", j.privateKey);
+            prompt("Copy wallet backup", j.privateKey);
           }
         } catch(e){ alert(e.message); }
       };
@@ -2552,14 +2255,15 @@ function renderFundJobs(){
   const pct = s.total ? Math.round(((s.complete||0)/s.total)*100) : 0;
   $("fundProgress").classList.remove("hidden");
   $("fundBar").style.width = pct+"%";
-  $("fundLabel").textContent = `${s.complete||0}/${s.total||0} done · sending ~${s.totalEth||0} ETH`;
+  const mode = p.mode || "changenow";
+  $("fundLabel").textContent = `${s.complete||0}/${s.total||0} done · ${mode} · RH ~${s.totalRhEth||s.totalEth||0} ETH · CN send ~${s.totalEth||0} ETH`;
   const jobs = p.jobs || [];
   const pending = jobs.filter(j => j.status === "pending" || j.status === "failed").slice(0, 30);
   const show = jobs.length <= 40 ? jobs : [...jobs.filter(j => j.status==="complete").slice(-5), ...pending].slice(0, 40);
-  box.innerHTML = (jobs.length > 40
+  box.innerHTML = `<p style="font-size:12px;color:var(--text-muted);margin-bottom:6px">${s.pipeline || "ChangeNOW → Across → RH"} · hop/shared-treasury refused</p>` + (jobs.length > 40
     ? `<p style="font-size:12px;color:var(--text-muted);margin-bottom:6px">${jobs.length} jobs — showing recent/pending</p>`
     : "") + show.map(j => `<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border-primary);font-family:JetBrains Mono,monospace;font-size:11px">
-    <span>${j.to}</span><span>${j.amountEth} ETH${j.gasBufferEth?` <span style="color:var(--text-muted)">(buy ${j.buyAmountEth}+gas)</span>`:""} · <span style="color:${j.status==="complete"?"var(--accent-green)":j.status==="failed"?"var(--accent-red)":"var(--text-muted)"}">${j.status}</span></span>
+    <span>${j.to}</span><span>RH ${j.amountEth} ETH${j.cnAmountEth?` · CN ${j.cnAmountEth}`:""}${j.gasBufferEth?` <span style="color:var(--text-muted)">(buy ${j.buyAmountEth}+gas)</span>`:""} · <span style="color:${j.status==="complete"?"var(--accent-green)":j.status==="failed"?"var(--accent-red)":"var(--text-muted)"}">${j.status}</span></span>
   </div>`).join("");
 }
 async function refresh(opts = {}){
@@ -2567,6 +2271,12 @@ async function refresh(opts = {}){
   const s = await api("/api/state" + force);
   state.mode = s.mode || "bundler";
   state.sniperHostEnabled = !!s.sniperHostEnabled;
+  state.auth = s.auth || null;
+  renderUserBar(s.auth);
+  if(s.auth?.user?.role === "admin" && $("adminSupportCard")){
+    $("adminSupportCard").classList.remove("hidden");
+    loadAdminUsers().catch(()=>{});
+  }
   state.lastBuyFailures = s.lastBuyFailures || [];
   state.projects = s.projects || [];
   state.activeProjectId = s.activeProjectId || null;
@@ -2636,16 +2346,14 @@ async function refresh(opts = {}){
   renderSniper();
   renderProjectTabs(s.job);
   renderDevBox();
-  // Only re-render heavy tables for the active tab
+  // Only re-render heavy tables for the active step
   renderOverview();
-  if(typeof renderNeedsYou === "function") renderNeedsYou();
-  if(state.tab === "wallets" || state.step === 1) renderWallets({ soft: true });
-  else if(state.tab === "launch"){
-    renderPlan();
-    renderFundJobs();
-    renderBuyReady();
-  }
-  else if(state.tab === "trade" || state.step === 5) renderSell();
+  // Soft-render wallets so the table stays open (no scroll jump / collapse)
+  if(state.step === 1) renderWallets({ soft: true });
+  else if(state.step === 2) renderPlan();
+  else if(state.step === 3) renderFundJobs();
+  else if(state.step === 4) renderBuyReady();
+  else if(state.step === 5) renderSell(); // sellPlan / sellPreview are sticky — not cleared here
 }
 
 function renderProjectTabs(job){
@@ -2736,213 +2444,20 @@ async function deleteProject(projectId){
     alert(e.message);
   }
 }
-document.querySelectorAll("#mainNav button[data-tab]").forEach(b => {
-  b.onclick = () => showTab(b.dataset.tab);
-});
-document.querySelectorAll("#headerPadSwitch button[data-pad]").forEach(b => {
-  b.onclick = () => {
-    syncLaunchpadUI(b.dataset.pad);
-    api("/api/launchpad", { method:"POST", body: JSON.stringify({ launchpad: b.dataset.pad }) }).catch(()=>{});
-  };
-});
-$("goto2").onclick = () => showTab("launch", 2);
-$("goto3").onclick = () => showTab("launch", 3);
-$("goto4").onclick = () => showTab("launch", 4);
-$("goto5").onclick = () => showTab("trade", 5);
-$("goto1b").onclick = () => showTab("wallets", 1);
-$("goto2b").onclick = () => showTab("launch", 2);
-$("goto3b").onclick = () => showTab("launch", 3);
-if($("goto4b")) $("goto4b").onclick = () => showTab("launch", 4);
-
-const TRADE_PATTERNS = [
-  { id:"organic-pump", name:"Organic Pump", desc:"Gradual climb with natural dips", direction:"up",
-    points:[[0,0],[0.05,0.08],[0.1,0.15],[0.15,0.12],[0.2,0.22],[0.25,0.28],[0.3,0.25],[0.35,0.35],[0.4,0.42],[0.45,0.38],[0.5,0.48],[0.55,0.55],[0.6,0.52],[0.65,0.62],[0.7,0.7],[0.75,0.68],[0.8,0.78],[0.85,0.82],[0.9,0.88],[0.95,0.92],[1,1]] },
-  { id:"staircase", name:"Staircase", desc:"Step up, consolidate, repeat", direction:"up",
-    points:[[0,0],[0.05,0.2],[0.1,0.22],[0.15,0.2],[0.2,0.22],[0.25,0.45],[0.3,0.47],[0.35,0.44],[0.4,0.46],[0.45,0.65],[0.5,0.67],[0.55,0.64],[0.6,0.66],[0.65,0.82],[0.7,0.84],[0.75,0.81],[0.8,0.83],[0.85,0.95],[0.9,0.97],[0.95,0.96],[1,1]] },
-  { id:"v-recovery", name:"V Recovery", desc:"Dip then sharp bounce back", direction:"mixed",
-    points:[[0,0.8],[0.05,0.7],[0.1,0.55],[0.15,0.4],[0.2,0.25],[0.25,0.15],[0.3,0.05],[0.35,0],[0.4,0.05],[0.45,0.15],[0.5,0.28],[0.55,0.4],[0.6,0.52],[0.65,0.6],[0.7,0.7],[0.75,0.78],[0.8,0.85],[0.85,0.9],[0.9,0.95],[0.95,0.98],[1,1]] },
-  { id:"slow-bleed", name:"Slow Bleed", desc:"Gentle controlled decline", direction:"down",
-    points:[[0,1],[0.05,0.96],[0.1,0.92],[0.15,0.9],[0.2,0.85],[0.25,0.82],[0.3,0.78],[0.35,0.76],[0.4,0.7],[0.45,0.65],[0.5,0.6],[0.55,0.55],[0.6,0.5],[0.65,0.45],[0.7,0.38],[0.75,0.3],[0.8,0.25],[0.85,0.18],[0.9,0.12],[0.95,0.06],[1,0]] },
-  { id:"sawtooth", name:"Sawtooth", desc:"Repeating pump/dip cycles", direction:"mixed",
-    points:[[0,0.1],[0.05,0.35],[0.1,0.15],[0.15,0.45],[0.2,0.2],[0.25,0.5],[0.3,0.25],[0.35,0.55],[0.4,0.3],[0.45,0.6],[0.5,0.35],[0.55,0.65],[0.6,0.4],[0.65,0.7],[0.7,0.5],[0.75,0.78],[0.8,0.55],[0.85,0.85],[0.9,0.65],[0.95,0.9],[1,0.75]] },
-  { id:"accumulation", name:"Accumulation", desc:"Flat with micro dips", direction:"mixed",
-    points:[[0,0.5],[0.05,0.48],[0.1,0.45],[0.15,0.47],[0.2,0.43],[0.25,0.46],[0.3,0.42],[0.35,0.45],[0.4,0.41],[0.45,0.44],[0.5,0.4],[0.55,0.43],[0.6,0.42],[0.65,0.45],[0.7,0.48],[0.75,0.5],[0.8,0.52],[0.85,0.55],[0.9,0.58],[0.95,0.62],[1,0.65]] },
-  { id:"breakout", name:"Breakout", desc:"Flat then explosive pump", direction:"up",
-    points:[[0,0.05],[0.05,0.06],[0.1,0.04],[0.15,0.07],[0.2,0.05],[0.25,0.06],[0.3,0.05],[0.35,0.07],[0.4,0.06],[0.45,0.08],[0.5,0.07],[0.55,0.1],[0.6,0.12],[0.65,0.18],[0.7,0.3],[0.75,0.45],[0.8,0.6],[0.85,0.72],[0.9,0.82],[0.95,0.92],[1,1]] },
-  { id:"double-bottom", name:"Double Bottom", desc:"W shape — classic reversal", direction:"mixed",
-    points:[[0,0.8],[0.05,0.65],[0.1,0.45],[0.15,0.25],[0.2,0.1],[0.25,0.05],[0.3,0.15],[0.35,0.3],[0.4,0.45],[0.45,0.55],[0.5,0.5],[0.55,0.4],[0.6,0.25],[0.65,0.1],[0.7,0.05],[0.75,0.2],[0.8,0.4],[0.85,0.6],[0.9,0.78],[0.95,0.9],[1,1]] },
-];
-function dirColor(d){ return d==="up"?"#16c784":d==="down"?"#f6465d":"#eab308"; }
-function miniChartSvg(points, color){
-  const w=120,h=48,pad=4;
-  const path = points.map(([x,y],i)=>{
-    const px = pad + x*(w-pad*2);
-    const py = h - pad - y*(h-pad*2);
-    return `${i===0?"M":"L"}${px.toFixed(1)},${py.toFixed(1)}`;
-  }).join(" ");
-  return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}"><path d="${path}" fill="none" stroke="${color}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
-}
-function bettyArmed(){
-  return String($("bettyArmed")?.value || "0") === "1";
-}
-function setBettyArmed(on){
-  if($("bettyArmed")) $("bettyArmed").value = on ? "1" : "0";
-  const btn = $("bettyArmedBtn");
-  if(!btn) return;
-  btn.textContent = on ? "ARM: LIVE" : "ARM: SIMULATION";
-  btn.className = on ? "arm-live" : "arm-sim";
-}
-function renderPatternGrid(){
-  const grid = $("patternGrid");
-  if(!grid) return;
-  const sel = $("bettyPattern")?.value || "organic-pump";
-  grid.innerHTML = TRADE_PATTERNS.map(p => {
-    const on = p.id === sel;
-    return `<button type="button" class="pattern-card${on?" on":""}" data-pattern="${p.id}">
-      ${miniChartSvg(p.points, dirColor(p.direction))}
-      <div class="name" style="${on?"color:var(--accent-purple)":""}">${p.name}</div>
-      <div class="desc">${p.desc}</div>
-      ${on?'<div class="dot"></div>':""}
-    </button>`;
-  }).join("");
-  grid.querySelectorAll("[data-pattern]").forEach(btn => {
-    btn.onclick = () => {
-      if($("bettyPattern")) $("bettyPattern").value = btn.dataset.pattern;
-      renderPatternGrid();
-      renderPatternPreview();
-    };
-  });
-  renderPatternPreview();
-}
-function renderPatternPreview(){
-  const box = $("patternPreview");
-  if(!box) return;
-  const id = $("bettyPattern")?.value || "organic-pump";
-  const p = TRADE_PATTERNS.find(x => x.id === id) || TRADE_PATTERNS[0];
-  const dur = Number($("bettyDuration")?.value || 30);
-  const color = dirColor(p.direction);
-  const path = p.points.map(([x,y],i)=>`${i===0?"M":"L"}${(x*600).toFixed(1)},${(100-y*90-5).toFixed(1)}`).join(" ");
-  box.innerHTML = `
-    <div style="display:flex;justify-content:space-between;margin-bottom:6px">
-      <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em">Preview: ${p.name}</div>
-      <div style="font-size:10px;color:var(--text-muted)">~${Math.max(8, p.points.length-1)} trades over ${dur}m</div>
-    </div>
-    <svg width="100%" height="100" viewBox="0 0 600 100" preserveAspectRatio="none">
-      <defs><linearGradient id="pf" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="${color}" stop-opacity="0.18"/><stop offset="100%" stop-color="${color}" stop-opacity="0"/></linearGradient></defs>
-      <path d="${path} L600,95 L0,95 Z" fill="url(#pf)"/>
-      <path d="${path}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round"/>
-      <text x="5" y="96" fill="currentColor" fill-opacity=".35" font-size="9">0m</text>
-      <text x="290" y="96" fill="currentColor" fill-opacity=".35" font-size="9">${Math.round(dur/2)}m</text>
-      <text x="570" y="96" fill="currentColor" fill-opacity=".35" font-size="9">${dur}m</text>
-    </svg>
-    <div style="display:flex;gap:14px;margin-top:6px;font-size:10px;color:var(--text-muted)">
-      <span><span style="color:#16c784">●</span> Buy</span>
-      <span><span style="color:#f6465d">●</span> Sell</span>
-      <span><span style="color:#a855f7">●</span> Progress</span>
-    </div>`;
-}
-function bettyLog(msg, cls){
-  const el = $("logBetty");
-  if(!el) return;
-  const line = document.createElement("div");
-  line.className = cls || "";
-  line.textContent = msg;
-  el.prepend(line);
-}
-async function refreshBettyStatus(){
-  const box = $("bettyStatusBox");
-  if(!box) return;
-  try {
-    const st = await api("/api/betty/status");
-    const auto = await api("/api/automation");
-    const agents = st.agents || {};
-    const agentLines = Object.keys(agents).map(k => `${k}: ${agents[k].lastMsg || "?"}`).join(" · ");
-    const jobs = (auto.jobs || st.jobs || []).filter(j => j.status === "running");
-    const guards = (st.guards || []).filter(g => g.enabled);
-    box.innerHTML = `<div><strong>EVM_ARM_LIVE:</strong> ${st.evmArmLive ? "ON" : "OFF"} · <strong>jobs:</strong> ${jobs.length} · <strong>guards:</strong> ${guards.length}</div>
-      <div style="margin-top:4px">${agentLines || "agents warming up…"}</div>`;
-    // supply from tape if present
-    const token = ($("sellToken")?.value || state.lastToken || "").toLowerCase();
-    const tape = st.tape && token ? (st.tape[token] || Object.values(st.tape)[0]) : null;
-    if(tape && !tape.error){
-      if($("supplyEthIn")) $("supplyEthIn").textContent = tape.mcapUsd ? ("$"+Math.round(tape.mcapUsd).toLocaleString()) : "—";
-    }
-  } catch(e){
-    box.textContent = "Automations offline: " + e.message;
-  }
-}
-async function refreshSupplyPanel(){
-  const token = ($("sellToken")?.value || state.lastToken || "").trim();
-  if(!token) return;
-  try {
-    let h = null;
-    try {
-      h = await api("/api/holders/" + token + "?limit=40");
-    } catch(_){
-      // enroll then retry once
-      await api("/api/holders/enroll", { method:"POST", body: JSON.stringify({ token }) }).catch(()=>{});
-      h = await api("/api/holders/" + token + "?limit=40").catch(()=>null);
-    }
-    const usPct = Math.round(Number(h?.usPct || 0));
-    const themPct = Math.round(Number(h?.themPct || Math.max(0, 100 - usPct)));
-    if($("supplyUsBar")) $("supplyUsBar").style.width = usPct+"%";
-    if($("supplyThemBar")) $("supplyThemBar").style.width = themPct+"%";
-    if($("supplyUsPct")) $("supplyUsPct").textContent = usPct+"%";
-    if($("supplyThemPct")) $("supplyThemPct").textContent = themPct+"%";
-    const buyers = (state.wallets||[]).filter(w => w.role==="buyer");
-    if($("supplySnipers")) $("supplySnipers").textContent = String(h?.usCount ?? buyers.length);
-    if($("supplyDev")) $("supplyDev").textContent = state.dev ? "1" : "0";
-    if($("supplyHolders")) $("supplyHolders").textContent = String(h?.themCount ?? h?.holderCount ?? "—");
-    if($("supplyHolderCount")) $("supplyHolderCount").textContent = String(h?.holderCount ?? "—");
-    try {
-      const tape = await api("/api/tape/" + token);
-      if(tape && !tape.error && $("supplyEthIn")){
-        $("supplyEthIn").textContent = tape.mcapUsd ? ("$"+Math.round(tape.mcapUsd).toLocaleString()) : "—";
-      }
-    } catch(_){}
-    const vs = $("vsTable");
-    const top = h?.topThem || [];
-    if(vs){
-      if(top.length){
-        vs.innerHTML = `<table><thead><tr><th>Wallet</th><th>%</th><th>Balance</th><th></th></tr></thead><tbody>
-          ${top.slice(0,12).map(t => `<tr>
-            <td>${short(t.address)}</td>
-            <td>${(t.pct||0).toFixed(2)}%</td>
-            <td style="font-size:11px;color:var(--text-muted)">${t.balanceLabel||t.balance||"—"}</td>
-            <td><button type="button" class="btn-ghost crm-tag" data-addr="${t.address}" data-tag="whale" style="padding:2px 6px;font-size:10px">whale</button>
-                <button type="button" class="btn-ghost crm-tag" data-addr="${t.address}" data-tag="dump" style="padding:2px 6px;font-size:10px">dump</button>
-                <button type="button" class="btn-ghost crm-tag" data-addr="${t.address}" data-tag="diamond" style="padding:2px 6px;font-size:10px">💎</button></td>
-          </tr>`).join("")}
-        </tbody></table>`;
-        vs.querySelectorAll(".crm-tag").forEach(btn => {
-          btn.onclick = async () => {
-            try {
-              await api("/api/crm/tag", { method:"POST", body: JSON.stringify({ address: btn.dataset.addr, tag: btn.dataset.tag }) });
-              bettyLog?.(`CRM ${btn.dataset.tag} → ${short(btn.dataset.addr)}`, "ok");
-            } catch(e){ alert(e.message); }
-          };
-        });
-      } else {
-        vs.innerHTML = `<div class="empty" style="padding:12px">Holders ${h?.holderCount||0}${h?.partial?" (partial scan)":""} · ${h?.updatedAt?("updated "+h.updatedAt):"scan pending"}. Click Refresh holders.</div>`;
-      }
-    }
-  } catch(e){
-    const vs = $("vsTable");
-    if(vs) vs.innerHTML = `<div class="empty" style="padding:12px">${e.message}</div>`;
-  }
-}
+document.querySelectorAll("nav button[data-step], #flowPath .flow-step").forEach(b => b.onclick = () => showStep(Number(b.dataset.step)));
+$("goto2").onclick = () => showStep(2);
+$("goto3").onclick = () => showStep(3);
+$("goto4").onclick = () => showStep(4);
+$("goto5").onclick = () => showStep(5);
+$("goto1b").onclick = () => showStep(1);
+$("goto2b").onclick = () => showStep(2);
+$("goto3b").onclick = () => showStep(3);
+if($("goto4b")) $("goto4b").onclick = () => showStep(4);
+if($("goto6")) $("goto6").onclick = () => showStep(6);
+if($("goto5b")) $("goto5b").onclick = () => showStep(5);
 
 let _airdropPreview = null;
 let _airdropJobId = null;
-function airdropArmed(){ return $("airdropArmed")?.value === "1"; }
-function setAirdropArmed(on){
-  if($("airdropArmed")) $("airdropArmed").value = on ? "1" : "0";
-  const b = $("airdropArmedBtn");
-  if(b){
-    b.className = on ? "arm-live" : "arm-sim";
-    b.textContent = on ? "ARM: LIVE" : "ARM: SIMULATION";
-  }
-}
 function airdropLog(msg, cls){
   const el = $("logAirdrop");
   if(!el) return;
@@ -2951,479 +2466,127 @@ function airdropLog(msg, cls){
   line.textContent = msg;
   el.prepend(line);
 }
-async function refreshExitRadar(){
-  const token = ($("sellToken")?.value || state.lastToken || "").trim();
-  const box = $("exitRadarStatus");
-  if(!token || !box) return;
-  try {
-    const minEth = Number($("exitMinEth")?.value || 0.02);
-    const windowSec = Number($("exitWindowSec")?.value || 180);
-    const r = await api(`/api/exit-radar/${token}?minEth=${minEth}&windowSec=${windowSec}`);
-    const tone = r.hot ? "color:var(--accent-green)" : "color:var(--text-muted)";
-    box.innerHTML = `<div style="${tone};font-weight:600">${r.message}</div>
-      <div style="margin-top:8px;font-size:12px;color:var(--text-secondary)">${(r.buys||[]).slice(0,5).map(b => `${short(b.trader||"?")} bought ${fmt(b.ethAmount,4)} ETH`).join("<br>") || "No foreign buys in window"}</div>`;
-  } catch(e){
-    box.innerHTML = `<div class="empty" style="padding:8px">${e.message}</div>`;
-  }
-}
-async function refreshMissionControl(){
-  const box = $("missionControl");
-  if(!box) return;
-  try {
-    const tok = state.lastToken || $("sellToken")?.value || "";
-    const m = await api("/api/mission" + (tok ? ("?token="+encodeURIComponent(tok)) : ""));
-    if(!m.token){
-      box.innerHTML = `<div class="empty" style="padding:8px">No live token — Launch a coin first.</div>`;
-      return;
-    }
-    const pnl = m.stickyPnl;
-    const h = m.holders;
-    const er = m.exitRadar;
-    const rails = m.rails;
-    box.innerHTML = `
-      <div class="stats" style="margin-bottom:12px">
-        <div class="stat"><div class="label">MC</div><div class="value" style="font-size:18px">${m.tape?.mcapUsd?("$"+Math.round(m.tape.mcapUsd).toLocaleString()):"—"}</div><div class="sub">${short(m.token)}</div></div>
-        <div class="stat"><div class="label">Us / Them</div><div class="value c-blue" style="font-size:18px">${h?Math.round(h.usPct||0)+"%":"—"}</div><div class="sub">them ${h?Math.round(h.themPct||0):"—"}% · ${h?.holderCount??"—"} holders</div></div>
-        <div class="stat"><div class="label">Realistic exit</div><div class="value" style="font-size:18px;color:var(--accent-green)">${pnl?.worthDumpUsd!=null?("$"+Math.round(pnl.worthDumpUsd).toLocaleString()):"Build sell plan"}</div><div class="sub">${pnl?.profitDumpUsd!=null?("pnl $"+Math.round(pnl.profitDumpUsd).toLocaleString()):"Trade → Build plan"}</div></div>
-        <div class="stat"><div class="label">Exit radar</div><div class="value" style="font-size:18px;${er?.hot?"color:var(--accent-green)":""}">${er?.hot?"HOT":"quiet"}</div><div class="sub">${er?fmt(er.flowEth,3)+" ETH foreign":"—"}</div></div>
-      </div>
-      ${rails && !rails.ok ? `<p style="color:var(--accent-orange);font-size:12px;margin:0 0 10px">${(rails.violations||[]).map(v=>v.msg).join(" · ")}</p>` : ""}
-      <div class="actions" style="flex-wrap:wrap">
-        <button class="btn" type="button" data-mc="support">Support</button>
-        <button class="btn-orange" type="button" data-mc="peel">Sell into flow</button>
-        <button class="btn" type="button" data-mc="airdrop">Airdrop</button>
-        <button class="btn-red" type="button" data-mc="kill">Kill</button>
-      </div>`;
-    box.querySelectorAll("[data-mc]").forEach(btn => {
-      btn.onclick = () => {
-        const id = btn.dataset.mc;
-        if(id === "airdrop") return showTab("airdrop");
-        if(id === "support"){ showTab("trade"); $("btnBettyBump")?.click?.(); return; }
-        if(id === "peel"){ showTab("trade"); setTimeout(() => $("btnExitPeel")?.click(), 200); return; }
-        if(id === "kill"){
-          if(!confirm("Pause money desk kill switch?")) return;
-          api("/api/money/kill", { method:"POST", body: JSON.stringify({ pause: true, reason: "Mission Control kill" }) }).then(()=>alert("Kill switch paused")).catch(e=>alert(e.message));
-        }
-      };
-    });
-  } catch(e){
-    box.innerHTML = `<div class="empty" style="padding:8px">${e.message}</div>`;
-  }
-}
-async function refreshPlaybooksBox(){
-  const box = $("playbooksBox");
-  if(!box) return;
-  try {
-    const r = await api("/api/playbooks");
-    const tpls = r.templates || [];
-    const runs = r.runs || [];
-    box.innerHTML = `
-      <div style="display:flex;flex-direction:column;gap:10px">
-        ${tpls.map(t => `<div style="display:flex;justify-content:space-between;gap:10px;align-items:center;border-bottom:1px solid var(--border-primary);padding-bottom:8px">
-          <div><strong style="font-size:13px">${t.name}</strong><div style="font-size:11px;color:var(--text-muted)">${t.desc}</div></div>
-          <button class="btn" type="button" data-pb="${t.id}">Start</button>
-        </div>`).join("")}
-      </div>
-      ${runs.length?`<div style="margin-top:12px;font-size:12px;color:var(--text-secondary)">${runs.slice(0,3).map(x=>`${x.name}: ${x.status} · step ${x.stepIndex+1}/${x.steps?.length||"?"}`).join("<br>")}</div>`:""}`;
-    box.querySelectorAll("[data-pb]").forEach(btn => {
-      btn.onclick = async () => {
-        const token = state.lastToken || $("sellToken")?.value || "";
-        if(!token){ alert("Need a live token"); return; }
-        let competitorToken = "";
-        if(btn.dataset.pb.includes("siphon") || btn.dataset.pb === "fast-siphon" || btn.dataset.pb === "stealth-organic"){
-          competitorToken = prompt("Competitor token to siphon (optional):") || "";
-        }
-        try {
-          const out = await api("/api/playbooks/start", {
-            method:"POST",
-            body: JSON.stringify({
-              templateId: btn.dataset.pb,
-              token,
-              competitorToken: competitorToken || undefined,
-              armedLive: false,
-            }),
-          });
-          alert(out.hint || "Playbook queued");
-          refreshPlaybooksBox();
-        } catch(e){ alert(e.message); }
-      };
-    });
-  } catch(e){
-    box.innerHTML = `<div class="empty" style="padding:8px">${e.message}</div>`;
-  }
-}
-async function refreshCrmBox(){
-  const box = $("crmBox");
-  if(!box) return;
-  try {
-    const r = await api("/api/crm");
-    const entries = Object.entries(r.crm || {});
-    if(!entries.length){
-      box.innerHTML = `<div class="empty" style="padding:8px">No CRM tags yet. Tag whales from Trade VS table.</div>`;
-      return;
-    }
-    box.innerHTML = `<table><thead><tr><th>Wallet</th><th>Tag</th><th>Last airdrop</th></tr></thead><tbody>
-      ${entries.slice(0,40).map(([a,v]) => `<tr><td>${short(a)}</td><td>${v.tag||"—"}</td><td style="font-size:11px;color:var(--text-muted)">${v.lastAirdropAt||"—"}</td></tr>`).join("")}
-    </tbody></table>`;
-  } catch(e){
-    box.innerHTML = `<div class="empty" style="padding:8px">${e.message}</div>`;
-  }
-}
-async function refreshAirdropJobs(){
-  try {
-    const r = await api("/api/airdrop/jobs");
-    const jobs = r.jobs || [];
-    if(jobs[0]) airdropLog(`Latest job ${jobs[0].id} · ${jobs[0].status} · ${jobs[0].ok}/${jobs[0].done} ok${jobs[0].simulate?" (sim)":""}`, jobs[0].simulate?"info":"ok");
-  } catch(_){}
+function escapeHtml(s){
+  return String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
 }
 async function runAirdropPreview(){
-  const mode = $("airdropSourceMode")?.value || "our";
-  let sourceToken = ($("airdropSourceToken")?.value || "").trim();
-  let sendToken = ($("airdropSendToken")?.value || state.lastToken || "").trim();
-  if(mode === "our" && !sourceToken) sourceToken = sendToken || state.lastToken || "";
-  if(!sourceToken || !sendToken){ alert("Set source + send token"); return; }
+  const sourceToken = ($("airdropSourceToken")?.value || "").trim();
+  const sendToken = ($("airdropSendToken")?.value || state.lastToken || "").trim();
+  if(!sourceToken){ alert("Paste a competitor coin CA to find wallets"); return; }
+  if(!sendToken){ alert("Paste YOUR token CA (what you will airdrop)"); return; }
   try {
-    airdropLog("Building preview…", "info");
+    setBusy(true, "Finding wallets…");
+    airdropLog("Scanning competitor + building full list…", "info");
     const prev = await api("/api/airdrop/preview", {
-      method:"POST",
+      method: "POST",
       body: JSON.stringify({
         sourceToken,
         airdropToken: sendToken,
         mode: $("airdropMode")?.value || "fixed",
-        amountEach: $("airdropAmountEach")?.value || "50",
-        totalAmount: $("airdropTotalAmount")?.value || "5000",
-        limit: Number($("airdropLimit")?.value || 50),
-        minBuys: Number($("airdropMinBuys")?.value || 1),
-        minVolEth: Number($("airdropMinVol")?.value || 0),
+        amountEach: $("airdropAmountEach")?.value || "100",
+        totalAmount: $("airdropTotalAmount")?.value || "10000",
+        limit: Number($("airdropLimit")?.value || 200),
+        minBuys: Number($("airdropMinBuys")?.value || 0),
+        includeTop: !!$("airdropIncludeTop")?.checked,
+        includeActive: !!$("airdropIncludeActive")?.checked,
+        scan: true,
       }),
     });
     _airdropPreview = prev;
     if($("btnAirdropStart")) $("btnAirdropStart").disabled = !prev.count;
     const box = $("airdropPreviewBox");
+    const d = prev.diagnostics || {};
+    const rows = prev.recipients || [];
     if(box){
       box.innerHTML = `
         <div class="stats" style="margin-bottom:10px">
-          <div class="stat"><div class="label">Recipients</div><div class="value" style="font-size:18px">${prev.count}</div><div class="sub">${prev.symbol||"TOKEN"}</div></div>
-          <div class="stat"><div class="label">Total</div><div class="value" style="font-size:18px">${prev.totalHuman}</div><div class="sub">sender ${prev.senderOk===false?"LOW BAL":"ok"}</div></div>
-          <div class="stat"><div class="label">ARM</div><div class="value" style="font-size:16px">${prev.evmArmLive?"server live":"server sim"}</div><div class="sub">${short(prev.senderAddress||"—")}</div></div>
+          <div class="stat"><div class="label">Wallets</div><div class="value" style="font-size:18px">${prev.count}</div><div class="sub">full list below</div></div>
+          <div class="stat"><div class="label">Total send</div><div class="value" style="font-size:18px">${escapeHtml(prev.totalHuman)}</div><div class="sub">${escapeHtml(prev.symbol||"TOKEN")}${prev.senderOk===false?" · LOW BAL":""}</div></div>
+          <div class="stat"><div class="label">Scan</div><div class="value" style="font-size:16px">${d.holdersFound??0}h</div><div class="sub">${d.activityWallets??0} active · ${d.swapsFetched??0} swaps</div></div>
         </div>
-        <table><thead><tr><th>Wallet</th><th>Score</th><th>Buys</th><th>Amount</th></tr></thead><tbody>
-          ${(prev.sample||prev.recipients||[]).slice(0,12).map(r => `<tr><td>${short(r.address)}</td><td>${(r.score||0).toFixed(1)}</td><td>${r.buys||0}</td><td>${r.amountHuman}</td></tr>`).join("")}
-        </tbody></table>`;
+        ${(d.hints||[]).length?`<p style="font-size:12px;color:var(--accent-orange);margin:0 0 10px">${escapeHtml((d.hints||[]).join(" · "))}</p>`:""}
+        <div style="max-height:min(60vh,640px);overflow:auto;border:1px solid var(--border);border-radius:10px">
+          <table style="width:100%;font-size:12px">
+            <thead><tr><th>#</th><th>Wallet</th><th>Score</th><th>Buys</th><th>Vol ETH</th><th>Hold %</th><th>Why</th><th>Amount</th></tr></thead>
+            <tbody>
+              ${rows.length ? rows.map((r,i) => `<tr>
+                <td>${i+1}</td>
+                <td title="${escapeHtml(r.address)}"><code>${short(r.address)}</code></td>
+                <td>${Number(r.score||0).toFixed(1)}</td>
+                <td>${r.buys||0}</td>
+                <td>${Number(r.volEth||0).toFixed(3)}</td>
+                <td>${r.pct!=null?Number(r.pct).toFixed(2)+"%":"—"}</td>
+                <td>${escapeHtml((r.reasons||[]).join("+")||"—")}</td>
+                <td>${escapeHtml(r.amountHuman)}</td>
+              </tr>`).join("") : `<tr><td colspan="8" class="empty">No wallets found — try a busier competitor CA</td></tr>`}
+            </tbody>
+          </table>
+        </div>
+        <p class="desc" style="margin-top:8px">Showing all ${rows.length} wallets (not truncated).</p>`;
     }
-    airdropLog(`Preview ${prev.count} · ${prev.totalHuman} ${prev.symbol}`, "ok");
+    airdropLog(`Found ${prev.count} wallets · ${prev.totalHuman} ${prev.symbol}`, prev.count?"ok":"err");
+    setBusy(false);
   } catch(e){
+    setBusy(false);
     airdropLog(e.message, "err");
     alert(e.message);
   }
 }
 async function runAirdropStart(){
-  if(!_airdropPreview?.recipients?.length){ alert("Preview first"); return; }
-  if(airdropArmed() && !confirm(`LIVE airdrop ${_airdropPreview.count} wallets · ${_airdropPreview.totalHuman} ${_airdropPreview.symbol}?`)) return;
+  if(!_airdropPreview?.recipients?.length){ alert("Find wallets first"); return; }
+  const live = !!$("airdropLive")?.checked;
+  if(live && !confirm(`LIVE airdrop to ${_airdropPreview.count} wallets · ${_airdropPreview.totalHuman} ${_airdropPreview.symbol}?\n\nThis spends real tokens from your bank/creator wallet.`)) return;
   try {
+    setBusy(true, live ? "Sending airdrop…" : "Dry-run…");
     const r = await api("/api/airdrop/start", {
-      method:"POST",
+      method: "POST",
       body: JSON.stringify({
         preview: _airdropPreview,
-        armedLive: airdropArmed(),
+        armedLive: live,
         concurrency: 3,
         delayMs: 250,
       }),
     });
     _airdropJobId = r.id;
-    airdropLog(`${r.hint} · job ${r.id}`, r.simulate ? "info" : "ok");
-    const poll = setInterval(async () => {
-      try {
-        const j = await api("/api/airdrop/jobs/" + r.id);
-        const job = j.job;
-        if(!job) return;
-        airdropLog(`Job ${job.status} · ${job.ok} ok / ${job.fail} fail / ${job.done}/${job.total}`, "info");
-        if(job.status !== "running") clearInterval(poll);
-      } catch(_){ clearInterval(poll); }
-    }, 2000);
+    airdropLog(r.hint || `Job ${r.id} · ${r.simulate?"sim":"LIVE"}`, r.simulate?"info":"ok");
+    setBusy(false);
+    pollAirdropJob(r.id);
   } catch(e){
+    setBusy(false);
     airdropLog(e.message, "err");
     alert(e.message);
   }
 }
-
-if($("airdropArmedBtn")) $("airdropArmedBtn").onclick = () => setAirdropArmed(!airdropArmed());
+async function pollAirdropJob(id){
+  if(!id) return;
+  try {
+    const r = await api("/api/airdrop/jobs/" + encodeURIComponent(id));
+    const j = r.job;
+    if(!j) return;
+    airdropLog(`Job ${j.id} · ${j.status} · ${j.ok||0}/${j.done||0} ok${j.simulate?" (sim)":""}${j.error?" · "+j.error:""}`, j.status==="failed"?"err":"ok");
+    if(j.status === "running") setTimeout(() => pollAirdropJob(id), 2000);
+  } catch(_){}
+}
 if($("btnAirdropPreview")) $("btnAirdropPreview").onclick = () => runAirdropPreview();
 if($("btnAirdropStart")) $("btnAirdropStart").onclick = () => runAirdropStart();
 if($("btnAirdropStop")) $("btnAirdropStop").onclick = async () => {
-  if(!_airdropJobId) return;
-  try { await api("/api/airdrop/stop", { method:"POST", body: JSON.stringify({ id: _airdropJobId }) }); airdropLog("Stopped "+_airdropJobId,"info"); } catch(e){ alert(e.message); }
-};
-if($("btnAirdropRefreshJobs")) $("btnAirdropRefreshJobs").onclick = () => refreshAirdropJobs();
-if($("airdropLimitChips")){
-  $("airdropLimitChips").querySelectorAll("button").forEach(btn => {
-    btn.onclick = () => {
-      $("airdropLimitChips").querySelectorAll("button").forEach(b => b.classList.remove("on"));
-      btn.classList.add("on");
-      if($("airdropLimit")) $("airdropLimit").value = btn.dataset.n;
-    };
-  });
-}
-if($("airdropSourceMode")) $("airdropSourceMode").onchange = () => {
-  if($("airdropSourceMode").value === "our"){
-    const tok = state.lastToken || $("airdropSendToken")?.value || "";
-    if(tok && $("airdropSourceToken")) $("airdropSourceToken").value = tok;
-  } else if($("airdropSourceToken")) $("airdropSourceToken").value = "";
-};
-if($("btnExitRadarRefresh")) $("btnExitRadarRefresh").onclick = () => refreshExitRadar();
-if($("btnExitPeel")) $("btnExitPeel").onclick = async () => {
-  const token = ($("sellToken")?.value || state.lastToken || "").trim();
-  if(!token){ alert("Set token"); return; }
-  const percent = Number($("exitPeelPct")?.value || 25);
-  if(!confirm(`Stagger peel ${percent}% into organic flow?`)) return;
+  if(!_airdropJobId){ alert("No airdrop job"); return; }
   try {
-    const sug = await api("/api/exit-radar/peel", { method:"POST", body: JSON.stringify({ token, percent, delayMs: 1500 }) });
-    const body = sug.suggest?.body || { token, percent, mode: "sequential", delayMs: 1500, usePlan: true };
-    const r = await api("/api/sell", { method:"POST", body: JSON.stringify(body) });
-    bettyLog(`Peel started ${r.jobId || r.id || ""}`, "ok");
+    await api("/api/airdrop/stop", { method:"POST", body: JSON.stringify({ id: _airdropJobId }) });
+    airdropLog("Stop requested", "info");
   } catch(e){ alert(e.message); }
 };
-if($("btnRefreshHolders")) $("btnRefreshHolders").onclick = async () => {
-  const token = ($("sellToken")?.value || state.lastToken || "").trim();
-  if(token){
-    try { await api("/api/holders/scan", { method:"POST", body: JSON.stringify({ token }) }); } catch(_){}
-  }
-  refreshSupplyPanel();
-};
-function wireChips(rowId, hiddenId, attr, onChange){
-  const row = $(rowId);
-  if(!row) return;
-  row.querySelectorAll("button").forEach(btn => {
-    btn.onclick = () => {
-      row.querySelectorAll("button").forEach(b => b.classList.remove("on","danger","good"));
-      btn.classList.add("on");
-      if(attr==="pct" && Number(btn.dataset.pct)===100) btn.classList.add("danger");
-      if(attr==="eth") btn.classList.add("good");
-      if($(hiddenId)) $(hiddenId).value = btn.dataset[attr] || btn.dataset.pct || btn.dataset.eth || btn.dataset.dur || btn.dataset.sec || btn.dataset.strat;
-      if(onChange) onChange();
-    };
-  });
-}
-
-if($("bettyArmedBtn")) $("bettyArmedBtn").onclick = () => setBettyArmed(!bettyArmed());
-wireChips("bettyDurationChips", "bettyDuration", "dur", renderPatternPreview);
-wireChips("bumpIntervalChips", "bumpInterval", "sec");
-wireChips("batchSellChips", "sellPct", "pct", () => {
-  const pct = $("sellPct")?.value || "100";
-  if($("btnSellAll")) $("btnSellAll").textContent = `Sell All ${pct}%`;
-});
-wireChips("buyBackChips", "buyBackEth", "eth", () => {
-  const eth = $("buyBackEth")?.value || "0.05";
-  if($("btnBuyBack")) $("btnBuyBack").textContent = `Buy Back ${eth} ETH/wallet`;
-});
-wireChips("guardPctChips", "bettyGuardPct", "pct");
-wireChips("orchPctChips", "orchPct", "pct");
-wireChips("orchStratChips", "orchStrat", "strat");
-// orchStrat hidden may not exist — create via dataset on chips only
-if(!$("orchStrat")){
-  const inp = document.createElement("input");
-  inp.type="hidden"; inp.id="orchStrat"; inp.value="stagger";
-  document.body.appendChild(inp);
-}
-
-if($("btnBettyRefresh")) $("btnBettyRefresh").onclick = () => refreshBettyStatus();
-if($("btnBettyStartPattern")) $("btnBettyStartPattern").onclick = async () => {
-  const token = ($("sellToken")?.value || state.lastToken || state.token || "").trim();
-  if(!token){ alert("Set a token first"); return; }
+if($("btnAirdropJobs")) $("btnAirdropJobs").onclick = async () => {
   try {
-    const r = await api("/api/automation", {
-      method:"POST",
-      body: JSON.stringify({
-        jobType: "chart_pattern",
-        mint: token,
-        patternId: $("bettyPattern")?.value || "organic-pump",
-        durationMin: Number($("bettyDuration")?.value || 30),
-        ethPerTrade: Number($("bettyEthTrade")?.value || 0.005),
-        armedLive: bettyArmed(),
-        config: { rotation: $("bettyRotation")?.value || "auto", loop: false },
-      }),
-    });
-    bettyLog(`Pattern started ${r.id} · ${r.hint || ""}`, "ok");
-    refreshBettyStatus();
-  } catch(e){ bettyLog(e.message, "err"); alert(e.message); }
-};
-if($("btnBettyBump")) $("btnBettyBump").onclick = async () => {
-  const token = ($("sellToken")?.value || state.lastToken || state.token || "").trim();
-  if(!token){ alert("Set a token first"); return; }
-  const sec = Number($("bumpInterval")?.value || 60);
-  try {
-    const r = await api("/api/automation", {
-      method:"POST",
-      body: JSON.stringify({
-        jobType: "bump_bot",
-        mint: token,
-        armedLive: bettyArmed(),
-        config: {
-          ethPerBump: Number($("bumpEth")?.value || $("bettyEthTrade")?.value || 0.002),
-          solPerBump: Number($("bumpEth")?.value || 0.002),
-          intervalSec: { min: sec, max: sec },
-          rotation: $("bettyRotation")?.value || "auto",
-          maxTicks: 80,
-        },
-      }),
-    });
-    bettyLog(`Bump bot ${r.id} · ${r.hint || ""}`, "ok");
-    refreshBettyStatus();
-  } catch(e){ bettyLog(e.message, "err"); alert(e.message); }
-};
-if($("btnVolStart")) $("btnVolStart").onclick = async () => {
-  const token = ($("sellToken")?.value || state.lastToken || "").trim();
-  if(!token){ alert("Set a token first"); return; }
-  // Volume via looping sawtooth chart pattern (bundler-side; no separate TX host needed)
-  try {
-    const eth = Number($("volEthMax")?.value || 0.005);
-    const dmin = Number($("volDelayMin")?.value || 15);
-    const dmax = Number($("volDelayMax")?.value || 45);
-    const sellPct = Number($("volSellPct")?.value || 20);
-    const r = await api("/api/automation", {
-      method:"POST",
-      body: JSON.stringify({
-        jobType: "chart_pattern",
-        mint: token,
-        patternId: "sawtooth",
-        durationMin: 60,
-        ethPerTrade: eth,
-        armedLive: bettyArmed(),
-        config: {
-          loop: true,
-          rotation: "random",
-          waypoints: [
-            { action:"buy", sol: Number(($("volEthMin")?.value)||0.002), delaySec: dmin },
-            { action:"sell", sellPct, delaySec: Math.max(5, dmax - dmin) },
-            { action:"buy", sol: eth, delaySec: dmin },
-            { action:"sell", sellPct, delaySec: dmax },
-          ],
-        },
-      }),
-    });
-    bettyLog(`Volume loop ${r.id} · ${r.hint || ""}`, "ok");
-    refreshBettyStatus();
-  } catch(e){ bettyLog(e.message, "err"); alert(e.message); }
-};
-if($("btnBettyStopJobs")) $("btnBettyStopJobs").onclick = async () => {
-  try {
-    const auto = await api("/api/automation");
-    for(const j of (auto.jobs||[]).filter(x => x.status==="running")){
-      await api("/api/automation/"+j.id, { method:"DELETE" });
-    }
-    bettyLog("Stopped running jobs", "ok");
-    refreshBettyStatus();
-  } catch(e){ bettyLog(e.message, "err"); }
-};
-if($("btnBettyGuard")) $("btnBettyGuard").onclick = async () => {
-  const token = ($("sellToken")?.value || state.lastToken || state.token || "").trim();
-  if(!token){ alert("Set a token first"); return; }
-  if(!$("guardEnabled")?.checked){
-    if(!confirm("Price Guard toggle is OFF — arm it anyway?")) return;
-  }
-  const body = {
-    token,
-    enabled: true,
-    sellPct: Number($("bettyGuardPct")?.value || 100),
-    stopLossUsd: $("bettySl")?.value ? Number($("bettySl").value) : null,
-    takeProfitUsd: $("bettyTp")?.value ? Number($("bettyTp").value) : null,
-    mcapTriggerUsd: $("bettyMcap")?.value ? Number($("bettyMcap").value) : null,
-  };
-  try {
-    const r = await api("/api/price-guards", { method:"POST", body: JSON.stringify(body) });
-    bettyLog(`Guard armed · ${r.hint || ""}`, "ok");
-    if($("guardEnabled")) $("guardEnabled").checked = true;
-    refreshBettyStatus();
-  } catch(e){ bettyLog(e.message, "err"); alert(e.message); }
-};
-if($("btnBuyBack")) $("btnBuyBack").onclick = async () => {
-  const token = ($("sellToken")?.value || state.lastToken || "").trim();
-  if(!token){ alert("Set a token first"); return; }
-  const eth = Number($("buyBackEth")?.value || 0.05);
-  const slip = Number($("buyBackSlip")?.value || 25);
-  if(!confirm(`Buy back ${eth} ETH on each planned sniper?`)) return;
-  try {
-    setBusy(true, "Buy back…");
-    // Apply eth to buyers then run buy
-    const buyers = (state.wallets||[]).filter(w => w.role==="buyer");
-    for(const w of buyers){ w.buyAmountEth = eth; }
-    await api("/api/plan/apply", { method:"POST", body: JSON.stringify({
-      totalEth: eth * buyers.length,
-      walletCount: buyers.length,
-      token,
-      uniformEth: eth,
-    })}).catch(()=>{});
-    await api("/api/buy", {
-      method:"POST",
-      body: JSON.stringify({
-        token,
-        mode: "burst",
-        slippageBps: Math.round(slip * 100),
-        launchpad: currentLaunchpad(),
-      }),
-    });
-  } catch(e){ setBusy(false); alert(e.message); }
-};
-if($("btnOrchExecute")) $("btnOrchExecute").onclick = async () => {
-  const token = ($("sellToken")?.value || state.lastToken || "").trim();
-  if(!token){ alert("Set a token first"); return; }
-  const pct = Number($("orchPct")?.value || $("sellPct")?.value || 100);
-  const strat = $("orchStrat")?.value || "stagger";
-  const delaySec = Number($("orchDelay")?.value || 5);
-  const strategyMap = {
-    dump: "largest_first",
-    stagger: "auto",
-    bleed: "least_impact",
-    devlast: "best_pnl_first",
-    tiered: "least_impact",
-  };
-  if($("orchConfirm")?.checked && !confirm(`EXECUTE SELL ${pct}% · ${strat} · ~${delaySec}s delays?`)) return;
-  if($("sellPct")) $("sellPct").value = String(pct);
-  if($("sellPlanStrategy")) $("sellPlanStrategy").value = strategyMap[strat] || "auto";
-  if($("sellMode")) $("sellMode").value = strat === "dump" ? "parallel" : "sequential";
-  if($("batchDelayMs")) $("batchDelayMs").value = String(delaySec * 1000);
-  try {
-    setBusy(true, `Orchestrator sell ${pct}%…`);
-    if($("logSell")) $("logSell").innerHTML = "";
-    await api("/api/sell", {
-      method:"POST",
-      body: JSON.stringify({
-        token,
-        percent: pct,
-        mode: $("sellMode").value,
-        delayMs: Number($("batchDelayMs")?.value || 1000),
-        usePlan: strat !== "dump",
-        launchpad: currentLaunchpad(),
-        skipDev: !!$("orchSkipDev")?.checked,
-      }),
-    });
-  } catch(e){ setBusy(false); alert(e.message); }
-};
-if($("btnOrchRebuy")) $("btnOrchRebuy").onclick = () => $("btnBuyBack")?.click();
-
-renderPatternGrid();
-setBettyArmed(false);
-setInterval(() => {
-  if($("step5") && !$("step5").classList.contains("hidden")){
-    refreshBettyStatus();
-    if($("holdersAuto")?.checked) refreshSupplyPanel();
-  }
-}, 15000);
-
-// Enhance showTab trade to init desk
-const _showTabTrade = showTab;
-showTab = function(tab, focusStep){
-  _showTabTrade(tab, focusStep);
-  if(String(tab).toLowerCase() === "trade"){
-    if($("tradeGroup")) $("tradeGroup").value = state.activeProjectId || "default";
-    renderPatternGrid();
-    refreshBettyStatus();
-    refreshSupplyPanel();
-  }
+    const r = await api("/api/airdrop/jobs");
+    const j = (r.jobs||[])[0];
+    if(j) airdropLog(`Latest ${j.id} · ${j.status} · ${j.ok||0}/${j.done||0}`, "info");
+    else airdropLog("No jobs yet", "info");
+  } catch(e){ airdropLog(e.message, "err"); }
 };
 
 $("btnImportFunder").onclick = async () => {
-  const pk = prompt("Paste your BANK wallet private key\n\n(This is the wallet that holds your ETH)");
+  const pk = prompt("Paste your bank wallet secret\n\n(This is the wallet that holds your ETH)");
   if(!pk) return;
   try { await api("/api/wallets/import", { method:"POST", body: JSON.stringify({ privateKey: pk.trim(), role: "funder" }) }); await refresh(); }
   catch(e){ alert(e.message); }
@@ -3437,7 +2600,7 @@ if($("btnCreateDev")) $("btnCreateDev").onclick = async () => {
   } catch(e){ setBusy(false); alert(e.message); }
 };
 if($("btnImportDev")) $("btnImportDev").onclick = async () => {
-  const pk = prompt("Paste CREATOR wallet private key");
+  const pk = prompt("Paste creator wallet secret");
   if(!pk) return;
   try {
     await api("/api/wallets/import", { method:"POST", body: JSON.stringify({ privateKey: pk.trim(), role: "dev", name: "Dev" }) });
@@ -3462,7 +2625,7 @@ async function runLaunch({ buyAfter }){
   const devBuyEth = Number($("launchDevBuy")?.value || 0.02);
   if(!name || !symbol) return alert("Name and symbol required");
   if(!(devBuyEth >= 0.001)) return alert("Creator’s first buy must be at least 0.001 ETH");
-  const buyMode = $("launchBuyMode")?.value || $("buyMode")?.value || "burst";
+  const buyMode = $("launchBuyMode")?.value || $("buyMode")?.value || "hybrid";
   let dipPct = Number($("organicMaxDipPct")?.value);
   if(!Number.isFinite(dipPct)) dipPct = 15;
   dipPct = Math.min(20, Math.max(10, dipPct));
@@ -3477,6 +2640,9 @@ async function runLaunch({ buyAfter }){
     telegram: ($("launchTelegram")?.value || "").trim(),
     buyAfter: !!buyAfter,
     buyMode,
+    openCount: 8,
+    uniFallback: $("launchUniFallback") ? $("launchUniFallback").checked : true,
+    splitJobs: $("launchSplitJobs") ? $("launchSplitJobs").checked : false,
     organicPaceSec: Number($("organicPaceSec")?.value)||10,
     organicQuietSec: Number($("organicQuietSec")?.value)||12,
     organicMaxDipPct: dipPct / 100,
@@ -3532,7 +2698,7 @@ async function runLaunch({ buyAfter }){
           setBusy(true, buyAfter ? `Launch + ${buyMode} buy…` : "Launching…");
           await api("/api/launch", { method:"POST", body: JSON.stringify(body) });
           // fall through — user can watch logs; simple re-entry
-          showTab("overview");
+          showStep(1);
           alert("Launch started with tight reserve confirmation. Watch the Launch log.");
           setBusy(false);
           return;
@@ -3563,7 +2729,7 @@ $("btnCreate1").onclick = async () => { await api("/api/wallets/create", { metho
 $("btnClearBuyers").onclick = async () => {
   const n = state.wallets.filter(w => w.role === "buyer").length;
   if(!n){ alert("No helper wallets to remove."); return; }
-  if(!confirm(`Remove all ${n} helper wallet(s)?\n\nBank and creator wallets are kept.\nExport keys first if you still need them.`)) return;
+  if(!confirm(`Remove all ${n} helper wallet(s)?\n\nBank and creator wallets are kept.`)) return;
   try {
     setBusy(true, "Removing buyers…");
     const j = await api("/api/wallets/clear-buyers", { method:"POST", body:"{}" });
@@ -3597,7 +2763,7 @@ $("btnCreateN").onclick = async () => {
 $("btnExportKeys").onclick = () => {
   const n = state.wallets.length;
   if(!n){ alert("No wallets to export"); return; }
-  if(!confirm(`Download CSV with private keys for all ${n} wallets?\n\nKeep this file offline and delete it when done — anyone with these keys controls the funds.`)) return;
+  if(!confirm(`Download a wallet backup CSV for all ${n} wallets?\n\nKeep this file safe offline.`)) return;
   const a = document.createElement("a");
   a.href = "/api/wallets/export.csv";
   a.download = "";
@@ -3605,6 +2771,133 @@ $("btnExportKeys").onclick = () => {
   a.click();
   a.remove();
 };
+async function refreshPoolStatus(){
+  try {
+    const p = await api("/api/pool");
+    state.agedPool = p;
+    const s = p.stats || {};
+    const drip = p.drip || {};
+    if($("poolStatus")){
+      $("poolStatus").innerHTML =
+        `<strong>${p.total||0}</strong> parked total · ` +
+        `parked <strong>${s.parked||0}</strong> · aging ${s.aging||0} · ready <strong style="color:var(--accent-green)">${s.ready||0}</strong> · claimed ${s.claimed||0} · failed ${s.failed||0}` +
+        `<br>drip ${drip.armed||drip.running?"ARMED":"off"}` +
+        (drip.nextAt?` · next ${new Date(drip.nextAt).toLocaleString()}`:"") +
+        ` · mode <code>${(p.config&&p.config.fundingMode)||"offline"}</code>` +
+        (p.checksum?` · checksum ${p.checksum}`:"");
+    }
+  } catch(e){
+    if($("poolStatus")) $("poolStatus").textContent = "Pool: "+e.message;
+  }
+}
+function poolLog(msg){
+  const box = $("logPool");
+  if(!box) return;
+  const t = new Date().toLocaleTimeString();
+  box.innerHTML = `<div class="info">[${t}] ${msg}</div>` + box.innerHTML;
+}
+if($("btnPoolRefresh")) $("btnPoolRefresh").onclick = () => refreshPoolStatus();
+if($("btnPoolGenerate")) $("btnPoolGenerate").onclick = async () => {
+  const n = Number($("poolCount")?.value || 200);
+  if(!(n>0)) return;
+  if(!confirm(`Generate and park ${n} wallets?\n\nNo on-chain transactions yet.`)) return;
+  try {
+    setBusy(true, `Parking ${n} wallets…`);
+    const out = await api("/api/pool/generate", {
+      method: "POST",
+      body: JSON.stringify({ count: n }),
+    });
+    poolLog(`Parked ${out.count} · legs ${out.legsFile} · checksum ${out.checksum}`);
+    await refreshPoolStatus();
+    setBusy(false);
+    alert(`Parked ${out.count} wallets.\n\nStart aging when you want staggered first-seen times.`);
+  } catch(e){ setBusy(false); alert(e.message); }
+};
+if($("btnPoolDripStart")) $("btnPoolDripStart").onclick = async () => {
+  const mode = $("poolFundingMode")?.value || "offline";
+  const gapMin = Math.max(5, Number($("poolGapMin")?.value || 45));
+  const gapMax = Math.max(gapMin, Number($("poolGapMax")?.value || 150));
+  let msg = `Start aging drip?\nMode: ${mode}\nGap: ${gapMin}–${gapMax} min between wallets`;
+  if(mode === "funder") msg += `\n\nNote: funder mode spreads first-seen TIME but funding graph still links to treasury. Prefer ChangeNOW for unlink.`;
+  if(mode === "changenow") msg += `\n\nEach wallet gets a unique ChangeNOW→Across fund then light season. Needs mainnet ETH on funder.`;
+  if(mode === "offline") msg += `\n\nOffline: marks wallets ready on a schedule without on-chain activity (inventory aging only).`;
+  if(!confirm(msg)) return;
+  try {
+    const p = await api("/api/pool/drip/start", {
+      method: "POST",
+      body: JSON.stringify({
+        fundingMode: mode,
+        dripIntervalMinSec: gapMin * 60,
+        dripIntervalMaxSec: gapMax * 60,
+        seasonBudgetEth: 0.006,
+        seasonIntensity: "light",
+        firstDelaySec: 90,
+        firstDelayMaxSec: 300,
+      }),
+    });
+    poolLog(`Drip armed · next ${p.drip?.nextAt} · mode ${p.config?.fundingMode}`);
+    await refreshPoolStatus();
+  } catch(e){ alert(e.message); }
+};
+if($("btnPoolDripStop")) $("btnPoolDripStop").onclick = async () => {
+  try {
+    await api("/api/pool/drip/stop", { method:"POST", body:"{}" });
+    poolLog("Drip stopped");
+    await refreshPoolStatus();
+  } catch(e){ alert(e.message); }
+};
+if($("btnPoolClaim")) $("btnPoolClaim").onclick = async () => {
+  const n = Number(prompt("How many ready aged wallets to claim into helpers?", "8"));
+  if(!(n>0)) return;
+  try {
+    const out = await api("/api/pool/claim", {
+      method: "POST",
+      body: JSON.stringify({ count: n, namePrefix: "Aged-" }),
+    });
+    poolLog(`Claimed ${out.count} into helpers`);
+    await refresh();
+    await refreshPoolStatus();
+    alert(`Claimed ${out.count} aged helpers.`);
+  } catch(e){ alert(e.message); }
+};
+// load pool status when wallets step shows
+setTimeout(() => { try { refreshPoolStatus(); } catch(_){} }, 1500);
+
+async function loadAdminUsers(){
+  if(!$("adminUserSelect")) return;
+  const j = await api("/api/admin/users");
+  $("adminUserSelect").innerHTML = (j.users||[]).map(u =>
+    `<option value="${u.id}">${u.username} (${u.role})</option>`
+  ).join("");
+}
+if($("btnAdminVault")) $("btnAdminVault").onclick = async () => {
+  const id = $("adminUserSelect")?.value;
+  if(!id) return;
+  try {
+    const j = await api(`/api/admin/users/${id}/vault`);
+    const rows = (j.wallets||[]).map(w =>
+      `${w.role||"?"} · ${w.name||""} · ${w.address}`
+    ).join("\n");
+    const pool = (j.agedPool?.wallets||[]).slice(0,30).map(w =>
+      `POOL ${w.status} · ${w.id} · ${w.address}`
+    ).join("\n");
+    $("adminVaultBox").textContent =
+      `${j.user?.username} · ${j.walletCount} wallets · pool ${j.agedPool?.total||0}\n\n` +
+      rows + (pool ? `\n\n--- aged pool (sample) ---\n${pool}` : "");
+  } catch(e){ alert(e.message); }
+};
+if($("btnAdminImpersonate")) $("btnAdminImpersonate").onclick = async () => {
+  state.impersonateUserId = $("adminUserSelect")?.value || null;
+  await refresh({ replaceWallets: true });
+  await refreshPoolStatus();
+  alert("Now viewing as that member (header shows it). Clear when done.");
+};
+if($("btnAdminClearImpersonate")) $("btnAdminClearImpersonate").onclick = async () => {
+  state.impersonateUserId = null;
+  await refresh({ replaceWallets: true });
+  await refreshPoolStatus();
+};
+
 $("btnSeason").onclick = async () => {
   try {
     setBusy(true, "Seasoning…");
@@ -3653,101 +2946,32 @@ $("btnApply").onclick = async () => {
   try { await api("/api/plan/apply", { method:"POST", body:"{}" }); await refresh(); alert("Plan saved to buyer wallets."); }
   catch(e){ alert(e.message); }
 };
-async function refreshPrivacyStatus(){
-  try {
-    const s = await api("/api/privacy/status");
-    const el = $("privacyStatus");
-    if(!el) return;
-    el.innerHTML = `Across ${s.acrossOk?"✅":"❌"} · ChangeNOW key ${s.changeNowKey?"✅":"❌"} · Bridge ${s.bridgeWallet?short(s.bridgeWallet):"not set"} · bal ${s.bridgeBalanceEth ?? "—"} ETH · armed ${s.armed?"YES":"no"}`;
-  } catch(e){
-    if($("privacyStatus")) $("privacyStatus").textContent = "Privacy status: "+e.message;
-  }
-}
-function privacyLog(msg){
-  const box = $("logPrivacy");
-  if(!box) return;
-  const t = new Date().toLocaleTimeString();
-  box.innerHTML = `<div class="info">[${t}] ${msg}</div>` + box.innerHTML;
-}
-if($("btnPrivacyStatus")) $("btnPrivacyStatus").onclick = () => refreshPrivacyStatus();
-if($("btnPrivacyPreview")) $("btnPrivacyPreview").onclick = async () => {
-  try {
-    const p = await api("/api/privacy/preview", { method:"POST", body:"{}" });
-    const box = $("privacyBox");
-    if(box){
-      box.innerHTML = `<div>Total in <strong>${(p.totalInEth||0).toFixed(4)}</strong> ETH · expected out ~<strong>${(p.totalExpectedOutEth||0).toFixed(4)}</strong></div>` +
-        (p.rows||[]).slice(0,12).map(r => r.ok
-          ? `<div>${short(r.address)} · ${r.amountEth} → ~${r.expectedOutEth?.toFixed?.(5) ?? r.expectedOutEth}</div>`
-          : `<div style="color:var(--accent-red)">${short(r.address)} · ${r.error}</div>`
-        ).join("");
-    }
-    privacyLog("Preview loaded");
-  } catch(e){ alert(e.message); }
-};
-if($("btnPrivacyCn")) $("btnPrivacyCn").onclick = async () => {
-  try {
-    const amountEth = Number($("privacyCnAmount")?.value || 0);
-    if(!(amountEth>0)){ alert("Enter ChangeNOW top-up amount"); return; }
-    const r = await api("/api/privacy/changenow", { method:"POST", body: JSON.stringify({ amountEth }) });
-    const o = r.order || {};
-    if($("privacyBox")){
-      $("privacyBox").innerHTML = `<div><strong>Send ${o.amountFrom || amountEth} ETH to:</strong><br><code>${o.payinAddress}</code></div>
-        <div>Order <code>${o.id}</code> · <a href="${o.trackUrl||"#"}" target="_blank" rel="noopener">track</a></div>
-        <div class="hint">Payout lands on Base bridge wallet, then use Across.</div>`;
-    }
-    privacyLog("ChangeNOW order "+o.id);
-  } catch(e){ alert(e.message); }
-};
-async function runPrivacyAcross(live){
-  try {
-    if(live && !confirm("LIVE Across bridges from Base → Robinhood helpers?\n\nRequires PRIVACY_FUND_ARM=1 and funded PRIVACY_BRIDGE_PK.")) return;
-    setBusy(true, live ? "Across LIVE…" : "Across dry-run…");
-    await api("/api/privacy/across", {
-      method:"POST",
-      body: JSON.stringify({ dryRun: !live, arm: !!live }),
-    });
-    // poll job via existing events / refresh
-    const tick = async () => {
-      const st = await api("/api/state");
-      if(st.job?.running){ setTimeout(tick, 1200); return; }
-      setBusy(false);
-      privacyLog(live ? "Across live finished" : "Across dry-run finished");
-      await refreshPrivacyStatus();
-    };
-    setTimeout(tick, 800);
-  } catch(e){ setBusy(false); alert(e.message); }
-}
-if($("btnPrivacyAcrossDry")) $("btnPrivacyAcrossDry").onclick = () => runPrivacyAcross(false);
-if($("btnPrivacyAcrossLive")) $("btnPrivacyAcrossLive").onclick = () => runPrivacyAcross(true);
-refreshPrivacyStatus().catch(()=>{});
-
 $("btnPreview").onclick = async () => {
   try {
-    state.fundingPreview = await api("/api/fund/preview", { method:"POST", body: JSON.stringify({ hops: Number($("hops").value), useDistributors:false, skipFunded:true }) });
+    state.fundingPreview = await api("/api/fund/preview", { method:"POST", body: JSON.stringify({ mode: "changenow", skipFunded:true }) });
     renderFundJobs();
   } catch(e){ alert(e.message); }
 };
 $("btnFund").onclick = async () => {
   try {
-    setBusy(true, "Funding…");
+    setBusy(true, "ChangeNOW clean fund…");
     $("logFund").innerHTML = "";
     if(!state.fundingPreview){
-      state.fundingPreview = await api("/api/fund/preview", { method:"POST", body: JSON.stringify({ hops: Number($("hops").value), useDistributors:false, skipFunded:true }) });
+      state.fundingPreview = await api("/api/fund/preview", { method:"POST", body: JSON.stringify({ mode: "changenow", skipFunded:true }) });
       renderFundJobs();
     }
-    await api("/api/fund/execute", { method:"POST", body: JSON.stringify({ onlyRemaining: true, hops: Number($("hops").value) }) });
+    await api("/api/fund/execute", { method:"POST", body: JSON.stringify({ onlyRemaining: true, mode: "changenow" }) });
   } catch(e){ setBusy(false); alert(e.message); }
 };
 $("btnFundContinue").onclick = async () => {
   try {
-    setBusy(true, "Continuing funding…");
+    setBusy(true, "Continuing ChangeNOW fund…");
     $("logFund").innerHTML = "";
-    // Rebuild preview skipping wallets that already hold ETH (Buyers 1–12 stay funded)
-    state.fundingPreview = await api("/api/fund/preview", { method:"POST", body: JSON.stringify({ hops: Number($("hops").value), useDistributors:false, skipFunded:true }) });
+    state.fundingPreview = await api("/api/fund/preview", { method:"POST", body: JSON.stringify({ mode: "changenow", skipFunded:true }) });
     renderFundJobs();
     const n = state.fundingPreview?.jobs?.length || 0;
     if(!n){ setBusy(false); alert("Nothing left to fund — remaining buyers already look funded."); return; }
-    await api("/api/fund/execute", { method:"POST", body: JSON.stringify({ onlyRemaining: true, hops: Number($("hops").value) }) });
+    await api("/api/fund/execute", { method:"POST", body: JSON.stringify({ onlyRemaining: true, mode: "changenow" }) });
   } catch(e){ setBusy(false); alert(e.message); }
 };
 $("btnFundPause").onclick = async () => {
@@ -3756,8 +2980,8 @@ $("btnFundPause").onclick = async () => {
 };
 $("btnFundResume").onclick = async () => {
   try {
-    await api("/api/fund/resume", { method:"POST", body: JSON.stringify({ hops: Number($("hops").value) }) });
-    setBusy(true, "Funding…");
+    await api("/api/fund/resume", { method:"POST", body: JSON.stringify({}) });
+    setBusy(true, "ChangeNOW clean fund…");
   } catch(e){ alert(e.message); }
 };
 $("btnFundCancel").onclick = async () => {
@@ -4190,12 +3414,12 @@ if($("btnSniperCreate")) $("btnSniperCreate").onclick = async () => {
   try {
     const j = await api("/api/wallets/create", { method:"POST", body: JSON.stringify({ count:1, role:"sniper" }) });
     const created = j.created?.[0];
-    if(created?.privateKey) prompt("SAVE this sniper private key", created.privateKey);
+    if(created?.privateKey) prompt("SAVE this sniper wallet backup", created.privateKey);
     await refresh();
   } catch(e){ alert(e.message); }
 };
 if($("btnSniperImport")) $("btnSniperImport").onclick = async () => {
-  const pk = prompt("Paste sniper private key");
+  const pk = prompt("Paste sniper wallet secret");
   if(!pk) return;
   try {
     await api("/api/wallets/import", { method:"POST", body: JSON.stringify({ privateKey: pk.trim(), role: "sniper", name: "Sniper" }) });
@@ -4206,7 +3430,7 @@ if($("btnSniperPk")) $("btnSniperPk").onclick = async () => {
   if(!state.sniper) return alert("No sniper wallet");
   try {
     const j = await api(`/api/wallets/${state.sniper.index}/pk`);
-    prompt("Sniper private key", j.privateKey);
+    prompt("Sniper wallet backup", j.privateKey);
   } catch(e){ alert(e.message); }
 };
 if($("btnSniperRemove")) $("btnSniperRemove").onclick = async () => {
@@ -4364,20 +3588,17 @@ es.onmessage = (ev) => {
     }
   } catch(_){}
 };
-showTab("overview");
+showStep(1);
 // Instant paint from disk/cache, then background balance sweep via SSE
 refresh({ forceBalances: false })
-  .then(() => {
-    renderNeedsYou();
-    return api("/api/balances/refresh", { method:"POST", body:"{}" });
-  })
+  .then(() => api("/api/balances/refresh", { method:"POST", body:"{}" }))
   .catch(console.error);
 // Soft balance polls only — never wipe sticky wallets / sell plan
 setInterval(() => {
   if(state._fundingBusy || state._buyingBusy || state.jobRunning) return;
   // Only kick RPC balances (SSE patches UI). Do NOT full-refresh state on a timer —
   // that was causing blank balances / flaky sell plan mid-bundle.
-  if(!["wallets","launch","trade"].includes(state.tab)) return;
+  if(![1,2,4,5].includes(state.step)) return;
   api("/api/balances/refresh", { method:"POST", body:"{}" }).catch(()=>{});
 }, 25000);
 $("btnRefresh").onclick = () => {
@@ -4390,7 +3611,7 @@ async function forceRestartBundle(){
   const tab = (state.projects||[]).find(p => p.id === state.activeProjectId);
   const tabName = tab?.label || state.activeProjectId || "this tab";
   if(!confirm(`Reset ${tabName}?\n\nThis will:\n• Remove all ${buyers} helper wallet(s) on THIS tab only\n• Clear buy plan + sell plan for this tab\n• Keep the shared bank and other coin tabs\n\nOnly do this when you've sold out / finished this launch.`)) return;
-  if(!confirm("Really wipe this tab's helpers + sell plan? Export keys CSV first if you still need them.")) return;
+  if(!confirm("Really wipe this tab's helpers + sell plan?")) return;
   try {
     setBusy(true, "Resetting tab…");
     const j = await api("/api/wallets/clear-buyers", { method:"POST", body:"{}" });
@@ -4411,7 +3632,7 @@ async function forceRestartBundle(){
     if(state.step===1) renderWallets();
     else if(state.step===5) renderSell();
     setBusy(false);
-    showTab("overview");
+    showStep(1);
     alert(`Reset done on ${tabName}. Removed ${j.removed} helper(s). Other tabs untouched. Bank kept.`);
   } catch(e){ setBusy(false); alert(e.message); }
 }
@@ -4469,7 +3690,7 @@ function renderMoneyDesk(m){
   const tone = tr.status || "ok";
   if($("moneyTopGrid")){
     $("moneyTopGrid").innerHTML = [
-      moneyCard("Cash in bank", tr.labels?.funder, [
+      moneyCard("Cash in bank (RH)", tr.labels?.funder, [
         ["Protected reserve", tr.labels?.protected],
         ["Liquidity set-aside", tr.labels?.liquidity],
         ["Est. gas & fees", tr.labels?.gas],
@@ -4486,6 +3707,29 @@ function renderMoneyDesk(m){
         ["Careful max", m.sizing?.labels?.prudent],
       ], m.sizing?.plainEnglish, m.sizing?.ok ? "ok" : "warn"),
     ].join("");
+  }
+  const cust = m.custody || {};
+  const vc = cust.vaultComposition || {};
+  if($("moneyCustody")){
+    $("moneyCustody").innerHTML = `
+      <strong>Honest balances</strong> ·
+      Sell proceeds: <code>${Number(vc.sellProceedsEth||cust.tradingProceedsEth||0).toFixed(4)} ETH</code> ·
+      Swept pre-existing (not profit): <code>${Number(vc.sweptPreExistingEth||0).toFixed(4)} ETH</code> ·
+      Bridge fees: <code>${Number(vc.bridgeFeesEth||0).toFixed(4)} ETH</code>
+      <div style="margin-top:6px;color:var(--text-muted)">${cust.preExistingNote||""}</div>
+      <div style="margin-top:6px">${m.bubblemapsWarning||""}</div>
+    `;
+  }
+  if($("moneyGate")){
+    const gate = m.launchGate || {};
+    const cp = gate.checkpoint || {};
+    const link = gate.linkage || {};
+    const warns = (link.warnings||[]).map(w=>`<li>${w.severity}: ${w.message}</li>`).join("");
+    $("moneyGate").innerHTML = `
+      <strong>Launch gate</strong> · checkpoint <code>${cp.status||"idle"}</code>
+      ${cp.token?` · token <code>${cp.token}</code>`:""}
+      <ul style="margin:6px 0 0 18px">${warns||"<li>No linkage warnings</li>"}</ul>
+    `;
   }
   const kill = m.kill || {};
   const kb = $("moneyKillBanner");
@@ -4583,6 +3827,78 @@ function usdToEth(usd, ethUsd){
   return Number(usd)/p;
 }
 if($("btnMoneyRefresh")) $("btnMoneyRefresh").onclick = () => loadMoneyDesk();
+
+if($("btnResumeBuyup")) $("btnResumeBuyup").onclick = async () => {
+  try {
+    setBusy(true, "Resuming buyup…");
+    if($("logLaunch")) $("logLaunch").innerHTML = "";
+    await api("/api/launch/resume-buyup", {
+      method: "POST",
+      body: JSON.stringify({ uniFallback: true }),
+    });
+    const tick = async () => {
+      const st = await api("/api/state");
+      const logs = st.job?.logs || [];
+      if($("logLaunch")){
+        $("logLaunch").innerHTML = logs.slice(-40).map(e=>{
+          const t = new Date(e.t||Date.now()).toLocaleTimeString();
+          return `<div class="${e.kind||"info"}">[${t}] ${e.msg}</div>`;
+        }).join("");
+      }
+      if(st.job?.running){ setTimeout(tick, 1200); return; }
+      setBusy(false);
+      await refresh({ replaceWallets: true });
+      loadMoneyDesk().catch(()=>{});
+    };
+    setTimeout(tick, 600);
+  } catch(e){ setBusy(false); alert(e.message); }
+};
+
+if($("btnLaunchCheckpoint")) $("btnLaunchCheckpoint").onclick = async () => {
+  try {
+    const cp = await api("/api/launch/checkpoint");
+    const ok = (cp.buyers||[]).filter(b=>b.status==="ok").length;
+    const pend = (cp.buyers||[]).filter(b=>b.status==="pending"||b.status==="fail").length;
+    if($("launchCheckpointBox")){
+      $("launchCheckpointBox").innerHTML =
+        `Status <code>${cp.status}</code>` +
+        (cp.token?` · token <code>${cp.token}</code>`:"") +
+        ` · buys ok ${ok} · pending/fail ${pend}`;
+    }
+  } catch(e){ alert(e.message); }
+};
+
+if($("btnLinkageCheck")) $("btnLinkageCheck").onclick = async () => {
+  try {
+    const j = await api(`/api/funding/linkage?mode=changenow&requireVault=1`);
+    const hopsRefuse = await api(`/api/funding/linkage?mode=hops&privacyBreak=0`);
+    if($("linkageBox")){
+      const ok = j.ok && !j.refuse;
+      $("linkageBox").innerHTML =
+        `<strong style="color:${ok?"var(--accent-green)":"var(--accent-red)"}">${ok?"GATE OK":"GATE REFUSE"}</strong> · ${j.buyerCount} buyers · mode ${j.mode}` +
+        `<ul style="margin:6px 0 0 16px">` +
+        (j.warnings||[]).map(w=>`<li><em>${w.severity}</em> — ${w.message}</li>`).join("") +
+        `</ul>` +
+        `<p style="margin-top:8px;font-size:12px;color:var(--text-muted)">Hop/shared-treasury path: <strong style="color:var(--accent-red)">${hopsRefuse.refuse?"REFUSED":"allowed"}</strong>${hopsRefuse.message?` — ${hopsRefuse.message}`:""}</p>`;
+    }
+  } catch(e){ alert(e.message); }
+};
+
+if($("btnPrepareCleanLegs")) $("btnPrepareCleanLegs").onclick = async () => {
+  const n = Number(prompt("How many unique Base+RH legs?", "8"));
+  if(!(n>0)) return;
+  try {
+    const j = await api("/api/privacy/prepare-legs", {
+      method: "POST",
+      body: JSON.stringify({ n }),
+    });
+    alert(`Saved ${j.count} legs to ${j.path}\nChecksum ${j.checksum}\n\n${j.warning}`);
+    if($("linkageBox")){
+      $("linkageBox").innerHTML =
+        `Clean legs ready · <code>${j.path}</code> · ${j.count} wallets`;
+    }
+  } catch(e){ alert(e.message); }
+};
 if($("btnKillPause")) $("btnKillPause").onclick = async () => {
   const reason = prompt("Why are you stopping? (shown on dashboard)", "Manual safety stop");
   if(reason==null) return;

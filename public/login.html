@@ -1,59 +1,132 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
+  <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Login — Robinhood Bundler</title>
+  <title>NOXA — Sign in</title>
   <style>
-    :root { --bg:#0b0f14; --card:#121820; --border:#243041; --text:#e8eef7; --muted:#8b9bb0; --accent:#3b82f6; }
+    :root {
+      --bg: #0c0f14;
+      --card: #141a22;
+      --text: #e8eef7;
+      --muted: #8b9bb0;
+      --accent: #3d9cf0;
+      --border: rgba(255,255,255,.08);
+      --err: #ff7a6e;
+      --ok: #3ecf8e;
+    }
     * { box-sizing: border-box; }
-    body { margin:0; min-height:100vh; display:grid; place-items:center; font-family: ui-sans-serif, system-ui, sans-serif;
-      background: radial-gradient(1200px 600px at 20% -10%, #1a2740, transparent), var(--bg); color: var(--text); }
-    .card { width:min(400px, 92vw); background:var(--card); border:1px solid var(--border); border-radius:16px; padding:28px; }
-    h1 { margin:0 0 6px; font-size:22px; }
-    p { margin:0 0 18px; color:var(--muted); font-size:13px; }
-    label { display:block; font-size:12px; color:var(--muted); margin:12px 0 6px; }
-    input { width:100%; padding:12px 14px; border-radius:10px; border:1px solid var(--border); background:#0c121a; color:var(--text); }
-    button { margin-top:18px; width:100%; padding:12px; border:0; border-radius:10px; background:var(--accent); color:#fff; font-weight:600; cursor:pointer; }
-    button:disabled { opacity:.6; cursor:wait; }
-    .err { margin-top:12px; color:#f87171; font-size:13px; min-height:18px; }
+    body {
+      margin: 0; min-height: 100vh;
+      font-family: "Segoe UI", system-ui, sans-serif;
+      background: radial-gradient(1200px 600px at 20% -10%, #1a2a3f, transparent),
+                  radial-gradient(900px 500px at 100% 20%, #1a2830, transparent),
+                  var(--bg);
+      color: var(--text);
+      display: flex; align-items: center; justify-content: center;
+      padding: 24px;
+    }
+    .card {
+      width: 100%; max-width: 420px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 28px 26px 24px;
+      box-shadow: 0 24px 60px rgba(0,0,0,.35);
+    }
+    h1 { margin: 0 0 6px; font-size: 26px; letter-spacing: .02em; }
+    .sub { color: var(--muted); font-size: 13px; margin-bottom: 22px; line-height: 1.45; }
+    label { display: block; font-size: 12px; color: var(--muted); margin: 12px 0 6px; }
+    input {
+      width: 100%; padding: 11px 12px; border-radius: 10px;
+      border: 1px solid var(--border); background: #0d1218; color: var(--text);
+      font-size: 14px;
+    }
+    input:focus { outline: 1px solid var(--accent); }
+    .row { display: flex; gap: 10px; margin-top: 18px; }
+    button {
+      flex: 1; padding: 12px 14px; border-radius: 10px; border: none;
+      font-weight: 600; cursor: pointer; font-size: 14px;
+    }
+    .primary { background: var(--accent); color: #041018; }
+    .ghost { background: transparent; color: var(--text); border: 1px solid var(--border); }
+    .err { color: var(--err); font-size: 13px; margin-top: 12px; min-height: 18px; }
+    .ok { color: var(--ok); font-size: 13px; margin-top: 12px; }
+    .tabs { display: flex; gap: 8px; margin-bottom: 8px; }
+    .tabs button {
+      flex: 0; padding: 8px 12px; background: transparent; color: var(--muted);
+      border: 1px solid transparent; font-weight: 500;
+    }
+    .tabs button.on { color: var(--text); border-color: var(--border); background: #0d1218; }
+    .note { margin-top: 16px; font-size: 12px; color: var(--muted); line-height: 1.4; }
   </style>
 </head>
 <body>
-  <form class="card" id="loginForm">
-    <h1>Bundler login</h1>
-    <p>Ported from stealth-bundler session auth. Single operator gate.</p>
-    <label>Username</label>
-    <input id="user" autocomplete="username" value="admin" />
-    <label>Password</label>
-    <input id="pass" type="password" autocomplete="current-password" />
-    <button type="submit" id="btn">Sign in</button>
-    <div class="err" id="err"></div>
-  </form>
+  <div class="card">
+    <h1>NOXA</h1>
+    <p class="sub">Sign in to your launch dashboard.</p>
+    <div class="tabs">
+      <button type="button" class="on" id="tabLogin">Sign in</button>
+      <button type="button" id="tabSignup">Create account</button>
+    </div>
+    <form id="form">
+      <label>Username</label>
+      <input id="username" autocomplete="username" placeholder="yourname" required />
+      <label>Password</label>
+      <input id="password" type="password" autocomplete="current-password" placeholder="••••••••" required />
+      <div id="signupExtra" class="hidden" style="display:none">
+        <label>Display name (optional)</label>
+        <input id="displayName" placeholder="Name on the desk" />
+      </div>
+      <div class="row">
+        <button class="primary" type="submit" id="submitBtn">Sign in</button>
+      </div>
+      <div class="err" id="err"></div>
+      <div class="ok" id="ok"></div>
+    </form>
+  </div>
   <script>
-    document.getElementById("loginForm").onsubmit = async (e) => {
+    let mode = "login";
+    const $ = (id) => document.getElementById(id);
+    function setMode(m) {
+      mode = m;
+      $("tabLogin").classList.toggle("on", m === "login");
+      $("tabSignup").classList.toggle("on", m === "signup");
+      $("signupExtra").style.display = m === "signup" ? "block" : "none";
+      $("submitBtn").textContent = m === "signup" ? "Create account" : "Sign in";
+      $("password").autocomplete = m === "signup" ? "new-password" : "current-password";
+      $("err").textContent = "";
+      $("ok").textContent = "";
+    }
+    $("tabLogin").onclick = () => setMode("login");
+    $("tabSignup").onclick = () => setMode("signup");
+    $("form").onsubmit = async (e) => {
       e.preventDefault();
-      const btn = document.getElementById("btn");
-      const err = document.getElementById("err");
-      err.textContent = "";
-      btn.disabled = true;
+      $("err").textContent = "";
+      $("ok").textContent = "";
+      const body = {
+        username: $("username").value.trim(),
+        password: $("password").value,
+        displayName: $("displayName").value.trim() || undefined,
+      };
       try {
-        const r = await fetch("/api/auth/login", {
+        const r = await fetch(mode === "signup" ? "/api/auth/signup" : "/api/auth/login", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            username: document.getElementById("user").value.trim(),
-            password: document.getElementById("pass").value,
-          }),
+          body: JSON.stringify(body),
         });
         const j = await r.json().catch(() => ({}));
         if (!r.ok) throw new Error(j.error || r.statusText);
+        $("ok").textContent = "Welcome, " + (j.user?.username || "") + " — opening dashboard…";
         location.href = "/";
-      } catch (ex) {
-        err.textContent = ex.message || String(ex);
-        btn.disabled = false;
+      } catch (err) {
+        $("err").textContent = err.message || String(err);
       }
     };
+    // If already logged in, go through
+    fetch("/api/auth/status").then(r => r.json()).then(j => {
+      if (j.authenticated) location.href = "/";
+    }).catch(() => {});
   </script>
 </body>
 </html>

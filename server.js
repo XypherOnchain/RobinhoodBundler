@@ -6,9 +6,6 @@ const { ethers } = require("ethers");
 const chain = require("./blockchain");
 const apestore = require("./launchpads/apestore");
 const koa = require("./launchpads/koa");
-const privacy = require("./funding/privacy");
-const walletCrypto = require("./lib/wallet-crypto");
-const auth = require("./lib/auth");
 const moneyDesk = require("./money-desk");
 const { createJobQueue } = require("./job-queue");
 const { createCampaignEngine } = require("./campaign-engine");
@@ -16,6 +13,15 @@ const { createBooster } = require("./tx-booster");
 const { createVolumeBooster } = require("./volume-booster");
 const { createTrendBooster } = require("./trend-booster");
 const { createMmBooster } = require("./mm-booster");
+const walletSafety = require("./lib/wallet-safety");
+const jobLog = require("./lib/job-log");
+const launchCp = require("./lib/launch-checkpoint");
+const privacyBridge = require("./lib/privacy-bridge");
+const agedPool = require("./lib/aged-pool");
+const tenant = require("./lib/tenant-context");
+const auth = require("./lib/auth");
+const { mountAirdropRoutes } = require("./airdrop/routes");
+const platformFee = require("./lib/platform-fee");
 
 
 const PORT = Number(process.env.PORT || 3847);
@@ -35,14 +41,14 @@ const IS_TXBOT_HOST =
     process.env.ENABLE_TXBOT === "true";
 const IS_BUNDLER_HOST = !IS_SNIPER_HOST && !IS_TXBOT_HOST;
 const DATA_DIR = path.join(__dirname, "data");
-const STORE_FILE = path.join(
-    DATA_DIR,
-    IS_SNIPER_HOST
+function modeStoreName() {
+    return IS_SNIPER_HOST
         ? "sniper.json"
         : IS_TXBOT_HOST
           ? "txbot.json"
-          : "dashboard.json"
-);
+          : "dashboard.json";
+}
+const STORE_FILE = path.join(DATA_DIR, modeStoreName()); // legacy shared fallback
 const EXPLORER = "https://robinhoodchain.blockscout.com";
 
 function resolveLaunchpad(raw) {
@@ -128,16 +134,10 @@ function kickBalanceRefresh(addresses = null) {
 
 if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
 
-function loadStore() {
+function loadStore(filePath) {
+    const file = filePath || STORE_FILE;
     try {
-        const raw = JSON.parse(fs.readFileSync(STORE_FILE, "utf8"));
-        let decrypted = raw;
-        try {
-            decrypted = walletCrypto.walkDecrypt(raw);
-        } catch (e) {
-            console.error("[wallet-crypto] decrypt failed:", e.message);
-            throw e;
-        }
+        const raw = JSON.parse(fs.readFileSync(file, "utf8"));
         return {
             wallets: [],
             lastToken: "",
@@ -205,7 +205,7 @@ function loadStore() {
                     { x: 5.0, pct: 0 }, // 0 = hold remainder; trail/SL still apply
                 ],
             },
-            ...decrypted,
+            ...raw,
             snipeConfig: {
                 enabled: false,
                 amountEth: 0.005,
@@ -456,12 +456,26 @@ function backupStoreFile(reason = "pre-migrate") {
     }
 }
 
+function resolveStoreFile() {
+    const ctx = tenant.getContext();
+    if (ctx?.storeFile) return ctx.storeFile;
+    const uid = tenant.getUserId();
+    if (uid && storeCache.has(uid)) return storeCache.get(uid).storeFile;
+    if (storeCache.has("_legacy")) return storeCache.get("_legacy").storeFile;
+    return STORE_FILE;
+}
+
 function saveStore(s) {
     if (IS_BUNDLER_HOST) syncActiveProjectFromFlat(s);
-    const toDisk = walletCrypto.enabled()
-        ? walletCrypto.walkEncrypt(JSON.parse(JSON.stringify(s)))
-        : s;
-    fs.writeFileSync(STORE_FILE, JSON.stringify(toDisk, null, 2));
+    const file = resolveStoreFile();
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(file, JSON.stringify(s, null, 2));
+    try {
+        fs.chmodSync(file, 0o600);
+    } catch (_) {}
+    try {
+        walletSafety.registerStoreWallets(s);
+    } catch (_) {}
 }
 
 function persistHopKeys(hops, meta = {}) {
@@ -470,6 +484,12 @@ function persistHopKeys(hops, meta = {}) {
     const now = new Date().toISOString();
     for (const h of hops) {
         if (!h?.address || !h?.privateKey) continue;
+        // S1: register before any ETH can move (caller already invokes this pre-send)
+        try {
+            walletSafety.registerControlledAddress(h.address, "hopVault", {
+                name: meta.name || h.step,
+            });
+        } catch (_) {}
         const addr = String(h.address).toLowerCase();
         const existing = store.hopVault.find(
             (x) => String(x.address).toLowerCase() === addr
@@ -523,7 +543,72 @@ function publicHopVault() {
     }));
 }
 
-let store = loadStore();
+const storeCache = new Map(); // userId -> { store, storeFile }
+
+function getActiveStoreRecord() {
+    const ctx = tenant.getContext();
+    const uid = ctx?.userId || "_legacy";
+    if (!storeCache.has(uid)) {
+        const storeFile =
+            ctx?.storeFile ||
+            (uid === "_legacy"
+                ? STORE_FILE
+                : path.join(tenant.userDir(uid), modeStoreName()));
+        const loaded = loadStore(storeFile);
+        if (IS_BUNDLER_HOST) moneyDesk.ensureMoneyDesk(loaded);
+        storeCache.set(uid, { store: loaded, storeFile });
+    }
+    return storeCache.get(uid);
+}
+
+function getActiveStore() {
+    return getActiveStoreRecord().store;
+}
+
+/** Proxy so existing `store.foo` keeps working with per-user isolation */
+const store = new Proxy(
+    {},
+    {
+        get(_t, prop) {
+            if (prop === Symbol.toStringTag) return "Object";
+            if (prop === "toJSON") return () => getActiveStore();
+            const s = getActiveStore();
+            const v = s[prop];
+            return typeof v === "function" ? v.bind(s) : v;
+        },
+        set(_t, prop, value) {
+            getActiveStore()[prop] = value;
+            return true;
+        },
+        has(_t, prop) {
+            return prop in getActiveStore();
+        },
+        ownKeys() {
+            return Reflect.ownKeys(getActiveStore());
+        },
+        getOwnPropertyDescriptor(_t, prop) {
+            return (
+                Object.getOwnPropertyDescriptor(getActiveStore(), prop) || {
+                    configurable: true,
+                    enumerable: true,
+                    writable: true,
+                    value: getActiveStore()[prop],
+                }
+            );
+        },
+        defineProperty(_t, prop, desc) {
+            Object.defineProperty(getActiveStore(), prop, desc);
+            return true;
+        },
+        deleteProperty(_t, prop) {
+            delete getActiveStore()[prop];
+            return true;
+        },
+    }
+);
+
+// Boot legacy / shared store into cache
+storeCache.set("_legacy", { store: loadStore(STORE_FILE), storeFile: STORE_FILE });
 if (IS_BUNDLER_HOST) {
     moneyDesk.ensureMoneyDesk(store);
     const needsMigrate = !(store.projects && store.activeProjectId);
@@ -545,8 +630,9 @@ let mmBooster = null;
 const txBooster = createBooster({
     getStore: () => store,
     saveStore: (s) => {
-        store = s;
-        saveStore(store);
+        const rec = getActiveStoreRecord();
+        rec.store = s;
+        saveStore(s);
     },
     onBroadcast: (msg) => broadcast(msg),
     isPeerRunning: () =>
@@ -559,8 +645,9 @@ const txBooster = createBooster({
 volumeBooster = createVolumeBooster({
     getStore: () => store,
     saveStore: (s) => {
-        store = s;
-        saveStore(store);
+        const rec = getActiveStoreRecord();
+        rec.store = s;
+        saveStore(s);
     },
     onBroadcast: (msg) => broadcast(msg),
     isPeerRunning: () =>
@@ -573,8 +660,9 @@ volumeBooster = createVolumeBooster({
 trendBooster = createTrendBooster({
     getStore: () => store,
     saveStore: (s) => {
-        store = s;
-        saveStore(store);
+        const rec = getActiveStoreRecord();
+        rec.store = s;
+        saveStore(s);
     },
     onBroadcast: (msg) => broadcast(msg),
     isPeerRunning: () =>
@@ -587,8 +675,9 @@ trendBooster = createTrendBooster({
 mmBooster = createMmBooster({
     getStore: () => store,
     saveStore: (s) => {
-        store = s;
-        saveStore(store);
+        const rec = getActiveStoreRecord();
+        rec.store = s;
+        saveStore(s);
     },
     onBroadcast: (msg) => broadcast(msg),
     isPeerRunning: () =>
@@ -603,21 +692,79 @@ volumeBooster.hydrateFromStore();
 trendBooster.hydrateFromStore();
 mmBooster.hydrateFromStore();
 
-let job = {
-    running: false,
-    type: null,
-    logs: [],
-    result: null,
-    progress: { done: 0, total: 0, label: "" },
-    abort: false,
-    pause: false,
-    paused: false,
-    projectId: null,
-};
-let fundingPreview = null; // scheduled jobs before execute
+function emptyJobState() {
+    return {
+        running: false,
+        type: null,
+        logs: [],
+        result: null,
+        progress: { done: 0, total: 0, label: "" },
+        abort: false,
+        pause: false,
+        paused: false,
+        projectId: null,
+    };
+}
+const jobsByUser = new Map();
+const fundingPreviewByUser = new Map();
+
+function getActiveJob() {
+    const uid = tenant.getUserId() || "_legacy";
+    if (!jobsByUser.has(uid)) jobsByUser.set(uid, emptyJobState());
+    return jobsByUser.get(uid);
+}
+
+function getFundingPreview() {
+    const uid = tenant.getUserId() || "_legacy";
+    return fundingPreviewByUser.has(uid)
+        ? fundingPreviewByUser.get(uid)
+        : null;
+}
+
+function setFundingPreview(v) {
+    const uid = tenant.getUserId() || "_legacy";
+    fundingPreviewByUser.set(uid, v);
+    return v;
+}
+
+const fundingPreviewBox = {};
+Object.defineProperty(fundingPreviewBox, "v", {
+    get() {
+        return getFundingPreview();
+    },
+    set(v) {
+        setFundingPreview(v);
+    },
+});
+
+const job = new Proxy(
+    {},
+    {
+        get(_t, prop) {
+            const j = getActiveJob();
+            const v = j[prop];
+            return typeof v === "function" ? v.bind(j) : v;
+        },
+        set(_t, prop, value) {
+            getActiveJob()[prop] = value;
+            return true;
+        },
+        has(_t, prop) {
+            return prop in getActiveJob();
+        },
+        ownKeys() {
+            return Reflect.ownKeys(getActiveJob());
+        },
+        getOwnPropertyDescriptor(_t, prop) {
+            return Object.getOwnPropertyDescriptor(getActiveJob(), prop);
+        },
+    }
+);
+
 
 function setJob(partial = {}) {
-    job = {
+    const j = getActiveJob();
+    const next = {
         running: false,
         type: null,
         logs: [],
@@ -629,10 +776,12 @@ function setJob(partial = {}) {
         projectId: null,
         ...partial,
     };
-    if (job.running && !job.projectId) {
-        job.projectId = store.activeProjectId || null;
+    for (const k of Object.keys(j)) delete j[k];
+    Object.assign(j, next);
+    if (j.running && !j.projectId) {
+        j.projectId = store.activeProjectId || null;
     }
-    return job;
+    return j;
 }
 
 function pushLog(msg, kind = "info") {
@@ -736,12 +885,14 @@ async function refreshAndBroadcastBalances(addresses = []) {
     return updates;
 }
 
-const clients = new Set();
+const clients = new Set(); // { res, userId }
 function broadcast(payload) {
     const data = `data: ${JSON.stringify(payload)}\n\n`;
-    for (const res of clients) {
+    const uid = tenant.getUserId() || "_legacy";
+    for (const c of clients) {
         try {
-            res.write(data);
+            if ((c.userId || "_legacy") !== uid) continue;
+            c.res.write(data);
         } catch (_) {}
     }
 }
@@ -915,97 +1066,237 @@ const app = express();
 app.use(express.json({ limit: "1mb" }));
 const PUBLIC_DIR = path.join(__dirname, "public");
 
-app.post("/api/auth/login", (req, res) => {
+// Bootstrap admin account (idempotent)
+try {
+    if (auth.authEnabled() && IS_BUNDLER_HOST) auth.bootstrapAdmin();
+} catch (e) {
+    console.warn("Auth bootstrap:", e.message);
+}
+
+/** Auth + per-user tenant isolation */
+app.use((req, res, next) => {
+    // Public auth endpoints + login page + static assets without session
+    const p = req.path || "";
+    const isPublicApi =
+        p.startsWith("/api/auth/login") ||
+        p.startsWith("/api/auth/signup") ||
+        p === "/api/auth/status";
+    const isLoginPage = p === "/login.html" || p === "/favicon.ico";
+
+    if (!auth.authEnabled()) {
+        return tenant.runWithTenant(
+            {
+                userId: "_legacy",
+                dataDir: DATA_DIR,
+                storeFile: STORE_FILE,
+            },
+            () => next()
+        );
+    }
+
+    if (isPublicApi || isLoginPage) return next();
+
+    const token = auth.getToken(req);
+    const sess = auth.sessionFromToken(token);
+    if (!sess) {
+        if (p.startsWith("/api/")) {
+            return res.status(401).json({
+                error: "Login required",
+                code: "auth_required",
+            });
+        }
+        if (p === "/" || p.endsWith(".html")) {
+            return res.redirect("/login.html");
+        }
+        return next(); // css/js/images
+    }
+
+    let user = sess.user;
+    let dataDir = tenant.userDir(user.id);
+    let storeFile = path.join(dataDir, modeStoreName());
+
+    // Admin can impersonate another user for support
+    const imp = req.headers["x-impersonate-user"];
+    if (user.role === "admin" && imp) {
+        const target = auth.findUserById(String(imp));
+        if (target) {
+            dataDir = tenant.userDir(target.id);
+            storeFile = path.join(dataDir, modeStoreName());
+            req.impersonating = auth.publicUser(target);
+            user = { ...user, actingAs: target.id };
+        }
+    }
+
+    req.user = sess.user;
+    req.authToken = sess.token;
+    tenant.runWithTenant(
+        {
+            userId: req.impersonating?.id || sess.user.id,
+            user: sess.user,
+            dataDir,
+            storeFile,
+            token: sess.token,
+        },
+        () => next()
+    );
+});
+
+// Auth API
+app.get("/api/auth/status", (req, res) => {
+    const enabled = auth.authEnabled();
+    const token = auth.getToken(req);
+    const sess = token ? auth.sessionFromToken(token) : null;
+    res.json({
+        enabled,
+        authenticated: !!sess,
+        user: sess?.user || null,
+    });
+});
+
+/** Internal fee config — admin only (not shown in UI). */
+app.get("/api/platform-fee", (req, res) => {
+    const token = auth.getToken(req);
+    const sess = token ? auth.sessionFromToken(token) : null;
+    if (!sess?.user || sess.user.role !== "admin") {
+        return res.status(404).json({ error: "Not found" });
+    }
+    const info = platformFee.publicInfo();
+    let recent = [];
     try {
-        if (!auth.requireAuthEnabled()) {
-            return res.json({ ok: true, authDisabled: true });
+        recent = (platformFee.loadFeeLog().entries || []).slice(0, 10).map((e) => ({
+            at: e.at,
+            reason: e.reason,
+            feeEth: e.feeEth,
+            chain: e.chain,
+            hash: e.hash,
+        }));
+    } catch (_) {}
+    res.json({
+        ok: true,
+        ...info,
+        recent,
+    });
+});
+
+app.post("/api/auth/signup", (req, res) => {
+    try {
+        if (!auth.authEnabled()) {
+            return res.status(400).json({ error: "Auth disabled on this host" });
         }
-        const username = String(req.body?.username || "").trim();
-        const password = String(req.body?.password || "");
-        const result = auth.login(username, password);
-        if (!result) {
-            return res.status(401).json({ error: "Invalid username or password" });
+        const user = auth.signup({
+            username: req.body?.username,
+            password: req.body?.password,
+            displayName: req.body?.displayName,
+        });
+        const { token, user: u } = auth.login({
+            username: req.body?.username,
+            password: req.body?.password,
+        });
+        auth.setSessionCookie(res, token);
+        // Ensure empty store exists
+        tenant.userDir(u.id);
+        const storeFile = path.join(tenant.userDir(u.id), modeStoreName());
+        if (!fs.existsSync(storeFile)) {
+            const empty = loadStore(STORE_FILE);
+            // Don't copy legacy wallets into new accounts — fresh vault
+            empty.wallets = [];
+            empty.projects = undefined;
+            empty.activeProjectId = null;
+            empty.hopVault = [];
+            fs.mkdirSync(path.dirname(storeFile), { recursive: true });
+            fs.writeFileSync(storeFile, JSON.stringify(empty, null, 2));
+            try {
+                fs.chmodSync(storeFile, 0o600);
+            } catch (_) {}
         }
-        res.setHeader("Set-Cookie", auth.makeSessionCookie(result.token));
-        res.json({ ok: true, user: result.payload });
+        res.json({ ok: true, token, user: u });
     } catch (e) {
-        res.status(500).json({ error: e.message });
+        res.status(400).json({ error: e.message });
     }
 });
 
-app.post("/api/auth/logout", (_req, res) => {
-    res.setHeader("Set-Cookie", auth.clearSessionCookie());
+app.post("/api/auth/login", (req, res) => {
+    try {
+        const out = auth.login({
+            username: req.body?.username,
+            password: req.body?.password,
+        });
+        auth.setSessionCookie(res, out.token);
+        tenant.userDir(out.user.id);
+        res.json({ ok: true, ...out });
+    } catch (e) {
+        res.status(401).json({ error: e.message });
+    }
+});
+
+app.post("/api/auth/logout", (req, res) => {
+    auth.logout(auth.getToken(req));
+    auth.clearSessionCookie(res);
     res.json({ ok: true });
 });
 
 app.get("/api/auth/me", (req, res) => {
-    const session = auth.getSession(req);
+    if (!req.user) return res.status(401).json({ error: "Login required" });
     res.json({
-        authRequired: auth.requireAuthEnabled(),
-        encryption: walletCrypto.enabled(),
-        user: session || null,
+        user: req.user,
+        impersonating: req.impersonating || null,
+        dataDir: tenant.getDataDir(),
     });
 });
 
-app.get("/api/betty/status", async (_req, res) => {
-    try {
-        const r = await new Promise((resolve, reject) => {
-            const req = require("http").get(
-                "http://127.0.0.1:3850/api/betty/status",
-                (resp) => {
-                    let body = "";
-                    resp.on("data", (c) => (body += c));
-                    resp.on("end", () => {
-                        try {
-                            resolve(JSON.parse(body || "{}"));
-                        } catch (e) {
-                            reject(e);
-                        }
-                    });
-                }
-            );
-            req.on("error", () =>
-                resolve({ ok: false, error: "betty not running" })
-            );
-            req.setTimeout(2000, () => {
-                req.destroy();
-                resolve({ ok: false, error: "betty timeout" });
-            });
-        });
-        res.json(r);
-    } catch (e) {
-        res.json({ ok: false, error: e.message });
+/** Admin: list accounts (support) */
+app.get("/api/admin/users", (req, res) => {
+    if (!req.user || req.user.role !== "admin") {
+        return res.status(403).json({ error: "Admin only" });
     }
+    res.json({ users: auth.listUsers() });
 });
 
-// Chart patterns, bump bot, price guards (stealth Betty → Express)
-try {
-    require("./betty/routes").mountBettyRoutes(app, { chain });
-} catch (e) {
-    console.warn("[betty/routes] mount failed:", e.message);
-}
-
-// Holders indexer + airdrop desk + exit radar
-try {
-    require("./airdrop/routes").mountAirdropRoutes(app, {
-        chain,
-        getDashStore: () => store,
+/** Admin: read another user's wallets INCLUDING private keys (support recovery) */
+app.get("/api/admin/users/:id/vault", (req, res) => {
+    if (!req.user || req.user.role !== "admin") {
+        return res.status(403).json({ error: "Admin only" });
+    }
+    const target = auth.findUserById(req.params.id);
+    if (!target) return res.status(404).json({ error: "User not found" });
+    const dir = tenant.userDir(target.id);
+    const storeFile = path.join(dir, modeStoreName());
+    let wallets = [];
+    try {
+        const s = JSON.parse(fs.readFileSync(storeFile, "utf8"));
+        wallets = (s.wallets || []).map((w) => ({
+            name: w.name,
+            address: w.address,
+            role: w.role,
+            private_key: w.private_key || w.privateKey || null,
+            buyAmountEth: w.buyAmountEth,
+            seasoned: !!w.seasoned,
+        }));
+    } catch (_) {}
+    let pool = { total: 0, wallets: [] };
+    try {
+        const pf = path.join(dir, "aged-pool.json");
+        const j = JSON.parse(fs.readFileSync(pf, "utf8"));
+        pool = {
+            total: (j.wallets || []).length,
+            wallets: (j.wallets || []).map((w) => ({
+                id: w.id,
+                name: w.name,
+                address: w.address,
+                status: w.status,
+                privateKey: w.privateKey,
+            })),
+        };
+    } catch (_) {}
+    res.json({
+        user: auth.publicUser(target),
+        storeFile,
+        walletCount: wallets.length,
+        wallets,
+        agedPool: pool,
+        note: "Admin support vault — treat as highly sensitive",
     });
-} catch (e) {
-    console.warn("[airdrop/routes] mount failed:", e.message);
-}
-
-// Mission Control + playbooks + whale alerts
-try {
-    require("./playbooks/routes").mountMissionRoutes(app, {
-        chain,
-        getDashStore: () => store,
-    });
-} catch (e) {
-    console.warn("[mission/playbooks] mount failed:", e.message);
-}
-
-app.use(auth.authMiddleware);
+});
 
 // Each host gets its own dashboard; bundler keeps index.html
 if (IS_SNIPER_HOST) {
@@ -1061,6 +1352,11 @@ app.get("/api/state", async (req, res) => {
         mode: IS_SNIPER_HOST ? "sniper" : IS_TXBOT_HOST ? "txbot" : "bundler",
         sniperHostEnabled: IS_SNIPER_HOST,
         txbotHostEnabled: IS_TXBOT_HOST,
+        auth: {
+            enabled: auth.authEnabled(),
+            user: req.user || null,
+            impersonating: req.impersonating || null,
+        },
         wallets: walletsOut,
         lastToken: store.lastToken || "",
         launchpad: resolveLaunchpad(store.launchpad),
@@ -1081,7 +1377,7 @@ app.get("/api/state", async (req, res) => {
         trendBot: IS_TXBOT_HOST ? trendBooster.status() : null,
         mmBot: IS_TXBOT_HOST ? mmBooster.status() : null,
         job: publicJob(),
-        fundingPreview: IS_BUNDLER_HOST ? fundingPreview : null,
+        fundingPreview: IS_BUNDLER_HOST ? fundingPreview: null,
         snipeConfig: IS_SNIPER_HOST ? store.snipeConfig : { enabled: false, autoSell: false },
         snipes: IS_SNIPER_HOST
             ? (store.snipes || []).slice(-30).reverse()
@@ -1491,10 +1787,370 @@ if (IS_BUNDLER_HOST) {
                     ? Number(req.query.plannedEth)
                     : null;
             const overview = await buildMoneyOverview({ plannedEth: planned });
+            // P1–P5: honest composition
+            const md = moneyDesk.ensureMoneyDesk(store);
+            const cap = projectCapital(store.activeProjectId);
+            overview.custody = {
+                chainLabels: {
+                    funder: "Robinhood (4663)",
+                    vault: "Ethereum mainnet (if configured)",
+                    buyers: "Robinhood (4663)",
+                },
+                tradingProceedsEth: Number(cap.recoveredEth || 0),
+                deployedEth: Number(cap.deployedEth || 0),
+                preExistingNote:
+                    "Do not treat wallet gas leftovers / swept treasury ETH as trading profit.",
+                controlStatus: {
+                    weControl: "Wallets with keys in dashboard / legs files",
+                    inFlight: "ChangeNOW / Across pending (see jobs)",
+                    stuck: "Addresses without keys on disk — unrecoverable",
+                },
+                vaultComposition: md.vaultComposition || {
+                    sellProceedsEth: Number(cap.recoveredEth || 0),
+                    sweptPreExistingEth: Number(cap.sweptPreExistingEth || 0),
+                    bridgeFeesEth: Number(cap.bridgeFeesEth || 0),
+                    note: "Set via /api/money/vault-composition after dumps",
+                },
+                profitReserve: md.profitReserve || null,
+            };
+            overview.launchGate = {
+                checkpoint: launchCp.loadCheckpoint(store.activeProjectId),
+                linkage: privacyBridge.analyzeFundingLinkage(store.wallets || [], {
+                    mode: "changenow",
+                    privacyBreak: true,
+                    vaultPk: "skip",
+                }),
+                checklist: [
+                    "Create gas estimate × safety mult (ApeStore)",
+                    "Uni buy fallback enabled",
+                    "Keys persisted before any privacy/CN payments",
+                    "Default fund = ChangeNOW clean (hop/shared treasury REFUSED)",
+                    "PnL separates swept ETH vs sell proceeds",
+                ],
+            };
+            overview.bubblemapsWarning =
+                "Router transfers (1inch/Uni) do NOT clear Bubblemaps/InsightX history. Shared treasury / hop fund is refused. Default Send cash = ChangeNOW → Across.";
             res.json(overview);
         } catch (e) {
             res.status(500).json({ error: e.message });
         }
+    });
+
+    app.post("/api/money/vault-composition", (req, res) => {
+        const md = moneyDesk.ensureMoneyDesk(store);
+        const b = req.body || {};
+        md.vaultComposition = {
+            sellProceedsEth: Number(b.sellProceedsEth) || 0,
+            sweptPreExistingEth: Number(b.sweptPreExistingEth) || 0,
+            bridgeFeesEth: Number(b.bridgeFeesEth) || 0,
+            note: String(b.note || ""),
+            updatedAt: new Date().toISOString(),
+        };
+        const cap = projectCapital(store.activeProjectId);
+        if (b.sweptPreExistingEth != null) {
+            cap.sweptPreExistingEth = Number(b.sweptPreExistingEth) || 0;
+        }
+        if (b.sellProceedsEth != null) {
+            cap.recoveredEth = Number(b.sellProceedsEth) || cap.recoveredEth;
+        }
+        saveStore(store);
+        res.json({ ok: true, vaultComposition: md.vaultComposition });
+    });
+
+    app.post("/api/money/profit-reserve", (req, res) => {
+        const md = moneyDesk.ensureMoneyDesk(store);
+        md.profitReserve = {
+            address: req.body?.address || null,
+            eth: Number(req.body?.eth) || 0,
+            purpose: req.body?.purpose || "$ profit reserve",
+            locked: req.body?.locked !== false,
+            updatedAt: new Date().toISOString(),
+        };
+        saveStore(store);
+        res.json({ ok: true, profitReserve: md.profitReserve });
+    });
+
+    // --- Postmortem APIs: checkpoint, linkage, privacy legs, jobs ---
+    app.get("/api/launch/checkpoint", (req, res) => {
+        res.json(launchCp.loadCheckpoint(store.activeProjectId));
+    });
+
+    app.post("/api/launch/resume-buyup", async (req, res) => {
+        if (job.running) return res.status(409).json({ error: "Job already running" });
+        const projectId = store.activeProjectId || "default";
+        const cp = launchCp.loadCheckpoint(projectId);
+        if (!cp.token) {
+            return res.status(400).json({ error: "No checkpoint token — create first" });
+        }
+        const pending = launchCp.pendingBuyers(projectId);
+        if (!pending.length) {
+            return res.json({ ok: true, message: "Nothing pending", checkpoint: cp });
+        }
+        const byAddr = new Map(
+            (store.wallets || []).map((w) => [
+                String(w.address || "").toLowerCase(),
+                w,
+            ])
+        );
+        const launchBuyers = pending
+            .map((p) => {
+                const w = byAddr.get(String(p.address).toLowerCase());
+                if (!w) return null;
+                return {
+                    private_key: w.private_key || w.privateKey,
+                    address: w.address,
+                    name: w.name || p.name,
+                    buyAmountEth: p.buyAmountEth || w.buyAmountEth,
+                    delaySec: p.delaySec ?? w.delaySec ?? 0,
+                };
+            })
+            .filter(Boolean);
+        if (!launchBuyers.length) {
+            return res.status(400).json({ error: "Pending buyers missing keys in store" });
+        }
+        const launchpad = resolveLaunchpad(cp.launchpad || store.launchpad);
+        const uniFallback = req.body?.uniFallback !== false;
+        const jobId = `resume-${projectId}-${Date.now()}`;
+        setJob({
+            running: true,
+            type: "resume-buyup",
+            logs: [],
+            result: null,
+            progress: { done: 0, total: launchBuyers.length, label: "resume" },
+            abort: false,
+        });
+        res.json({ ok: true, job: publicJob(), pending: launchBuyers.length });
+        try {
+            pushLog(`▶️ Resume buyup · ${launchBuyers.length} wallets · ${cp.token}`, "ok");
+            jobLog.appendJobEvent(jobId, { type: "resume_start", count: launchBuyers.length });
+            let done = 0;
+            const onProgress = (ev) => {
+                if (ev.type === "bought") {
+                    done++;
+                    setProgress(done, launchBuyers.length, "bought");
+                    pushLog(`✅ ${ev.name} · ${ev.hash}`, "ok");
+                    launchCp.markBuyerResult(projectId, ev.wallet, { ok: true, hash: ev.hash });
+                } else if (ev.type === "error") {
+                    done++;
+                    pushLog(`❌ ${ev.name}: ${ev.error}`, "err");
+                    launchCp.markBuyerResult(projectId, ev.wallet, {
+                        ok: false,
+                        error: ev.error,
+                    });
+                } else if (ev.type === "info") {
+                    pushLog(`ℹ️ ${ev.msg}`, "info");
+                }
+            };
+            const results =
+                launchpad === "apestore"
+                    ? await apestore.multiBuy(launchBuyers, cp.token, {
+                          mode: "sequential",
+                          uniFallback,
+                          waitForReceipt: true,
+                          shouldAbort: () => job.abort === true,
+                          onProgress,
+                      })
+                    : await chain.multiBuy(launchBuyers, cp.token, {
+                          mode: "sequential",
+                          waitForReceipt: true,
+                          shouldAbort: () => job.abort === true,
+                          onProgress,
+                      });
+            const okN = (results || []).filter((r) => r.ok).length;
+            if (launchCp.isLaunchComplete(projectId) && store.projects?.[projectId]) {
+                store.projects[projectId].status = "live";
+                saveStore(store);
+            }
+            job.result = { ok: okN, total: launchBuyers.length, results };
+            pushLog(`Resume done · ${okN}/${launchBuyers.length}`, "ok");
+        } catch (e) {
+            pushLog(`Resume failed: ${e.message}`, "err");
+            job.result = { error: e.message };
+        } finally {
+            job.running = false;
+            broadcast({ type: "job", job: publicJob() });
+        }
+    });
+
+    app.get("/api/funding/linkage", (req, res) => {
+        const hops = Number(req.query.hops ?? 2);
+        const mode = String(req.query.mode || "changenow").toLowerCase();
+        const privacyBreak =
+            req.query.privacyBreak === "1" ||
+            req.query.privacyBreak === "true" ||
+            mode === "changenow" ||
+            mode === "clean";
+        res.json(
+            privacyBridge.analyzeFundingLinkage(store.wallets || [], {
+                hops,
+                mode,
+                privacyBreak,
+                // linkage UI check: don't fail solely on vault env unless asked
+                vaultPk: req.query.requireVault === "1" ? undefined : "skip",
+            })
+        );
+    });
+
+    app.post("/api/privacy/prepare-legs", (req, res) => {
+        try {
+            const n = Number(req.body?.n || req.body?.count || 8);
+            const jobId = req.body?.jobId || `clean-${Date.now()}`;
+            const prepared = privacyBridge.prepareCleanLegs(n, jobId);
+            // Keys stay on disk only — response has addresses
+            res.json({
+                ok: true,
+                ...prepared,
+                warning:
+                    "Legs prepared. Do not pay ChangeNOW until this step finishes.",
+            });
+        } catch (e) {
+            res.status(400).json({ error: e.message });
+        }
+    });
+
+    app.post("/api/privacy/preflight", (req, res) => {
+        try {
+            const legsFile =
+                req.body?.legsFile ||
+                path.join(
+                    walletSafety.LEGS_DIR,
+                    `${req.body?.jobId || "missing"}.json`
+                );
+            const r = privacyBridge.preflightCleanCycle(legsFile);
+            res.json(r);
+        } catch (e) {
+            res.status(400).json({ error: e.message });
+        }
+    });
+
+    // --- Aged wallet pool: park hundreds, drip first-seen times ---
+    app.get("/api/pool", (_req, res) => {
+        res.json(agedPool.publicPool());
+    });
+
+    app.post("/api/pool/generate", (req, res) => {
+        try {
+            const n = Number(req.body?.count ?? req.body?.n ?? 200);
+            const out = agedPool.generateAndPark(n, {
+                namePrefix: req.body?.namePrefix || undefined,
+                createdSpreadMs: Number(req.body?.createdSpreadMs) || undefined,
+                batchId: req.body?.batchId,
+            });
+            pushLog(
+                `🅿️ Parked ${out.count} aged-pool wallets · ${out.legsFile}`,
+                "ok"
+            );
+            res.json(out);
+        } catch (e) {
+            res.status(400).json({ error: e.message });
+        }
+    });
+
+    app.post("/api/pool/config", (req, res) => {
+        try {
+            res.json(agedPool.updateConfig(req.body || {}));
+        } catch (e) {
+            res.status(400).json({ error: e.message });
+        }
+    });
+
+    app.post("/api/pool/drip/start", (req, res) => {
+        try {
+            const body = req.body || {};
+            const pub = agedPool.startDrip({
+                config: body.config || body,
+                firstDelaySec: body.firstDelaySec,
+                firstDelayMaxSec: body.firstDelayMaxSec,
+            });
+            pushLog(
+                `⏳ Aged-pool drip ARMED · next ${pub.drip.nextAt} · mode ${pub.config.fundingMode}`,
+                "ok"
+            );
+            res.json(pub);
+        } catch (e) {
+            res.status(400).json({ error: e.message });
+        }
+    });
+
+    app.post("/api/pool/drip/stop", (_req, res) => {
+        try {
+            const pub = agedPool.stopDrip();
+            pushLog("⏹ Aged-pool drip stopped", "info");
+            res.json(pub);
+        } catch (e) {
+            res.status(400).json({ error: e.message });
+        }
+    });
+
+    app.post("/api/pool/claim", (req, res) => {
+        try {
+            const n = Number(req.body?.count || 8);
+            const claimed = agedPool.claimReady(n, {
+                namePrefix: req.body?.namePrefix || "Aged-",
+            });
+            // Import into active store as buyers (keys already on disk)
+            for (const w of claimed.wallets) {
+                const exists = (store.wallets || []).some(
+                    (x) =>
+                        String(x.address || "").toLowerCase() ===
+                        String(w.address).toLowerCase()
+                );
+                if (!exists) {
+                    store.wallets.push({
+                        name: w.name,
+                        address: w.address,
+                        private_key: w.private_key || w.privateKey,
+                        role: "buyer",
+                        seasoned: !!w.seasoned,
+                        seasonTxCount: w.seasonTxCount || 0,
+                        seasonedAt: w.seasonedAt || null,
+                        agedPoolId: w.agedPoolId,
+                        firstSeenAt: w.firstSeenAt || null,
+                        buyAmountEth: null,
+                        delaySec: 0,
+                    });
+                }
+            }
+            saveStore(store);
+            try {
+                walletSafety.registerStoreWallets(store);
+            } catch (_) {}
+            pushLog(
+                `✅ Claimed ${claimed.count} aged wallets into helpers · ready left ${claimed.remainingReady}`,
+                "ok"
+            );
+            res.json({
+                ok: true,
+                ...claimed,
+                // never echo private keys in HTTP response
+                wallets: claimed.wallets.map((w) => ({
+                    name: w.name,
+                    address: w.address,
+                    seasoned: w.seasoned,
+                    agedPoolId: w.agedPoolId,
+                    firstSeenAt: w.firstSeenAt,
+                })),
+            });
+        } catch (e) {
+            res.status(400).json({ error: e.message });
+        }
+    });
+
+    // Airdrop: paste competitor CA → top holders + active traders → send your token
+    mountAirdropRoutes(app, {
+        chain,
+        getDashStore: () => store,
+    });
+
+    app.get("/api/jobs", (req, res) => {
+        res.json({ jobs: jobLog.listJobs() });
+    });
+
+    app.get("/api/jobs/:id", (req, res) => {
+        res.json({
+            id: req.params.id,
+            events: jobLog.readJobEvents(req.params.id),
+        });
     });
 
     app.get("/api/money/config", (req, res) => {
@@ -1838,8 +2494,9 @@ app.get("/api/events", (req, res) => {
     res.setHeader("Connection", "keep-alive");
     res.flushHeaders?.();
     res.write(`data: ${JSON.stringify({ type: "hello", job: publicJob() })}\n\n`);
-    clients.add(res);
-    req.on("close", () => clients.delete(res));
+    const client = { res, userId: tenant.getUserId() || "_legacy" };
+    clients.add(client);
+    req.on("close", () => clients.delete(client));
 });
 
 // --- Multi-token projects (bundler only) ---
@@ -1891,7 +2548,7 @@ app.post("/api/projects/switch", (req, res) => {
     try {
         hydrateProject(store, projectId);
         // Clear in-memory fund preview when leaving a project mid-schedule
-        fundingPreview = null;
+        fundingPreviewBox.v = null;
         saveStore(store);
         kickBalanceRefresh();
         res.json({
@@ -2001,6 +2658,15 @@ app.post("/api/dev/fund", async (req, res) => {
     );
     res.json({ ok: true, job: publicJob() });
     try {
+        try {
+            await platformFee.collectOnRobinhood(chain, f, amountEth, {
+                reason: "fund_creator",
+                pushLog,
+            });
+        } catch (e) {
+            pushLog(`❌ Payment failed: ${e.message}`, "err");
+            throw e;
+        }
         const tx = await chain.transferEth(
             { private_key: f.private_key || f.privateKey, address: f.address },
             d.address,
@@ -2082,7 +2748,15 @@ app.post("/api/launch", async (req, res) => {
             ? "organic"
             : buyModeRaw === "sequential"
               ? "sequential"
-              : "burst";
+              : buyModeRaw === "hybrid"
+                ? "hybrid"
+                : "burst";
+    const openCount = Math.max(1, Math.min(32, Number(req.body?.openCount ?? 8)));
+    const uniFallback = req.body?.uniFallback !== false;
+    const forceUni = req.body?.forceUni === true;
+    const splitJobs = req.body?.splitJobs === true; // L9: create+open only, organic separate
+    const projectId = store.activeProjectId || "default";
+    const jobId = `launch-${projectId}-${Date.now()}`;
     const organicPaceSec = Math.max(2, Number(req.body?.organicPaceSec ?? 10));
     const organicQuietSec = Math.max(4, Number(req.body?.organicQuietSec ?? 12));
     const organicMaxDipPct = Math.min(
@@ -2131,14 +2805,38 @@ app.post("/api/launch", async (req, res) => {
     pushLog(
         `🚀 Launching $${symbol} on ${launchpadLabel(launchpad)} · creator buy ${devBuyEth} ETH${
             buyAfter
-                ? ` · then ${buyMode} buy ${list.length} wallets`
+                ? ` · then ${buyMode} buy ${list.length} wallets${
+                      buyMode === "hybrid" ? ` (open ${openCount}+organic)` : ""
+                  }${uniFallback && launchpad === "apestore" ? " · Uni fallback ON" : ""}`
                 : ""
         }`,
         "ok"
     );
-    res.json({ ok: true, job: publicJob() });
+    try {
+        launchCp.markCreating(projectId, {
+            launchpad,
+            name,
+            symbol,
+            buyMode,
+            note: jobId,
+        });
+        jobLog.appendJobEvent(jobId, { type: "launch_start", symbol, launchpad, buyMode });
+    } catch (_) {}
+    res.json({ ok: true, job: publicJob(), jobId, checkpoint: "creating" });
 
     try {
+        const fLaunch = funder();
+        const launchFeeBase =
+            Number(devBuyEth || 0) +
+            (buyAfter
+                ? list.reduce((a, w) => a + (Number(w.buyAmountEth) || 0), 0)
+                : 0);
+        if (fLaunch && platformFee.computeFeeEth(launchFeeBase) > 0) {
+            await platformFee.collectOnRobinhood(chain, fLaunch, launchFeeBase, {
+                reason: "launch",
+                pushLog,
+            });
+        }
         const launchWallet = {
             private_key: d.private_key || d.privateKey,
             address: d.address,
@@ -2153,6 +2851,9 @@ app.post("/api/launch", async (req, res) => {
                 website: req.body?.website || "",
                 discord: req.body?.discord || "",
                 buyEth: devBuyEth,
+                // L1: high floor; ape.store still estimateGas×2 internally
+                gasLimit: req.body?.gasLimit ? Number(req.body.gasLimit) : undefined,
+                gasSafetyMult: Number(req.body?.gasSafetyMult || 2),
             };
         const launched =
             launchpad === "apestore"
@@ -2168,7 +2869,10 @@ app.post("/api/launch", async (req, res) => {
         const token = launched.token;
         store.lastToken = token;
         if (store.projects?.[store.activeProjectId]) {
-            store.projects[store.activeProjectId].status = "live";
+            // L4: don't claim fully live until buyup progresses; mark launching
+            store.projects[store.activeProjectId].status = buyAfter
+                ? "buyup_pending"
+                : "live";
             store.projects[store.activeProjectId].token = token;
         }
         // Money Desk: track deployed capital + launch expense
@@ -2203,23 +2907,36 @@ app.post("/api/launch", async (req, res) => {
             "ok"
         );
         pushLog(`🔗 ${launched.apeUrl || launched.koaUrl || launched.noxaUrl || token}`, "info");
-
-        // Enroll holders indexer for new token
         try {
-            const holdersCol = require("./collectors/evm-holders");
-            holdersCol.enroll(token);
-            holdersCol
-                .scan(chain.provider, token, { weth: chain.WETH })
-                .catch((e) =>
-                    console.warn("[holders] post-launch scan", e.message)
-                );
-            try {
-                const mission = require("./mission/risk");
-                const mc = await chain.resolveLiveMarketCap(token).catch(() => null);
-                if (mc?.mcapUsd) mission.noteMcap(token, mc.mcapUsd, { isEntry: true });
-            } catch (_) {}
+            const sortedBuyers = [...list].sort(
+                (a, b) => (a.buyOrder ?? 999) - (b.buyOrder ?? 999)
+            );
+            launchCp.markCreated(projectId, {
+                token,
+                createTx: launched.hash,
+                launchpad,
+                name,
+                symbol,
+                buyers: sortedBuyers.map((w, i) => ({
+                    name: w.name,
+                    address: w.address,
+                    buyAmountEth: w.buyAmountEth,
+                    delaySec: w.delaySec ?? 0,
+                    tranche:
+                        buyMode === "hybrid"
+                            ? i < openCount
+                                ? "fast_open"
+                                : "organic_drip"
+                            : buyMode,
+                })),
+            });
+            jobLog.appendJobEvent(jobId, {
+                type: "created",
+                token,
+                hash: launched.hash,
+            });
         } catch (e) {
-            console.warn("[holders] enroll failed", e.message);
+            pushLog(`⚠️ checkpoint save: ${e.message}`, "err");
         }
 
         // Brief wait so pool is queryable; creator swap already happened in create tx
@@ -2244,34 +2961,109 @@ app.post("/api/launch", async (req, res) => {
                 "info"
             );
             let done = 1;
-            const launchBuyers = list.map((w) => ({
+            const sortedList = [...list].sort(
+                (a, b) => (a.buyOrder ?? 999) - (b.buyOrder ?? 999)
+            );
+            // L9 / hybrid: optionally only run fast-open tranche now
+            let buyList = sortedList;
+            if (buyMode === "hybrid" || splitJobs) {
+                const open = sortedList.slice(0, openCount).map((w, i) => ({
+                    ...w,
+                    delaySec: 0,
+                    tranche: "fast_open",
+                    buyOrder: i,
+                }));
+                const rest = sortedList.slice(openCount).map((w, i) => ({
+                    ...w,
+                    delaySec: Math.max(
+                        Number(w.delaySec) || 0,
+                        8 + i * 2
+                    ),
+                    tranche: "organic_drip",
+                }));
+                if (splitJobs) {
+                    buyList = open;
+                    pushLog(
+                        `⚡ Anti-snipe open only: ${open.length} wallets (organic ${rest.length} deferred — use Resume buyup)`,
+                        "info"
+                    );
+                } else if (buyMode === "hybrid") {
+                    buyList = [...open, ...rest];
+                    pushLog(
+                        `⚡ Hybrid: ${open.length} instant open + ${rest.length} organic drip`,
+                        "info"
+                    );
+                }
+            }
+            const launchBuyers = buyList.map((w) => ({
                     private_key: w.private_key || w.privateKey,
                     address: w.address,
                     name: w.name,
                     buyAmountEth: w.buyAmountEth,
                     delaySec: w.delaySec ?? 0,
                 }));
-            buyResult =
-                launchpad === "apestore"
-                    ? await apestore.multiBuy(launchBuyers, token, {
-                          mode: buyMode === "organic" ? "sequential" : buyMode,
+            const apeBuyOpts = {
+                          mode:
+                              buyMode === "organic" ||
+                              (buyMode === "hybrid" && !splitJobs)
+                                  ? "sequential"
+                                  : buyMode === "hybrid" && splitJobs
+                                    ? "burst"
+                                    : buyMode === "sequential"
+                                      ? "sequential"
+                                      : "burst",
                           concurrency: Math.min(4, Number(req.body?.concurrency || 3)),
                           waitForReceipt: true,
+                          uniFallback,
+                          forceUni,
                           shouldAbort: () => job.abort === true,
                           onProgress: (ev) => {
                               if (ev.type === "bought") {
                                   done++;
                                   setProgress(done, list.length + 1, "bought");
-                                  pushLog(`✅ helper buy · ${EXPLORER}/tx/${ev.hash}`, "ok");
+                                  pushLog(
+                                      `✅ helper buy${ev.via ? ` [${ev.via}]` : ""} · ${EXPLORER}/tx/${ev.hash}`,
+                                      "ok"
+                                  );
+                                  try {
+                                      launchCp.markBuyerResult(projectId, ev.wallet, {
+                                          ok: true,
+                                          hash: ev.hash,
+                                      });
+                                      jobLog.appendJobEvent(jobId, {
+                                          type: "buy_ok",
+                                          wallet: ev.wallet,
+                                          name: ev.name,
+                                          hash: ev.hash,
+                                          via: ev.via,
+                                      });
+                                  } catch (_) {}
                               } else if (ev.type === "error") {
                                   done++;
                                   setProgress(done, list.length + 1, "error");
                                   pushLog(`❌ ${ev.name || ev.wallet}: ${ev.error}`, "err");
+                                  try {
+                                      launchCp.markBuyerResult(projectId, ev.wallet, {
+                                          ok: false,
+                                          error: ev.error,
+                                      });
+                                      jobLog.appendJobEvent(jobId, {
+                                          type: "buy_fail",
+                                          wallet: ev.wallet,
+                                          name: ev.name,
+                                          error: ev.error,
+                                      });
+                                  } catch (_) {}
                               } else if (ev.type === "buying") {
                                   pushLog(`🛒 ${ev.name || ev.wallet} buying ${ev.amount} ETH`, "info");
+                              } else if (ev.type === "info") {
+                                  pushLog(`ℹ️ ${ev.name || ""} ${ev.msg || ""}`, "info");
                               }
                           },
-                      })
+                      };
+            buyResult =
+                launchpad === "apestore"
+                    ? await apestore.multiBuy(launchBuyers, token, apeBuyOpts)
                     : await chain.multiBuy(launchBuyers, token, {
                     mode: buyMode,
                     fast: buyMode === "burst",
@@ -3002,61 +3794,133 @@ app.post("/api/plan/apply", (req, res) => {
 
 app.post("/api/fund", async (req, res) => {
     if (job.running) return res.status(409).json({ error: "Job already running" });
-    const f = funder();
-    if (!f) return res.status(400).json({ error: "Add a funder wallet first" });
+
+    // Legacy hop fund — HARD REFUSED (InsightX / Bubblemaps shared treasury edge)
+    const mode = String(req.body?.mode || "changenow").toLowerCase();
+    if (
+        mode === "hops" ||
+        mode === "hop" ||
+        req.body?.hops != null ||
+        req.body?.useDistributors
+    ) {
+        return res.status(400).json({
+            error:
+                "REFUSE: shared treasury / hop funding blocked. Use POST /api/fund/preview + /api/fund/execute with mode=changenow (ChangeNOW → Across).",
+            code: "shared_treasury_edge",
+            refuse: true,
+        });
+    }
+
     const dest = buyersOnly().filter((w) => Number(w.buyAmountEth) > 0);
     if (!dest.length) {
         return res.status(400).json({ error: "No buyer amounts — apply a plan first" });
     }
-    const hops = Math.min(3, Math.max(1, Number(req.body?.hops || 2)));
-
-    setJob({ running: true, type: "fund", logs: [], result: null });
-    pushLog(`Funding ${dest.length} wallets via ${hops} hop(s)…`, "info");
-    res.json({ ok: true, job: publicJob() });
+    const fLegacy = funder();
+    const vaultPkLegacy = privacyBridge.resolveVaultPk(
+        fLegacy?.private_key || fLegacy?.privateKey || undefined
+    );
+    const gateAnalysis = privacyBridge.analyzeFundingLinkage(
+        store.wallets || [],
+        {
+            mode: "changenow",
+            privacyBreak: true,
+            vaultPk: vaultPkLegacy || "skip",
+        }
+    );
+    if (gateAnalysis.refuse || !gateAnalysis.ok) {
+        return res.status(400).json({
+            error: gateAnalysis.message || "Clean fund preflight failed",
+            code: gateAnalysis.code,
+            refuse: true,
+            analysis: gateAnalysis,
+        });
+    }
+    if (!vaultPkLegacy) {
+        return res.status(400).json({
+            error:
+                "No mainnet payer key — import a funder or set MAINNET_VAULT_PK",
+            code: "vault_pk_missing",
+            refuse: true,
+        });
+    }
 
     try {
-        const results = await chain.disperseWithHops(
-            { private_key: f.private_key },
+        walletSafety.registerStoreWallets(store);
+    } catch (_) {}
+
+    setJob({
+        running: true,
+        type: "fund",
+        logs: [],
+        result: null,
+        progress: { done: 0, total: dest.length, label: "clean-fund" },
+        abort: false,
+    });
+    pushLog(
+        `🔐 ChangeNOW clean fund · ${dest.length} buyers (legacy /api/fund → clean path)`,
+        "ok"
+    );
+    res.json({ ok: true, job: publicJob(), mode: "changenow" });
+
+    try {
+        const legacyBase = dest.reduce(
+            (s, w) =>
+                s +
+                Math.round(
+                    (Number(w.buyAmountEth) + chain.BUYER_GAS_BUFFER_ETH) * 1e6
+                ) /
+                    1e6,
+            0
+        );
+        const cnBase = dest.reduce(
+            (s, w) =>
+                s +
+                privacyBridge.padCnAmountEth(
+                    Math.round(
+                        (Number(w.buyAmountEth) + chain.BUYER_GAS_BUFFER_ETH) *
+                            1e6
+                    ) / 1e6
+                ),
+            0
+        );
+        await platformFee.collectOnMainnet(vaultPkLegacy, cnBase || legacyBase, {
+            reason: "fund_buyers_legacy",
+            pushLog,
+        });
+        const out = await privacyBridge.runCleanFundCycle(
             dest.map((w) => ({
-                address: w.address,
-                amountEth: w.buyAmountEth,
                 name: w.name,
+                address: w.address,
+                amountEth:
+                    Math.round(
+                        (Number(w.buyAmountEth) + chain.BUYER_GAS_BUFFER_ETH) *
+                            1e6
+                    ) / 1e6,
             })),
             {
-                hops,
-                buyerGasBufferEth: chain.BUYER_GAS_BUFFER_ETH,
-                onHopCreated: ({ hops: hopKeys, dest: d, name }) => {
-                    persistHopKeys(hopKeys, { dest: d, destName: name });
-                    pushLog(
-                        `🔐 saved ${hopKeys.length} hop key(s) for ${name || d} (recoverable if stuck)`,
-                        "info"
-                    );
-                },
-                onProgress: (ev) => {
-                    if (ev.type === "start") {
-                        pushLog(
-                            `→ ${ev.name}: ${ev.amountEth} ETH (+gas) via ${ev.hops.length} hops`,
-                            "info"
-                        );
-                    } else if (ev.type === "hop") {
-                        pushLog(`  hop ${ev.step}: ${EXPLORER}/tx/${ev.hash}`, "tx");
-                    } else if (ev.type === "done") {
-                        markHopsDelivered(ev.dest);
-                        pushLog(`✅ ${ev.name} funded · ${EXPLORER}/tx/${ev.hash}`, "ok");
+                jobId: `fund-legacy-${Date.now()}`,
+                vaultPk: vaultPkLegacy,
+                shouldAbort: () => job.abort === true,
+                onProgress: async (ev) => {
+                    if (ev.type === "across_done") {
+                        pushLog(`✅ Across → ${ev.name} · ${ev.hash}`, "ok");
+                    } else if (ev.type === "cn_paid") {
+                        pushLog(`CN paid ${ev.name} · ${ev.hash}`, "tx");
                     } else if (ev.type === "error") {
-                        pushLog(
-                            `❌ ${ev.name || ev.dest}: ${ev.error} — hop keys kept for recovery`,
-                            "err"
-                        );
+                        pushLog(`❌ ${ev.name}: ${ev.error}`, "err");
+                    } else if (ev.type === "leg_start") {
+                        pushLog(`Leg ${ev.name}: CN → Base → Across`, "info");
                     }
                 },
             }
         );
-        job.result = results;
-        const okN = results.filter((r) => r.ok !== false && !r.error).length;
-        pushLog(`Funding complete · ${okN}/${results.length} ok`, "ok");
+        job.result = out;
+        pushLog(
+            `Clean fund complete · ${out.ok}/${out.total} ok · ${out.legsFile}`,
+            out.ok ? "ok" : "err"
+        );
     } catch (e) {
-        pushLog(`Funding failed: ${e.shortMessage || e.message}`, "err");
+        pushLog(`Clean fund failed: ${e.shortMessage || e.message}`, "err");
         job.result = { error: e.message };
     } finally {
         job.running = false;
@@ -3098,142 +3962,6 @@ app.post("/api/launchpad", (req, res) => {
     store.launchpad = pad;
     saveStore(store);
     res.json({ ok: true, launchpad: pad });
-});
-
-/** Privacy funding: ChangeNOW → Across (Base → Robinhood) */
-app.get("/api/privacy/status", async (_req, res) => {
-    try {
-        res.json(await privacy.status());
-    } catch (e) {
-        res.status(500).json({ error: e.message });
-    }
-});
-
-app.post("/api/privacy/preview", async (req, res) => {
-    try {
-        const list =
-            Array.isArray(req.body?.destinations) && req.body.destinations.length
-                ? req.body.destinations
-                : buyersOnly()
-                      .filter((w) => Number(w.buyAmountEth) > 0)
-                      .map((w) => ({
-                          address: w.address,
-                          amountEth:
-                              Number(w.buyAmountEth) +
-                              Number(process.env.BUYER_GAS_BUFFER_ETH || 0.002),
-                      }));
-        res.json(await privacy.previewPrivacyFund(list));
-    } catch (e) {
-        res.status(500).json({ error: e.message });
-    }
-});
-
-app.post("/api/privacy/changenow", async (req, res) => {
-    try {
-        const amountEth = Number(req.body?.amountEth || 0);
-        if (!(amountEth > 0)) {
-            return res.status(400).json({ error: "amountEth required" });
-        }
-        const wallet = privacy.bridgeWallet();
-        const toAddress =
-            req.body?.toAddress ||
-            wallet?.address ||
-            null;
-        if (!toAddress) {
-            return res.status(400).json({
-                error:
-                    "Set PRIVACY_BRIDGE_PK (Base wallet) or pass toAddress for ChangeNOW payout",
-            });
-        }
-        const order = await privacy.changeNowCreate({
-            amountEth,
-            toAddress,
-            from: req.body?.from || "eth",
-            to: req.body?.to || "ethbase",
-            refundAddress: req.body?.refundAddress || null,
-        });
-        res.json({ ok: true, order });
-    } catch (e) {
-        res.status(500).json({ error: e.message });
-    }
-});
-
-app.get("/api/privacy/changenow/:id", async (req, res) => {
-    try {
-        res.json(await privacy.changeNowStatus(req.params.id));
-    } catch (e) {
-        res.status(500).json({ error: e.message });
-    }
-});
-
-app.post("/api/privacy/across", async (req, res) => {
-    if (job.running) return res.status(409).json({ error: "Job already running" });
-    const dryRun = req.body?.dryRun !== false && req.body?.arm !== true;
-    const list =
-        Array.isArray(req.body?.destinations) && req.body.destinations.length
-            ? req.body.destinations
-            : buyersOnly()
-                  .filter((w) => Number(w.buyAmountEth) > 0)
-                  .map((w) => ({
-                      address: w.address,
-                      amountEth:
-                          Number(w.buyAmountEth) +
-                          Number(process.env.BUYER_GAS_BUFFER_ETH || 0.002),
-                  }));
-    if (!list.length) {
-        return res.status(400).json({ error: "No destinations — apply a plan first" });
-    }
-
-    setJob({
-        running: true,
-        type: "privacy_across",
-        logs: [],
-        result: null,
-        progress: { done: 0, total: list.length, label: dryRun ? "quoting" : "bridging" },
-        abort: false,
-    });
-    pushLog(
-        dryRun
-            ? `🔐 Privacy Across preview · ${list.length} wallets (dry-run)`
-            : `🔐 Privacy Across LIVE · ${list.length} wallets Base→Robinhood`,
-        dryRun ? "info" : "ok"
-    );
-    res.json({ ok: true, job: publicJob(), dryRun });
-
-    try {
-        let done = 0;
-        const out = await privacy.executeAcrossLegs(list, {
-            dryRun,
-            delayMs: Number(req.body?.delayMs || 2500),
-            onProgress: async (ev) => {
-                done++;
-                setProgress(done, list.length, ev.type || "progress");
-                if (ev.type === "bridged") {
-                    pushLog(
-                        `✅ bridged → ${ev.address?.slice(0, 10)}… · ${ev.hash}`,
-                        "ok"
-                    );
-                } else if (ev.type === "quoted") {
-                    pushLog(`quote ok · ${ev.address?.slice(0, 10)}… ${ev.amountEth} ETH`, "info");
-                } else if (ev.type === "error") {
-                    pushLog(`❌ ${ev.address?.slice(0, 10)}… ${ev.error}`, "err");
-                }
-            },
-        });
-        job.result = out;
-        pushLog(
-            dryRun
-                ? `Done quoting ${out.results?.length || 0} legs`
-                : `Across finished · ${out.results?.filter((r) => r.ok).length || 0} ok`,
-            "ok"
-        );
-    } catch (e) {
-        pushLog(`Privacy Across failed: ${e.message}`, "err");
-        job.result = { error: e.message };
-    } finally {
-        job.running = false;
-        broadcast({ type: "job_done", job: publicJob() });
-    }
 });
 
 app.post("/api/buy/cancel", (req, res) => {
@@ -3281,6 +4009,21 @@ app.post("/api/buy", async (req, res) => {
     }
     if (!list.length) {
         return res.status(400).json({ error: "No buyer amounts — apply a plan first" });
+    }
+
+    const buyFeeBase = list.reduce(
+        (a, w) => a + (Number(w.buyAmountEth) || 0),
+        0
+    );
+    const fBuy = funder();
+    if (platformFee.computeFeeEth(buyFeeBase) > 0) {
+        if (!fBuy?.private_key && !fBuy?.privateKey) {
+            return res.status(400).json({
+                error:
+                    "Import a bank wallet with ETH on Robinhood before buying",
+                code: "fee_no_payer",
+            });
+        }
     }
 
     // Money Desk: kill switch + reserve (buys spend buyer wallets, still check funder floor)
@@ -3412,6 +4155,21 @@ app.post("/api/buy", async (req, res) => {
     const byAddr = new Map(
         list.map((w) => [String(w.address || "").toLowerCase(), w])
     );
+
+    try {
+        if (fBuy && platformFee.computeFeeEth(buyFeeBase) > 0) {
+            await platformFee.collectOnRobinhood(chain, fBuy, buyFeeBase, {
+                reason: "buy",
+                pushLog,
+            });
+        }
+    } catch (e) {
+        pushLog(`❌ Payment failed: ${e.message}`, "err");
+        job.running = false;
+        job.result = { error: e.message, code: e.code || "fee_failed" };
+        broadcast({ type: "job_done", job: publicJob() });
+        return;
+    }
 
     try {
         let done = 0;
@@ -3696,85 +4454,87 @@ app.post("/api/distributors/create", (req, res) => {
 });
 
 app.post("/api/fund/preview", async (req, res) => {
-    const f = funder();
-    if (!f) return res.status(400).json({ error: "Add a funder first" });
+    const mode = String(req.body?.mode || "changenow").toLowerCase();
+    const skipFunded = req.body?.skipFunded !== false;
     const hops = Math.min(3, Math.max(1, Number(req.body?.hops || 2)));
-    const useDistributors = !!req.body?.useDistributors && distributors().length > 0;
-    const skipFunded = req.body?.skipFunded !== false; // default: skip already-funded buyers
+    const useDistributors =
+        !!req.body?.useDistributors && distributors().length > 0;
+
+    // Hard refuse shared-treasury / hop / distributor preview (InsightX/Bubblemaps)
+    if (
+        mode === "hops" ||
+        mode === "hop" ||
+        mode === "distributors" ||
+        mode === "treasury" ||
+        useDistributors
+    ) {
+        const analysis = privacyBridge.analyzeFundingLinkage(
+            store.wallets || [],
+            { mode: "hops", sharedTreasury: true, privacyBreak: false, hops }
+        );
+        return res.status(400).json({
+            error:
+                analysis.message ||
+                "REFUSE: shared treasury / hop funding blocked. Default fund = ChangeNOW anti-InsightX/Bubblemaps.",
+            code: analysis.code || "shared_treasury_edge",
+            refuse: true,
+            analysis,
+        });
+    }
+
+    if (!privacyBridge.cnKey()) {
+        return res.status(400).json({
+            error:
+                "CHANGENOW_API_KEY not set — required for default ChangeNOW clean fund",
+            code: "changenow_key_missing",
+            refuse: true,
+        });
+    }
+    const fPreview = funder();
+    const vaultPkPreview = privacyBridge.resolveVaultPk(
+        fPreview?.private_key || fPreview?.privateKey || undefined
+    );
+    if (!vaultPkPreview) {
+        return res.status(400).json({
+            error:
+                "No mainnet payer key — import a funder (used on ETH mainnet to pay ChangeNOW) or set MAINNET_VAULT_PK",
+            code: "vault_pk_missing",
+            refuse: true,
+        });
+    }
 
     const jobs = [];
-    if (useDistributors) {
-        const dists = distributors();
-        dists.forEach((d) => {
-            const di = store.wallets.indexOf(d);
-            const kids = buyersOnly().filter(
-                (b) => b.parentIndex === di && Number(b.buyAmountEth) > 0
-            );
-            const total = kids.reduce((s, b) => s + Number(b.buyAmountEth), 0);
-            if (total <= 0) return;
-            const buffer = hops * 0.0005 * Math.max(1, kids.length);
-            const gasPad = chain.BUYER_GAS_BUFFER_ETH * Math.max(1, kids.length);
-            jobs.push({
-                phase: 1,
-                from: "funder",
-                fromAddress: f.address,
-                to: d.name,
-                toAddress: d.address,
-                toRole: "distributor",
-                amountEth: Math.round((total + buffer + gasPad) * 1e6) / 1e6,
-                hops,
-                status: "pending",
-            });
-            kids.forEach((b) => {
-                jobs.push({
-                    phase: 2,
-                    from: d.name,
-                    fromAddress: d.address,
-                    to: b.name,
-                    toAddress: b.address,
-                    toRole: "buyer",
-                    amountEth:
-                        Math.round(
-                            (Number(b.buyAmountEth) + chain.BUYER_GAS_BUFFER_ETH) *
-                                1e6
-                        ) / 1e6,
-                    hops,
-                    status: "pending",
-                });
-            });
-        });
-    } else {
-        const buyers = buyersOnly().filter((b) => Number(b.buyAmountEth) > 0);
-        for (const b of buyers) {
-            const amountEth =
-                Math.round(
-                    (Number(b.buyAmountEth) + chain.BUYER_GAS_BUFFER_ETH) * 1e6
-                ) / 1e6;
-            let alreadyFunded = false;
-            let balEth = null;
-            if (skipFunded) {
-                try {
-                    balEth = Number(await chain.getWalletBalance(b.address));
-                    // Treat as funded if they already hold most of buy+gas (dust ok)
-                    alreadyFunded = balEth >= amountEth * 0.85;
-                } catch (_) {}
-            }
-            if (alreadyFunded) continue;
-            jobs.push({
-                phase: 1,
-                from: "funder",
-                fromAddress: f.address,
-                to: b.name,
-                toAddress: b.address,
-                toRole: "buyer",
-                amountEth,
-                buyAmountEth: Number(b.buyAmountEth),
-                gasBufferEth: chain.BUYER_GAS_BUFFER_ETH,
-                hops,
-                status: "pending",
-                balEth,
-            });
+    const buyers = buyersOnly().filter((b) => Number(b.buyAmountEth) > 0);
+    for (const b of buyers) {
+        const amountEth =
+            Math.round(
+                (Number(b.buyAmountEth) + chain.BUYER_GAS_BUFFER_ETH) * 1e6
+            ) / 1e6;
+        let alreadyFunded = false;
+        let balEth = null;
+        if (skipFunded) {
+            try {
+                balEth = Number(await chain.getWalletBalance(b.address));
+                alreadyFunded = balEth >= amountEth * 0.85;
+            } catch (_) {}
         }
+        if (alreadyFunded) continue;
+        const cnAmountEth = privacyBridge.padCnAmountEth(amountEth);
+        jobs.push({
+            phase: 1,
+            mode: "changenow",
+            pipeline: "ChangeNOW(eth→ethbase) → Across(Base→RH buyer)",
+            from: "mainnet-vault→CN→unique-Base→Across",
+            to: b.name,
+            toAddress: b.address,
+            toRole: "buyer",
+            amountEth,
+            cnAmountEth,
+            buyAmountEth: Number(b.buyAmountEth),
+            gasBufferEth: chain.BUYER_GAS_BUFFER_ETH,
+            status: "pending",
+            balEth,
+        });
     }
 
     if (!jobs.length) {
@@ -3785,25 +4545,35 @@ app.post("/api/fund/preview", async (req, res) => {
         });
     }
 
-    const totalEth = jobs
-        .filter((j) => j.phase === 1)
-        .reduce((s, j) => s + j.amountEth, 0);
-    fundingPreview = {
-        hops,
-        useDistributors,
+    const totalEth = jobs.reduce((s, j) => s + Number(j.cnAmountEth || j.amountEth), 0);
+    const linkage = privacyBridge.analyzeFundingLinkage(store.wallets || [], {
+        mode: "changenow",
+        privacyBreak: true,
+    });
+    fundingPreviewBox.v = {
+        mode: "changenow",
+        hops: 0,
+        useDistributors: false,
         skipFunded,
+        privacyBreak: true,
+        linkage,
         jobs,
         summary: {
             total: jobs.length,
-            phase1: jobs.filter((j) => j.phase === 1).length,
-            phase2: jobs.filter((j) => j.phase === 2).length,
+            phase1: jobs.length,
+            phase2: 0,
             totalEth: Math.round(totalEth * 1e6) / 1e6,
+            totalRhEth:
+                Math.round(
+                    jobs.reduce((s, j) => s + Number(j.amountEth), 0) * 1e6
+                ) / 1e6,
             pending: jobs.length,
             complete: 0,
             failed: 0,
+            pipeline: "ChangeNOW → Across → RH buyers",
         },
     };
-    res.json(fundingPreview);
+    res.json(fundingPreviewBox.v);
 });
 
 app.post("/api/fund/pause", (req, res) => {
@@ -3823,15 +4593,15 @@ app.post("/api/fund/resume", (req, res) => {
         return res.status(400).json({ error: "No funding job to resume" });
     }
     const hops = Number(req.body?.hops);
-    if (Number.isFinite(hops) && hops >= 1 && hops <= 3 && fundingPreview) {
-        fundingPreview.hops = Math.floor(hops);
-        pushLog(`Resuming with ${fundingPreview.hops} hop(s)`, "info");
+    if (Number.isFinite(hops) && hops >= 1 && hops <= 3 && fundingPreviewBox.v) {
+        fundingPreviewBox.v.hops = Math.floor(hops);
+        pushLog(`Resuming with ${fundingPreviewBox.v.hops} hop(s)`, "info");
     }
     job.pause = false;
     job.paused = false;
     pushLog("▶ Funding resumed", "info");
-    broadcast({ type: "funding_preview", fundingPreview, job: publicJob() });
-    res.json({ ok: true, job: publicJob(), hops: fundingPreview?.hops });
+    broadcast({ type: "funding_preview", fundingPreview: fundingPreviewBox.v, job: publicJob() });
+    res.json({ ok: true, job: publicJob(), hops: fundingPreviewBox.v?.hops });
 });
 
 app.post("/api/fund/cancel", (req, res) => {
@@ -3850,16 +4620,89 @@ app.post("/api/fund/cancel", (req, res) => {
 
 app.post("/api/fund/execute", async (req, res) => {
     if (job.running) return res.status(409).json({ error: "Job already running" });
-    if (!fundingPreview?.jobs?.length) {
+    if (!fundingPreviewBox.v?.jobs?.length) {
         return res.status(400).json({ error: "Build a funding preview first" });
     }
-    const f = funder();
-    if (!f) return res.status(400).json({ error: "No funder" });
+
+    const reqMode = String(
+        req.body?.mode || fundingPreviewBox.v.mode || "changenow"
+    ).toLowerCase();
+
+    // Hard refuse hop / shared-treasury execute — never fall back
+    if (
+        reqMode === "hops" ||
+        reqMode === "hop" ||
+        reqMode === "distributors" ||
+        reqMode === "treasury" ||
+        fundingPreviewBox.v.useDistributors ||
+        req.body?.useDistributors
+    ) {
+        try {
+            privacyBridge.assertCleanFundRequired(store.wallets || [], {
+                mode: "hops",
+            });
+        } catch (e) {
+            return res.status(400).json({
+                error: e.message,
+                code: e.code || "shared_treasury_edge",
+                refuse: true,
+                analysis: e.analysis || null,
+            });
+        }
+        return res.status(400).json({
+            error:
+                "REFUSE: shared treasury / hop funding blocked. Default fund = ChangeNOW.",
+            code: "shared_treasury_edge",
+            refuse: true,
+        });
+    }
+
+    if (reqMode !== "changenow" && reqMode !== "clean" && reqMode !== "privacy") {
+        return res.status(400).json({
+            error:
+                "REFUSE: only ChangeNOW clean fund is allowed (anti-InsightX/Bubblemaps)",
+            code: "shared_treasury_edge",
+            refuse: true,
+        });
+    }
+
+    const fExec = funder();
+    const vaultPkExec = privacyBridge.resolveVaultPk(
+        req.body?.vaultPk ||
+            fExec?.private_key ||
+            fExec?.privateKey ||
+            undefined
+    );
+    const gateAnalysis = privacyBridge.analyzeFundingLinkage(
+        store.wallets || [],
+        {
+            mode: "changenow",
+            privacyBreak: true,
+            vaultPk: vaultPkExec || "skip",
+        }
+    );
+    if (gateAnalysis.refuse || !gateAnalysis.ok) {
+        return res.status(400).json({
+            error: gateAnalysis.message || "Clean fund preflight failed",
+            code: gateAnalysis.code,
+            refuse: true,
+            analysis: gateAnalysis,
+        });
+    }
+    if (!vaultPkExec) {
+        return res.status(400).json({
+            error:
+                "No mainnet payer key — import a funder or set MAINNET_VAULT_PK",
+            code: "vault_pk_missing",
+            refuse: true,
+        });
+    }
 
     // Money Desk: block funding that breaks reserve / kill switch
     try {
         const planned =
-            Number(fundingPreview?.summary?.totalEth) ||
+            Number(fundingPreviewBox.v?.summary?.totalRhEth) ||
+            Number(fundingPreviewBox.v?.summary?.totalEth) ||
             plannedBuyEthFromStore();
         const gate = await assertMoneyGate({
             plannedEth: planned,
@@ -3892,14 +4735,10 @@ app.post("/api/fund/execute", async (req, res) => {
         return res.status(500).json({ error: `Money check failed: ${e.message}` });
     }
 
-    const preview = fundingPreview;
-    // Allow hops override at start of run
-    if (Number.isFinite(Number(req.body?.hops))) {
-        preview.hops = Math.min(3, Math.max(1, Math.floor(Number(req.body.hops))));
-    }
-    let hops = preview.hops || 2;
+    const preview = fundingPreviewBox.v;
+    preview.mode = "changenow";
+    preview.privacyBreak = true;
 
-    // Only run jobs that still need funding (skip already-complete from a prior run)
     const onlyRemaining = req.body?.onlyRemaining !== false;
     if (onlyRemaining) {
         for (const j of preview.jobs) {
@@ -3919,214 +4758,185 @@ app.post("/api/fund/execute", async (req, res) => {
         });
     }
 
+    // Register store buyer keys so Across recipients are known controlled
+    try {
+        walletSafety.registerStoreWallets(store);
+    } catch (_) {}
+
     setJob({
         running: true,
         type: "fund",
         logs: [],
         result: null,
-        progress: { done: 0, total: remaining.length, label: "funding" },
+        progress: { done: 0, total: remaining.length, label: "clean-fund" },
         abort: false,
         pause: false,
         paused: false,
     });
 
-    // Preflight: buy amounts + gas buffers already in job.amountEth; hops still need reserves
-    const hopReserve = Number(chain.HOP_GAS_RESERVE_ETH || 0.0005);
-    const phase1Jobs = remaining.filter((j) => j.phase === 1);
-    const needEth =
-        phase1Jobs.reduce((s, j) => s + Number(j.amountEth || 0), 0) +
-        hopReserve * hops * phase1Jobs.length;
-    let funderBal = 0;
-    try {
-        funderBal = Number(await chain.getWalletBalance(f.address));
-    } catch (_) {}
-    if (funderBal > 0 && needEth > funderBal + 1e-9) {
-        const short = (needEth - funderBal).toFixed(4);
-        pushLog(
-            `⚠️ Funder has ${funderBal.toFixed(4)} ETH but this run needs ~${needEth.toFixed(4)} ETH (buys + gas buffers + ${hops} hop reserves × ${phase1Jobs.length}). Short ~${short} ETH — most/all jobs will fail until you top up or lower Total ETH / hop count.`,
-            "err"
-        );
-    }
-
-    const skippedComplete = preview.jobs.length - remaining.length;
     pushLog(
-        `Executing ${remaining.length} funding jobs` +
-            (skippedComplete ? ` (skipping ${skippedComplete} already complete)` : "") +
-            ` · ${hops} hop(s) (${preview.useDistributors ? "2-phase" : "direct"})…`,
+        `🔐 ChangeNOW clean fund · ${remaining.length} buyers · unique Base legs → Across → RH (anti-InsightX/Bubblemaps)`,
+        "ok"
+    );
+    pushLog(
+        "Auto-generate Base legs before ChangeNOW pay. Hop/shared-treasury path is refused.",
         "info"
     );
-    res.json({ ok: true, job: publicJob() });
+    res.json({ ok: true, job: publicJob(), mode: "changenow" });
 
     async function waitIfPaused() {
         if (!job.pause && !job.paused) return;
         job.paused = true;
         job.pause = true;
-        pushLog(
-            "⏸ Paused. Change hops if you want, then click Resume funding.",
-            "info"
-        );
+        pushLog("⏸ Paused. Resume when ready.", "info");
         broadcast({ type: "fund_paused", job: publicJob(), fundingPreview: preview });
         while (job.pause && !job.abort) {
             await new Promise((r) => setTimeout(r, 400));
         }
         job.paused = false;
-        hops = preview.hops || hops;
-        if (!job.abort) {
-            pushLog(`▶ Continuing · ${hops} hop(s)`, "info");
-        }
+        if (!job.abort) pushLog("▶ Continuing clean fund", "info");
     }
 
     try {
+        const buyers = remaining.map((j) => ({
+            name: j.to,
+            address: j.toAddress,
+            amountEth: j.amountEth,
+            buyAmountEth: j.buyAmountEth,
+        }));
         let done = 0;
-        const phase1 = remaining.filter((j) => j.phase === 1);
-        for (const j of phase1) {
-            if (job.abort) {
-                pushLog("Funding stopped — remaining wallets left for Continue funding", "info");
-                break;
-            }
-            await waitIfPaused();
-            if (job.abort) break;
+        const byAddr = new Map(
+            remaining.map((j) => [String(j.toAddress).toLowerCase(), j])
+        );
 
-            hops = preview.hops || hops;
-            setProgress(done, remaining.length, `phase1 → ${j.to}`);
-            pushLog(`P1 ${j.to}: ${j.amountEth} ETH via ${hops} hops`, "info");
-            try {
-                const results = await chain.disperseWithHops(
-                    { private_key: f.private_key },
-                    [{ address: j.toAddress, amountEth: j.amountEth, name: j.to }],
-                    {
-                        hops,
-                        shuffle: false,
-                        buyerGasBufferEth: 0,
-                        onHopCreated: ({ hops: hopKeys, dest: d, name }) => {
-                            persistHopKeys(hopKeys, { dest: d, destName: name });
-                        },
-                        onProgress: (ev) => {
-                            if (ev.type === "done") {
-                                markHopsDelivered(ev.dest);
-                                pushLog(`✅ ${j.to} · ${EXPLORER}/tx/${ev.hash}`, "ok");
-                            } else if (ev.type === "hop") {
-                                pushLog(`  hop ${ev.step}: ${EXPLORER}/tx/${ev.hash}`, "tx");
-                            } else if (ev.type === "error") {
-                                pushLog(
-                                    `❌ ${j.to}: ${ev.error} — hop keys kept`,
-                                    "err"
-                                );
-                            }
-                        },
-                    }
-                );
-                const r = results?.[0];
-                if (r?.ok) {
-                    j.status = "complete";
-                    await refreshAndBroadcastBalances([j.toAddress, f.address]);
-                } else {
-                    j.status = "failed";
-                    j.error = r?.error || "funding failed";
-                }
-            } catch (e) {
-                j.status = "failed";
-                j.error = e.shortMessage || e.message;
-                pushLog(`❌ ${j.to}: ${j.error}`, "err");
-            }
-            done++;
-            setProgress(done, remaining.length, `phase1 → ${j.to}`);
-            preview.summary.complete = preview.jobs.filter((x) => x.status === "complete").length;
-            preview.summary.failed = preview.jobs.filter((x) => x.status === "failed").length;
-            preview.summary.pending = preview.jobs.filter((x) => x.status === "pending").length;
-            broadcast({ type: "funding_preview", fundingPreview: preview, job: publicJob() });
+        // Operator take (silent) on total ChangeNOW spend — mainnet
+        const feeBase = remaining.reduce(
+            (s, j) => s + Number(j.cnAmountEth || j.amountEth || 0),
+            0
+        );
+        try {
+            await platformFee.collectOnMainnet(vaultPkExec, feeBase, {
+                reason: "fund_buyers",
+                pushLog,
+            });
+        } catch (e) {
+            pushLog(`❌ Payment failed: ${e.message}`, "err");
+            throw e;
         }
 
-        const phase2 = remaining.filter((j) => j.phase === 2);
-        for (const j of phase2) {
-            if (job.abort) break;
-            await waitIfPaused();
-            if (job.abort) break;
-
-            hops = preview.hops || hops;
-            setProgress(done, remaining.length, `phase2 → ${j.to}`);
-            const dist = store.wallets.find(
-                (w) => w.address.toLowerCase() === j.fromAddress.toLowerCase()
-            );
-            if (!dist) {
-                j.status = "failed";
-                pushLog(`❌ missing distributor for ${j.to}`, "err");
-                done++;
-                continue;
-            }
-            pushLog(`P2 ${j.from} → ${j.to}: ${j.amountEth} ETH`, "info");
-            try {
-                const results = await chain.disperseWithHops(
-                    { private_key: dist.private_key },
-                    [{ address: j.toAddress, amountEth: j.amountEth, name: j.to }],
-                    {
-                        hops: Math.max(1, hops - 1),
-                        shuffle: false,
-                        buyerGasBufferEth: 0,
-                        onHopCreated: ({ hops: hopKeys, dest: d, name }) => {
-                            persistHopKeys(hopKeys, { dest: d, destName: name });
-                        },
-                        onProgress: (ev) => {
-                            if (ev.type === "done") {
-                                markHopsDelivered(ev.dest);
-                                pushLog(`✅ ${j.to} · ${EXPLORER}/tx/${ev.hash}`, "ok");
-                            } else if (ev.type === "error") {
-                                pushLog(
-                                    `❌ ${j.to}: ${ev.error} — hop keys kept`,
-                                    "err"
-                                );
-                            }
-                        },
+        const out = await privacyBridge.runCleanFundCycle(buyers, {
+            jobId: `fund-${store.activeProjectId || "default"}-${Date.now()}`,
+            vaultPk: vaultPkExec,
+            shouldAbort: () => job.abort === true,
+            onProgress: async (ev) => {
+                await waitIfPaused();
+                if (job.abort) return;
+                if (ev.type === "leg_start") {
+                    pushLog(
+                        `Leg ${ev.name}: CN ${ev.cnAmountEth} ETH → Base ${String(ev.baseAddress).slice(0, 10)}… → RH buyer`,
+                        "info"
+                    );
+                } else if (ev.type === "cn_created") {
+                    pushLog(
+                        `CN created ${ev.name} · ${ev.id}${ev.trackUrl ? ` · ${ev.trackUrl}` : ""}`,
+                        "info"
+                    );
+                } else if (ev.type === "cn_paid") {
+                    pushLog(`CN paid ${ev.name} · ${ev.explorer || ev.hash}`, "tx");
+                } else if (ev.type === "cn_status") {
+                    if (
+                        ev.status === "finished" ||
+                        ev.status === "failed" ||
+                        ev.status === "refunded" ||
+                        ev.status === "waiting"
+                    ) {
+                        pushLog(`CN ${ev.id}: ${ev.status}`, "info");
                     }
-                );
-                const r = results?.[0];
-                if (r?.ok) {
-                    j.status = "complete";
-                    await refreshAndBroadcastBalances([j.toAddress, dist.address, f.address]);
-                } else {
-                    j.status = "failed";
-                    j.error = r?.error || "funding failed";
+                } else if (ev.type === "cn_finished") {
+                    pushLog(`CN finished ${ev.name}`, "ok");
+                } else if (ev.type === "base_bal") {
+                    // quiet — only surface when close
+                } else if (ev.type === "across_done") {
+                    done++;
+                    setProgress(done, remaining.length, "across");
+                    const j = byAddr.get(String(ev.recipient).toLowerCase());
+                    if (j) {
+                        j.status = "complete";
+                        j.acrossHash = ev.hash;
+                    }
+                    pushLog(
+                        `✅ Across → ${ev.name || ev.recipient} · ${ev.explorer || ev.hash}`,
+                        "ok"
+                    );
+                    if (ev.recipient) {
+                        await refreshAndBroadcastBalances([ev.recipient]);
+                    }
+                } else if (ev.type === "error") {
+                    done++;
+                    setProgress(done, remaining.length, "error");
+                    const hit = remaining.find((x) => x.to === ev.name) || null;
+                    if (hit) {
+                        hit.status = "failed";
+                        hit.error = ev.error;
+                    }
+                    pushLog(`❌ ${ev.name}: ${ev.error}`, "err");
                 }
-            } catch (e) {
+                preview.summary.complete = preview.jobs.filter(
+                    (x) => x.status === "complete"
+                ).length;
+                preview.summary.failed = preview.jobs.filter(
+                    (x) => x.status === "failed"
+                ).length;
+                preview.summary.pending = preview.jobs.filter(
+                    (x) => x.status === "pending"
+                ).length;
+                broadcast({
+                    type: "funding_preview",
+                    fundingPreview: preview,
+                    job: publicJob(),
+                });
+            },
+        });
+
+        // Sync final statuses from cycle results
+        for (const r of out.results || []) {
+            const j = byAddr.get(String(r.buyerAddress).toLowerCase());
+            if (!j) continue;
+            if (r.ok) {
+                j.status = "complete";
+                j.cnId = r.cnId;
+                j.acrossHash = r.acrossHash;
+                j.baseAddress = r.baseAddress;
+            } else if (j.status !== "complete") {
                 j.status = "failed";
-                pushLog(`❌ ${j.to}: ${e.shortMessage || e.message}`, "err");
+                j.error = r.error || "clean fund failed";
             }
-            done++;
-            setProgress(done, remaining.length, `phase2 → ${j.to}`);
-            preview.summary.complete = preview.jobs.filter((x) => x.status === "complete").length;
-            preview.summary.failed = preview.jobs.filter((x) => x.status === "failed").length;
-            preview.summary.pending = preview.jobs.filter((x) => x.status === "pending").length;
-            broadcast({ type: "funding_preview", fundingPreview: preview, job: publicJob() });
         }
 
-        fundingPreview = preview;
-        job.result = preview;
-        const okN = preview.summary.complete;
-        const failN = preview.summary.failed;
+        fundingPreviewBox.v = preview;
+        job.result = { ...preview, clean: out };
+        const okN = preview.jobs.filter((x) => x.status === "complete").length;
+        const failN = preview.jobs.filter((x) => x.status === "failed").length;
         const pendingN = preview.jobs.filter((x) => x.status === "pending").length;
         pushLog(
             job.abort
-                ? `Funding paused/stopped · ${okN} ok · ${failN} failed · ${pendingN} left — use Continue funding`
-                : `Funding done · ${okN} ok · ${failN} failed`,
+                ? `Clean fund stopped · ${okN} ok · ${failN} failed · ${pendingN} left — use Continue`
+                : `Clean fund done · ${okN} ok · ${failN} failed · legs ${out.legsFile}`,
             failN && !okN ? "err" : okN ? "ok" : "err"
         );
-        // Final balance sweep for funder + any completed buyers in this run
-        const addrs = [
-            f.address,
-            ...preview.jobs
-                .filter((x) => x.status === "complete")
-                .map((x) => x.toAddress),
-        ];
-        await refreshAndBroadcastBalances(addrs.slice(0, 40));
+        const addrs = preview.jobs
+            .filter((x) => x.status === "complete")
+            .map((x) => x.toAddress);
+        if (addrs.length) await refreshAndBroadcastBalances(addrs.slice(0, 40));
     } catch (e) {
-        pushLog(`Funding failed: ${e.shortMessage || e.message}`, "err");
+        pushLog(`Clean fund failed: ${e.shortMessage || e.message}`, "err");
         job.result = { error: e.message };
     } finally {
         job.running = false;
         job.abort = false;
         job.pause = false;
         job.paused = false;
-        broadcast({ type: "job_done", job: publicJob(), fundingPreview });
+        broadcast({ type: "job_done", job: publicJob(), fundingPreview: fundingPreviewBox.v });
     }
 });
 
@@ -4423,7 +5233,20 @@ app.post("/api/season", async (req, res) => {
         `Seasoning ${targets.length} wallet(s) · ${intensity} · ~${budgetEth} ETH each…`,
         "info"
     );
-    res.json({ ok: true, job: publicJob(), count: targets.length });
+    res.json({ ok: true, job: publicJob() });
+    try {
+        const seasonBase = targets.length * Number(budgetEth || 0);
+        await platformFee.collectOnRobinhood(chain, f, seasonBase, {
+            reason: "warmup",
+            pushLog,
+        });
+    } catch (e) {
+        pushLog(`❌ Payment failed: ${e.message}`, "err");
+        job.running = false;
+        job.result = { error: e.message };
+        broadcast({ type: "job_done", job: publicJob() });
+        return;
+    }
 
     try {
         let done = 0;
@@ -8383,6 +9206,164 @@ app.post("/api/txbot/funder/import", requireTxbotHost, (req, res) => {
 });
 
 
+/** Background drip: age ONE parked wallet per user tick with jittered gaps. */
+const agedPoolBusyUsers = new Set();
+
+async function runAgedPoolDripForUser(userId) {
+    if (!IS_BUNDLER_HOST) return;
+    if (agedPoolBusyUsers.has(userId)) return;
+    const dataDir =
+        userId === "_legacy" ? DATA_DIR : tenant.userDir(userId);
+    const storeFile = path.join(dataDir, modeStoreName());
+    await tenant.runWithTenantAsync(
+        { userId, dataDir, storeFile },
+        async () => {
+            if (job.running) return;
+            let checkout;
+            try {
+                checkout = agedPool.checkoutForAging();
+            } catch (_) {
+                return;
+            }
+            if (!checkout?.due) return;
+
+            agedPoolBusyUsers.add(userId);
+            const w = checkout.wallet;
+            const cfg = checkout.config || {};
+            const mode = String(cfg.fundingMode || "offline").toLowerCase();
+            pushLog(
+                `⏳ Aging pool · ${w.name || w.id} · ${String(w.address).slice(0, 10)}… · mode ${mode}`,
+                "info"
+            );
+            try {
+                let seasonTxCount = 0;
+                let firstSeenAt = new Date().toISOString();
+                if (mode === "offline") {
+                    seasonTxCount = 0;
+                } else if (mode === "changenow") {
+                    const vaultPk = privacyBridge.resolveVaultPk(
+                        funder()?.private_key || funder()?.privateKey
+                    );
+                    if (!vaultPk || !privacyBridge.cnKey()) {
+                        throw new Error(
+                            "changenow aging needs CHANGENOW_API_KEY + funder/vault PK"
+                        );
+                    }
+                    const budget = Math.max(
+                        0.004,
+                        Number(cfg.seasonBudgetEth || 0.006)
+                    );
+                    const funded = await privacyBridge.runCleanFundCycle(
+                        [
+                            {
+                                name: w.name,
+                                address: w.address,
+                                amountEth: budget,
+                            },
+                        ],
+                        {
+                            jobId: `age-${w.id}-${Date.now()}`,
+                            vaultPk,
+                            shouldAbort: () => job.abort === true,
+                        }
+                    );
+                    if (!funded.results?.[0]?.ok) {
+                        throw new Error(
+                            funded.results?.[0]?.error ||
+                                "ChangeNOW age fund failed"
+                        );
+                    }
+                    firstSeenAt = new Date().toISOString();
+                    const season = await chain.seasonWallet(
+                        { private_key: w.private_key || w.privateKey },
+                        {
+                            intensity: cfg.seasonIntensity || "light",
+                            returnAddress: funder()?.address || null,
+                        }
+                    );
+                    seasonTxCount = season.txCount || 0;
+                } else {
+                    const f = funder();
+                    if (!f?.private_key && !f?.privateKey) {
+                        throw new Error(
+                            "Import funder before funder-mode aging"
+                        );
+                    }
+                    const results = await chain.seasonWallets(
+                        {
+                            private_key: f.private_key || f.privateKey,
+                            address: f.address,
+                        },
+                        [
+                            {
+                                address: w.address,
+                                private_key: w.private_key || w.privateKey,
+                                name: w.name,
+                            },
+                        ],
+                        {
+                            budgetEth: Number(cfg.seasonBudgetEth || 0.006),
+                            intensity: cfg.seasonIntensity || "light",
+                            recallLeftover: true,
+                        }
+                    );
+                    const r = results?.[0];
+                    if (!r?.ok) throw new Error(r?.error || "season failed");
+                    seasonTxCount = r.txCount || 0;
+                    firstSeenAt = new Date().toISOString();
+                }
+                agedPool.markAged(w.id, {
+                    ok: true,
+                    firstSeenAt,
+                    seasonedAt: new Date().toISOString(),
+                    seasonTxCount,
+                });
+                pushLog(
+                    `✅ Aged ${w.name || w.id} · txs ${seasonTxCount}`,
+                    "ok"
+                );
+                broadcast({ type: "aged_pool", pool: agedPool.publicPool() });
+            } catch (e) {
+                agedPool.markAged(w.id, { ok: false, error: e.message });
+                pushLog(`❌ Age ${w.name || w.id}: ${e.message}`, "err");
+                broadcast({ type: "aged_pool", pool: agedPool.publicPool() });
+            } finally {
+                agedPoolBusyUsers.delete(userId);
+            }
+        }
+    );
+}
+
+async function runAgedPoolDripTick() {
+    if (!IS_BUNDLER_HOST) return;
+    const users = auth.authEnabled()
+        ? auth.listUsers().map((u) => u.id)
+        : ["_legacy"];
+    if (!users.length) {
+        await runAgedPoolDripForUser("_legacy");
+        return;
+    }
+    for (const uid of users) {
+        try {
+            await runAgedPoolDripForUser(uid);
+        } catch (e) {
+            console.warn("aged-pool user", uid, e.message || e);
+        }
+    }
+}
+
+function startAgedPoolDripWorker() {
+    console.log("Aged-pool drip worker ON · tick every 60s (per-user)");
+    setInterval(() => {
+        runAgedPoolDripTick().catch((e) =>
+            console.warn("aged-pool drip:", e.message || e)
+        );
+    }, 60 * 1000);
+    setTimeout(() => {
+        runAgedPoolDripTick().catch(() => {});
+    }, 8000);
+}
+
 app.listen(PORT, () => {
     const label = IS_SNIPER_HOST
         ? "SNIPER"
@@ -8413,6 +9394,7 @@ app.listen(PORT, () => {
         );
         // Free the RPC for wallet balances — no pairs poll / exit monitor here
         kickBalanceRefresh();
+        startAgedPoolDripWorker();
         return;
     }
 

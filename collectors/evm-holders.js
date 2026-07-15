@@ -6,14 +6,22 @@
 const fs = require("fs");
 const path = require("path");
 const { ethers } = require("ethers");
+const tenant = require("../lib/tenant-context");
 
-const DATA_DIR = path.join(__dirname, "..", "data", "holders");
 const TRANSFER_TOPIC = ethers.id("Transfer(address,address,uint256)");
 const ZERO = "0x0000000000000000000000000000000000000000";
 const MULTICALL3 = "0xcA11bde05977b3631167028862bE2a173976CA11";
 const CHUNK = 4000n;
-const DEFAULT_LOOKBACK = 8000n;
-const MAX_SCAN = 40000n;
+const DEFAULT_LOOKBACK = 120000n; // ~deeper default so older competitor CAs still resolve
+const MAX_SCAN = 300000n;
+const BLOCKSCOUT = "https://robinhoodchain.blockscout.com";
+
+function DATA_DIR() {
+  return path.join(tenant.getDataDir(), "holders");
+}
+function fileFor(token) {
+  return path.join(DATA_DIR(), `${String(token).toLowerCase()}.json`);
+}
 
 const ERC20_MIN = [
     "function balanceOf(address) view returns (uint256)",
@@ -24,10 +32,6 @@ const ERC20_MIN = [
 const MULTICALL_ABI = [
     "function aggregate3((address target, bool allowFailure, bytes callData)[] calls) payable returns ((bool success, bytes returnData)[])",
 ];
-
-function fileFor(token) {
-    return path.join(DATA_DIR, `${String(token).toLowerCase()}.json`);
-}
 
 function emptyState(token) {
     return {
@@ -53,7 +57,8 @@ function load(token) {
 }
 
 function save(state) {
-    if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+    const dir = DATA_DIR();
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
     state.updatedAt = new Date().toISOString();
     state.holderCount = Object.keys(state.holders || {}).length;
     const f = fileFor(state.token);
@@ -105,18 +110,155 @@ async function fetchBalances(provider, tokenAddr, addresses) {
 }
 
 /**
+ * Fast path: pull top holders from Blockscout (works for older / quiet tokens).
+ */
+async function importHoldersFromBlockscout(token, { pages = 4, pageSize = 50, replace = true } = {}) {
+    const tokenAddr = ethers.getAddress(token);
+    const state = load(tokenAddr);
+    const nextHolders = replace ? {} : { ...(state.holders || {}) };
+    let imported = 0;
+
+    // Prefer v2 (skips contracts / LP / routers when flagged)
+    let nextParams = null;
+    for (let page = 1; page <= pages; page++) {
+        let url = `${BLOCKSCOUT}/api/v2/tokens/${tokenAddr}/holders`;
+        if (nextParams && typeof nextParams === "object") {
+            const qs = new URLSearchParams();
+            for (const [k, v] of Object.entries(nextParams)) {
+                if (v != null) qs.set(k, String(v));
+            }
+            const q = qs.toString();
+            if (q) url += `?${q}`;
+        }
+        let items = [];
+        let next = null;
+        try {
+            const r = await fetch(url);
+            const j = await r.json();
+            items = Array.isArray(j?.items) ? j.items : [];
+            next = j?.next_page_params || null;
+        } catch (e) {
+            console.warn("[holders] blockscout v2:", e.message);
+            break;
+        }
+        if (!items.length) break;
+        for (const it of items) {
+            const addrObj = it.address || {};
+            if (addrObj.is_contract) continue;
+            const addr = String(addrObj.hash || "").toLowerCase();
+            const val = String(it.value || "0");
+            if (!addr.startsWith("0x") || addr === ZERO) continue;
+            if (BigInt(val || "0") <= 0n) continue;
+            nextHolders[addr] = val;
+            imported++;
+        }
+        if (!next) break;
+        nextParams = next;
+    }
+
+    // Fallback: classic API if v2 returned nothing
+    if (!imported) {
+        for (let page = 1; page <= pages; page++) {
+            const url =
+                `${BLOCKSCOUT}/api?module=token&action=getTokenHolders` +
+                `&contractaddress=${tokenAddr}&page=${page}&offset=${pageSize}`;
+            let rows = [];
+            try {
+                const r = await fetch(url);
+                const j = await r.json();
+                rows = Array.isArray(j?.result) ? j.result : [];
+            } catch (e) {
+                console.warn("[holders] blockscout:", e.message);
+                break;
+            }
+            if (!rows.length) break;
+            for (const row of rows) {
+                const addr = String(row.address || row.Address || "").toLowerCase();
+                const val = String(row.value || row.Value || "0");
+                if (!addr.startsWith("0x") || addr === ZERO) continue;
+                if (BigInt(val || "0") <= 0n) continue;
+                nextHolders[addr] = val;
+                imported++;
+            }
+            if (rows.length < pageSize) break;
+        }
+    }
+
+    if (imported > 0 || replace) state.holders = nextHolders;
+
+    try {
+        const r2 = await fetch(`${BLOCKSCOUT}/api/v2/tokens/${tokenAddr}`);
+        const j2 = await r2.json();
+        if (j2?.total_supply) state.totalSupply = String(j2.total_supply);
+    } catch (_) {}
+
+    save(state);
+    return {
+        token: tokenAddr.toLowerCase(),
+        imported,
+        holderCount: Object.keys(state.holders || {}).length,
+        totalSupply: state.totalSupply,
+        source: "blockscout",
+    };
+}
+
+/**
+ * Drop contract addresses (LP / routers) — airdrops should go to EOAs only.
+ */
+async function filterEoaHolders(provider, token, { maxCheck = 300 } = {}) {
+    const state = load(token);
+    const entries = Object.entries(state.holders || {}).slice(0, maxCheck);
+    if (!entries.length) return { kept: 0, dropped: 0 };
+    const kept = {};
+    let dropped = 0;
+    const BATCH = 40;
+    for (let i = 0; i < entries.length; i += BATCH) {
+        const chunk = entries.slice(i, i + BATCH);
+        const codes = await Promise.all(
+            chunk.map(async ([addr]) => {
+                try {
+                    return [addr, await provider.getCode(addr)];
+                } catch (_) {
+                    return [addr, "0x"];
+                }
+            })
+        );
+        for (let j = 0; j < chunk.length; j++) {
+            const [addr, bal] = chunk[j];
+            const code = codes[j][1] || "0x";
+            if (code && code !== "0x") {
+                dropped++;
+                continue;
+            }
+            kept[addr] = bal;
+        }
+    }
+    // preserve any holders beyond maxCheck unchecked
+    for (const [addr, bal] of Object.entries(state.holders || {}).slice(maxCheck)) {
+        kept[addr] = bal;
+    }
+    state.holders = kept;
+    save(state);
+    return { kept: Object.keys(kept).length, dropped };
+}
+
+/**
  * Scan Transfer logs and refresh balances for touched addresses.
  * @param {import('ethers').Provider} provider
  * @param {string} token
- * @param {{ lookback?: bigint, weth?: string, exclude?: string[] }} opts
+ * @param {{ lookback?: bigint, weth?: string, exclude?: string[], force?: boolean }} opts
  */
 async function scan(provider, token, opts = {}) {
     const tokenAddr = ethers.getAddress(token);
     const state = load(tokenAddr);
     const head = BigInt(await provider.getBlockNumber());
     const lookback = opts.lookback != null ? BigInt(opts.lookback) : DEFAULT_LOOKBACK;
+    const force =
+        opts.force === true ||
+        !Object.keys(state.holders || {}).length ||
+        !state.lastBlock;
     let from =
-        state.lastBlock > 0
+        !force && state.lastBlock > 0
             ? BigInt(state.lastBlock) + 1n
             : head > lookback
               ? head - lookback
@@ -274,7 +416,7 @@ function listHolders(token, { limit = 100, ourSet = [] } = {}) {
 }
 
 /** Score active traders for airdrop (buys-weighted, prefer non-dumpers). */
-function scoreAirdropTargets(token, { exclude = [], minVolEth = 0, minBuys = 1, limit = 100 } = {}) {
+function scoreAirdropTargets(token, { exclude = [], minVolEth = 0, minBuys = 0, limit = 100 } = {}) {
     const state = load(token);
     const ex = new Set(
         (exclude || []).map((a) => String(a).toLowerCase())
@@ -290,14 +432,18 @@ function scoreAirdropTargets(token, { exclude = [], minVolEth = 0, minBuys = 1, 
     for (const addr of addrs) {
         if (ex.has(addr)) continue;
         const act = activity[addr] || { buys: 0, sells: 0, volEth: 0, lastTs: 0 };
-        if (act.buys < minBuys && !holders[addr]) continue;
-        if (act.volEth < minVolEth && act.buys < minBuys) continue;
+        const holding = !!holders[addr] && BigInt(holders[addr] || "0") > 0n;
+        // Need either enough buys OR currently holding
+        if (act.buys < minBuys && !holding) continue;
+        if (act.volEth < minVolEth && act.buys < minBuys && !holding) continue;
         const dumpRatio =
             act.buys > 0 ? act.sells / act.buys : act.sells > 0 ? 2 : 0;
-        const holdBonus = holders[addr] ? 1.5 : 1;
+        const holdBonus = holding ? 1.5 : 1;
+        // Base score so pure holders (no tape yet) still qualify
+        const base = holding ? 4 : 0;
         const score =
-            (act.buys * 3 + act.volEth * 10 - act.sells * 1.5) * holdBonus;
-        if (score <= 0 && !holders[addr]) continue;
+            (base + act.buys * 3 + act.volEth * 10 - act.sells * 1.5) * holdBonus;
+        if (score <= 0) continue;
         scored.push({
             address: addr,
             score,
@@ -307,7 +453,8 @@ function scoreAirdropTargets(token, { exclude = [], minVolEth = 0, minBuys = 1, 
             lastTs: act.lastTs,
             balance: holders[addr] || "0",
             dumpRatio,
-            holding: !!holders[addr] && BigInt(holders[addr] || "0") > 0n,
+            holding,
+            source: "token",
         });
     }
     scored.sort((a, b) => b.score - a.score);
@@ -322,5 +469,12 @@ module.exports = {
     mergeActivity,
     listHolders,
     scoreAirdropTargets,
-    DATA_DIR,
+    importHoldersFromBlockscout,
+    filterEoaHolders,
+    TRANSFER_TOPIC,
+    DEFAULT_LOOKBACK,
+    MAX_SCAN,
+    get DATA_DIR() {
+        return DATA_DIR();
+    },
 };

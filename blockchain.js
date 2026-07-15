@@ -3917,9 +3917,10 @@ function randomBetween(min, max) {
 function parseEthAmount(amount) {
     if (typeof amount === "bigint") return amount;
     if (typeof amount === "number") {
-        if (!Number.isFinite(amount) || amount <= 0) {
+        if (!Number.isFinite(amount) || amount < 0) {
             throw new Error("invalid ETH amount");
         }
+        if (amount === 0) return 0n;
         // Avoid "too many decimals for format" from float dust
         return ethers.parseEther(amount.toFixed(8).replace(/\.?0+$/, "") || "0");
     }
